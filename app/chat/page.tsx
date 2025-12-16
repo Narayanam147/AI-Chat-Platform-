@@ -229,6 +229,7 @@ export default function ChatPage() {
         }
       }
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [messages, selectedChatId, currentChatId]);
 
   // Filter chat history based on search query
@@ -621,7 +622,7 @@ export default function ChatPage() {
           {/* No results message */}
           {searchQuery && filteredChatHistory.length === 0 && (
             <div className="px-3 py-4 text-center text-sm text-gray-500 dark:text-gray-400">
-              No chats found for "{searchQuery}"
+              No chats found for &ldquo;{searchQuery}&rdquo;
             </div>
           )}
           <div className="space-y-1">
