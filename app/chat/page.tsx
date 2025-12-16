@@ -2,7 +2,7 @@
 
 import { useSession, signOut, signIn } from "next-auth/react";
 import { useState, useRef, useEffect } from "react";
-import { Send, Upload, Download, Menu, LogOut, User, Sparkles, FileText, Image as ImageIcon, X, MessageSquare, Clock, Trash2, Plus, Settings, HelpCircle, FolderOpen, Code, Moon, Sun, Mail, KeyRound } from "lucide-react";
+import { Send, Upload, Download, Menu, LogOut, User, Sparkles, FileText, Image as ImageIcon, X, MessageSquare, Clock, Trash2, Plus, Settings, HelpCircle, FolderOpen, Code, Moon, Sun, Mail, KeyRound, Copy, Check } from "lucide-react";
 import ReactMarkdown from "react-markdown";
 
 interface Message {
@@ -36,12 +36,24 @@ export default function ChatPage() {
   const [feedbackText, setFeedbackText] = useState("");
   const [feedbackSubmitting, setFeedbackSubmitting] = useState(false);
   const [theme, setTheme] = useState<'light' | 'dark'>('light');
+  const [copiedMessageId, setCopiedMessageId] = useState<string | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const attachMenuRef = useRef<HTMLDivElement>(null);
   const profileMenuRef = useRef<HTMLDivElement>(null);
   const settingsModalRef = useRef<HTMLDivElement>(null);
   const feedbackModalRef = useRef<HTMLDivElement>(null);
+
+  // Copy message to clipboard
+  const handleCopyMessage = async (messageId: string, text: string) => {
+    try {
+      await navigator.clipboard.writeText(text);
+      setCopiedMessageId(messageId);
+      setTimeout(() => setCopiedMessageId(null), 2000);
+    } catch (err) {
+      console.error('Failed to copy:', err);
+    }
+  };
 
   // Get user initials for avatar fallback
   const getUserInitials = () => {
@@ -59,13 +71,17 @@ export default function ChatPage() {
     return 'U';
   };
 
-  // Save chat to history when messages change
+  // Save chat to history when messages change (only for NEW chats, not loaded ones)
   useEffect(() => {
+    // Skip if we're viewing an existing chat from history
+    if (selectedChatId) return;
+    
     if (messages.length > 0) {
       const firstUserMessage = messages.find(m => m.sender === 'user');
       if (firstUserMessage) {
         const existingChat = chatHistory.find(ch => 
-          ch.preview === firstUserMessage.text.substring(0, 50)
+          ch.preview === firstUserMessage.text.substring(0, 50) ||
+          ch.title === firstUserMessage.text.substring(0, 50) + (firstUserMessage.text.length > 50 ? '...' : '')
         );
         
         if (!existingChat) {
@@ -79,7 +95,7 @@ export default function ChatPage() {
         }
       }
     }
-  }, [messages]);
+  }, [messages, selectedChatId]);
 
   // Group chat history by time
   const groupChatHistory = () => {
@@ -266,9 +282,11 @@ export default function ChatPage() {
           return;
         }
         const json = await res.json();
-        if (json?.data) {
+        // Handle both array response and {data: array} response
+        const data = Array.isArray(json) ? json : json?.data;
+        if (data && data.length > 0) {
           // Map API shape to ChatHistory expected shape
-          const mapped = json.data.map((c: any) => ({
+          const mapped = data.map((c: any) => ({
             id: String(c.id),
             title: c.title,
             timestamp: new Date(c.lastMessageAt),
@@ -605,8 +623,8 @@ export default function ChatPage() {
                   </div>
 
                   {/* Message Content */}
-                  <div className="flex-1 max-w-3xl">
-                    <div className={`rounded-2xl px-5 py-3 ${
+                  <div className="flex-1 max-w-3xl group">
+                    <div className={`relative rounded-2xl px-5 py-3 ${
                       message.sender === 'user'
                         ? 'bg-gray-100 dark:bg-gray-800 text-gray-900 dark:text-gray-100'
                         : 'bg-transparent text-gray-900 dark:text-white'
@@ -618,6 +636,18 @@ export default function ChatPage() {
                       ) : (
                         <p className="whitespace-pre-wrap text-[15px] leading-relaxed">{message.text}</p>
                       )}
+                      {/* Copy Button */}
+                      <button
+                        onClick={() => handleCopyMessage(message.id, message.text)}
+                        className={`absolute ${message.sender === 'user' ? 'left-2' : 'right-2'} top-2 p-1.5 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600`}
+                        title="Copy message"
+                      >
+                        {copiedMessageId === message.id ? (
+                          <Check className="w-4 h-4 text-green-500" />
+                        ) : (
+                          <Copy className="w-4 h-4 text-gray-600 dark:text-gray-400" />
+                        )}
+                      </button>
                     </div>
                     <p className="text-xs text-gray-400 dark:text-gray-600 mt-2 px-2">
                       {message.timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
