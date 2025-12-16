@@ -33,8 +33,8 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // Call Gemini API
-    const API_KEY = process.env.GEMINI_API_KEY;
+    // Call Groq API
+    const API_KEY = process.env.GROQ_API_KEY;
     if (!API_KEY) {
       return NextResponse.json(
         { error: 'AI service not configured' },
@@ -42,30 +42,34 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Use gemini-2.5-flash (fast and efficient) - Updated model name
-    const url = `https://generativelanguage.googleapis.com/v1/models/gemini-2.5-flash:generateContent?key=${API_KEY}`;
-
     const enhancedPrompt = prompt + searchContext;
 
-    const response = await fetch(url, {
+    const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
+        'Authorization': `Bearer ${API_KEY}`,
       },
       body: JSON.stringify({
-        contents: [{ parts: [{ text: enhancedPrompt }] }],
-        generationConfig: {
-          temperature: 0.7,
-          topK: 40,
-          topP: 0.95,
-          maxOutputTokens: 2048,
-        },
+        model: 'llama-3.3-70b-versatile',
+        messages: [
+          {
+            role: 'system',
+            content: 'You are a helpful AI assistant. Provide clear, accurate, and helpful responses.'
+          },
+          {
+            role: 'user',
+            content: enhancedPrompt
+          }
+        ],
+        temperature: 0.7,
+        max_tokens: 2048,
       }),
     });
 
     if (!response.ok) {
       const errorData = await response.text();
-      console.error('Gemini API error:', errorData);
+      console.error('Groq API error:', errorData);
       return NextResponse.json(
         { error: 'Failed to get response from AI' },
         { status: 500 }
@@ -73,7 +77,7 @@ export async function POST(request: NextRequest) {
     }
 
     const data = await response.json();
-    const aiResponse = data.candidates?.[0]?.content?.parts?.[0]?.text || 'No response generated';
+    const aiResponse = data.choices?.[0]?.message?.content || 'No response generated';
 
     // Save to database if userId is provided
     if (userId) {

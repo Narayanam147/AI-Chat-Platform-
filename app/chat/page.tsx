@@ -37,12 +37,31 @@ export default function ChatPage() {
   const [feedbackSubmitting, setFeedbackSubmitting] = useState(false);
   const [theme, setTheme] = useState<'light' | 'dark'>('light');
   const [copiedMessageId, setCopiedMessageId] = useState<string | null>(null);
+  const [attachedFiles, setAttachedFiles] = useState<File[]>([]);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const attachMenuRef = useRef<HTMLDivElement>(null);
   const profileMenuRef = useRef<HTMLDivElement>(null);
   const settingsModalRef = useRef<HTMLDivElement>(null);
   const feedbackModalRef = useRef<HTMLDivElement>(null);
+
+  // Handle file selection
+  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    if (files) {
+      const newFiles = Array.from(files);
+      setAttachedFiles(prev => [...prev, ...newFiles]);
+    }
+    // Reset input so the same file can be selected again
+    if (fileInputRef.current) {
+      fileInputRef.current.value = '';
+    }
+  };
+
+  // Remove attached file
+  const removeAttachedFile = (index: number) => {
+    setAttachedFiles(prev => prev.filter((_, i) => i !== index));
+  };
 
   // Copy message to clipboard
   const handleCopyMessage = async (messageId: string, text: string) => {
@@ -70,6 +89,20 @@ export default function ChatPage() {
     }
     return 'U';
   };
+
+  // Load theme from localStorage on mount
+  useEffect(() => {
+    const savedTheme = localStorage.getItem('theme') as 'light' | 'dark' | null;
+    const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+    const initialTheme = savedTheme || (prefersDark ? 'dark' : 'light');
+    
+    setTheme(initialTheme);
+    if (initialTheme === 'dark') {
+      document.documentElement.classList.add('dark');
+    } else {
+      document.documentElement.classList.remove('dark');
+    }
+  }, []);
 
   // Save chat to history when messages change (only for NEW chats, not loaded ones)
   useEffect(() => {
@@ -232,6 +265,7 @@ export default function ChatPage() {
 
   const handleThemeChange = (newTheme: 'light' | 'dark') => {
     setTheme(newTheme);
+    localStorage.setItem('theme', newTheme);
     // Apply theme to document root
     if (newTheme === 'dark') {
       document.documentElement.classList.add('dark');
@@ -304,27 +338,48 @@ export default function ChatPage() {
   }, [session?.user?.email]);
 
   const handleSend = async () => {
-    if (!input.trim() || isLoading) return;
+    if ((!input.trim() && attachedFiles.length === 0) || isLoading) return;
+
+    // Build message text with file info
+    let messageText = input;
+    const fileNames = attachedFiles.map(f => f.name);
+    
+    // If there are attached files, mention them
+    if (attachedFiles.length > 0) {
+      const fileList = fileNames.join(', ');
+      if (messageText) {
+        messageText += `\n\n[Attached files: ${fileList}]`;
+      } else {
+        messageText = `[Attached files: ${fileList}]`;
+      }
+    }
 
     const userMessage: Message = {
       id: Date.now().toString(),
-      text: input,
+      text: messageText,
       sender: 'user',
       timestamp: new Date(),
+      attachments: fileNames.length > 0 ? fileNames : undefined,
     };
 
     setMessages(prev => [...prev, userMessage]);
     setInput("");
+    setAttachedFiles([]); // Clear attached files after sending
     setIsLoading(true);
 
     try {
+      // For now, send text to API (file processing would need backend support)
+      const promptText = attachedFiles.length > 0 
+        ? `${input}\n\n(Note: User attached files: ${fileNames.join(', ')}. File content analysis is not yet supported.)`
+        : input;
+
       const response = await fetch("/api/chat", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
         },
         body: JSON.stringify({ 
-          prompt: input,
+          prompt: promptText,
           userId: session?.user?.email 
         }),
       });
@@ -501,6 +556,25 @@ export default function ChatPage() {
               title={showSidebar ? "Close sidebar" : "Open sidebar"}
             >
               <Menu className="w-5 h-5 text-gray-700 dark:text-gray-300" />
+            </button>
+
+            {/* Quick Theme Toggle */}
+            <button
+              onClick={() => {
+                const newTheme = theme === 'light' ? 'dark' : 'light';
+                setTheme(newTheme);
+                localStorage.setItem('theme', newTheme);
+                document.documentElement.classList.toggle('dark', newTheme === 'dark');
+              }}
+              className="p-2 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition-colors"
+              aria-label="Toggle theme"
+              title={theme === 'light' ? "Switch to dark mode" : "Switch to light mode"}
+            >
+              {theme === 'light' ? (
+                <Moon className="w-5 h-5 text-gray-700 dark:text-gray-300" />
+              ) : (
+                <Sun className="w-5 h-5 text-gray-700 dark:text-gray-300" />
+              )}
             </button>
 
             {/* Title - Show when sidebar is collapsed */}
@@ -720,7 +794,32 @@ export default function ChatPage() {
                 className="hidden"
                 multiple
                 accept="image/*,.pdf,.doc,.docx,.txt"
+                onChange={handleFileSelect}
               />
+
+              {/* Attached Files Preview */}
+              {attachedFiles.length > 0 && (
+                <div className="flex flex-wrap gap-2 px-2">
+                  {attachedFiles.map((file, index) => (
+                    <div key={index} className="flex items-center gap-2 bg-gray-200 dark:bg-gray-700 rounded-lg px-3 py-1.5">
+                      {file.type.startsWith('image/') ? (
+                        <ImageIcon className="w-4 h-4 text-blue-500" />
+                      ) : (
+                        <FileText className="w-4 h-4 text-blue-500" />
+                      )}
+                      <span className="text-xs text-gray-700 dark:text-gray-300 max-w-[100px] truncate">
+                        {file.name}
+                      </span>
+                      <button
+                        onClick={() => removeAttachedFile(index)}
+                        className="p-0.5 hover:bg-gray-300 dark:hover:bg-gray-600 rounded"
+                      >
+                        <X className="w-3 h-3 text-gray-500" />
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
 
               {/* Text Input Field */}
               <textarea
