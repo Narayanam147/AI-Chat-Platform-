@@ -2,7 +2,7 @@
 
 import { useSession, signOut, signIn } from "next-auth/react";
 import { useState, useRef, useEffect } from "react";
-import { Send, Upload, Download, Menu, LogOut, User, Sparkles, FileText, Image as ImageIcon, X, MessageSquare, Clock, Trash2, Plus, Settings, HelpCircle, FolderOpen, Code, Moon, Sun, Mail, KeyRound, Copy, Check } from "lucide-react";
+import { Send, Upload, Download, Menu, LogOut, User, Sparkles, FileText, Image as ImageIcon, X, MessageSquare, Clock, Trash2, Plus, Settings, HelpCircle, FolderOpen, Code, Moon, Sun, Mail, KeyRound, Copy, Check, Brain, ToggleLeft, ToggleRight } from "lucide-react";
 import ReactMarkdown from "react-markdown";
 
 interface Message {
@@ -38,6 +38,18 @@ export default function ChatPage() {
   const [theme, setTheme] = useState<'light' | 'dark'>('light');
   const [copiedMessageId, setCopiedMessageId] = useState<string | null>(null);
   const [attachedFiles, setAttachedFiles] = useState<File[]>([]);
+  const [personalizationEnabled, setPersonalizationEnabled] = useState(true);
+  const [userActivity, setUserActivity] = useState<{
+    topics: string[];
+    preferredStyle: string;
+    recentQueries: string[];
+    interactionCount: number;
+  }>({
+    topics: [],
+    preferredStyle: 'balanced',
+    recentQueries: [],
+    interactionCount: 0
+  });
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const attachMenuRef = useRef<HTMLDivElement>(null);
@@ -102,7 +114,67 @@ export default function ChatPage() {
     } else {
       document.documentElement.classList.remove('dark');
     }
+
+    // Load personalization settings
+    const savedPersonalization = localStorage.getItem('personalizationEnabled');
+    if (savedPersonalization !== null) {
+      setPersonalizationEnabled(savedPersonalization === 'true');
+    }
+
+    // Load user activity data
+    const savedActivity = localStorage.getItem('userActivity');
+    if (savedActivity) {
+      try {
+        setUserActivity(JSON.parse(savedActivity));
+      } catch (e) {
+        console.error('Error loading user activity:', e);
+      }
+    }
   }, []);
+
+  // Extract topics from user message
+  const extractTopics = (text: string): string[] => {
+    const keywords = text.toLowerCase()
+      .replace(/[^a-z0-9\s]/g, '')
+      .split(/\s+/)
+      .filter(word => word.length > 4)
+      .filter(word => !['about', 'would', 'could', 'should', 'there', 'their', 'which', 'where', 'please', 'thanks', 'thank'].includes(word));
+    return [...new Set(keywords)].slice(0, 5);
+  };
+
+  // Update user activity when sending a message
+  const updateUserActivity = (message: string) => {
+    const newTopics = extractTopics(message);
+    setUserActivity(prev => {
+      const updatedActivity = {
+        topics: [...new Set([...newTopics, ...prev.topics])].slice(0, 20),
+        preferredStyle: prev.preferredStyle,
+        recentQueries: [message.substring(0, 100), ...prev.recentQueries].slice(0, 10),
+        interactionCount: prev.interactionCount + 1
+      };
+      localStorage.setItem('userActivity', JSON.stringify(updatedActivity));
+      return updatedActivity;
+    });
+  };
+
+  // Toggle personalization
+  const togglePersonalization = () => {
+    const newValue = !personalizationEnabled;
+    setPersonalizationEnabled(newValue);
+    localStorage.setItem('personalizationEnabled', String(newValue));
+  };
+
+  // Clear user activity data
+  const clearUserActivity = () => {
+    const emptyActivity = {
+      topics: [],
+      preferredStyle: 'balanced',
+      recentQueries: [],
+      interactionCount: 0
+    };
+    setUserActivity(emptyActivity);
+    localStorage.removeItem('userActivity');
+  };
 
   // Save chat to history when messages change (only for NEW chats, not loaded ones)
   useEffect(() => {
@@ -367,11 +439,24 @@ export default function ChatPage() {
     setAttachedFiles([]); // Clear attached files after sending
     setIsLoading(true);
 
+    // Update user activity for personalization
+    if (personalizationEnabled) {
+      updateUserActivity(input);
+    }
+
     try {
       // For now, send text to API (file processing would need backend support)
       const promptText = attachedFiles.length > 0 
         ? `${input}\n\n(Note: User attached files: ${fileNames.join(', ')}. File content analysis is not yet supported.)`
         : input;
+
+      // Prepare personalization context
+      const personalizationContext = personalizationEnabled ? {
+        enabled: true,
+        topics: userActivity.topics,
+        recentQueries: userActivity.recentQueries.slice(0, 3),
+        interactionCount: userActivity.interactionCount
+      } : null;
 
       const response = await fetch("/api/chat", {
         method: "POST",
@@ -380,7 +465,8 @@ export default function ChatPage() {
         },
         body: JSON.stringify({ 
           prompt: promptText,
-          userId: session?.user?.email 
+          userId: session?.user?.email,
+          personalization: personalizationContext
         }),
       });
 
@@ -880,7 +966,7 @@ export default function ChatPage() {
             </div>
 
             {/* Modal Content */}
-            <div className="p-6 space-y-6">
+            <div className="p-6 space-y-6 max-h-[70vh] overflow-y-auto">
               {/* Theme Selection */}
               <div>
                 <h3 className="text-sm font-semibold text-gray-900 dark:text-white mb-3">Theme</h3>
@@ -937,16 +1023,16 @@ export default function ChatPage() {
                 </div>
               </div>
 
-              {/* Clear All Chats */}
+              {/* Clear History */}
               <div>
-                <h3 className="text-sm font-semibold text-gray-900 dark:text-white mb-3">Danger Zone</h3>
+                <h3 className="text-sm font-semibold text-gray-900 dark:text-white mb-3">Clear History</h3>
                 <button
                   onClick={handleClearAllChats}
                   className="w-full p-4 bg-red-50 dark:bg-red-900/20 hover:bg-red-100 dark:hover:bg-red-900/30 border border-red-200 dark:border-red-800 rounded-lg transition-colors flex items-center gap-3"
                 >
                   <Trash2 className="w-5 h-5 text-red-600 dark:text-red-500" />
                   <div className="flex-1 text-left">
-                    <p className="text-sm font-medium text-red-700 dark:text-red-500">Clear All Chats</p>
+                    <p className="text-sm font-medium text-red-700 dark:text-red-500">Clear All History</p>
                     <p className="text-xs text-red-600 dark:text-red-400">Permanently delete all chat history</p>
                   </div>
                 </button>
@@ -993,6 +1079,52 @@ export default function ChatPage() {
                     <FileText className="w-5 h-5" />
                     Privacy Policy
                   </a>
+                </div>
+              </div>
+
+              {/* Personalization / User Activity - At Bottom */}
+              <div>
+                <h3 className="text-sm font-semibold text-gray-900 dark:text-white mb-3 flex items-center gap-2">
+                  <Brain className="w-4 h-4" />
+                  Personalization
+                </h3>
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between p-4 bg-gray-100 dark:bg-gray-700 rounded-lg">
+                    <div className="flex-1">
+                      <p className="text-sm font-medium text-gray-900 dark:text-white">Adaptive Responses</p>
+                      <p className="text-xs text-gray-600 dark:text-gray-400">AI learns from your activity to provide better answers</p>
+                    </div>
+                    <button
+                      onClick={togglePersonalization}
+                      className="ml-4 focus:outline-none"
+                      aria-label={personalizationEnabled ? "Disable personalization" : "Enable personalization"}
+                    >
+                      {personalizationEnabled ? (
+                        <ToggleRight className="w-10 h-10 text-blue-600" />
+                      ) : (
+                        <ToggleLeft className="w-10 h-10 text-gray-400" />
+                      )}
+                    </button>
+                  </div>
+                  
+                  {personalizationEnabled && (
+                    <div className="p-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg border border-blue-200 dark:border-blue-800">
+                      <p className="text-xs font-medium text-blue-800 dark:text-blue-300 mb-2">Your Activity Summary</p>
+                      <div className="space-y-1 text-xs text-blue-700 dark:text-blue-400">
+                        <p>• Interactions: {userActivity.interactionCount}</p>
+                        <p>• Topics tracked: {userActivity.topics.length}</p>
+                        {userActivity.topics.length > 0 && (
+                          <p className="truncate">• Recent topics: {userActivity.topics.slice(0, 5).join(', ')}</p>
+                        )}
+                      </div>
+                      <button
+                        onClick={clearUserActivity}
+                        className="mt-3 text-xs text-blue-600 dark:text-blue-400 hover:underline"
+                      >
+                        Clear activity data
+                      </button>
+                    </div>
+                  )}
                 </div>
               </div>
             </div>
