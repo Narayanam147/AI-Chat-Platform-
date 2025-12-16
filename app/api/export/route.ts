@@ -176,7 +176,7 @@ export async function POST(request: NextRequest) {
       // Generate a simple PDF manually (no external dependencies with font issues)
       const pdfContent = generateSimplePDF(messages);
       
-      return new NextResponse(pdfContent, {
+      return new NextResponse(new Uint8Array(pdfContent), {
         headers: {
           'Content-Type': 'application/pdf',
           'Content-Disposition': `attachment; filename="chat-export-${Date.now()}.pdf"`,
