@@ -1,4 +1,4 @@
-import { supabase } from '@/lib/mongodb';
+import { supabase } from '@/lib/supabase';
 
 export interface Message {
   text: string;
