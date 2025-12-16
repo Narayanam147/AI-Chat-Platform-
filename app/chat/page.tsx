@@ -2,7 +2,7 @@
 
 import { useSession, signOut, signIn } from "next-auth/react";
 import { useState, useRef, useEffect } from "react";
-import { Send, Upload, Download, Menu, LogOut, User, Sparkles, FileText, Image as ImageIcon, X, MessageSquare, Clock, Trash2, Plus, Settings, HelpCircle, FolderOpen, Code, Moon, Sun, Mail, KeyRound, Copy, Check, Brain, ToggleLeft, ToggleRight } from "lucide-react";
+import { Send, Upload, Download, Menu, LogOut, User, Sparkles, FileText, Image as ImageIcon, X, MessageSquare, Clock, Trash2, Plus, Settings, HelpCircle, FolderOpen, Code, Moon, Sun, Mail, KeyRound, Copy, Check, Brain, ToggleLeft, ToggleRight, Search } from "lucide-react";
 import ReactMarkdown from "react-markdown";
 
 interface Message {
@@ -39,6 +39,8 @@ export default function ChatPage() {
   const [copiedMessageId, setCopiedMessageId] = useState<string | null>(null);
   const [attachedFiles, setAttachedFiles] = useState<File[]>([]);
   const [personalizationEnabled, setPersonalizationEnabled] = useState(true);
+  const [currentChatId, setCurrentChatId] = useState<string | null>(null);
+  const [searchQuery, setSearchQuery] = useState("");
   const [userActivity, setUserActivity] = useState<{
     topics: string[];
     preferredStyle: string;
@@ -176,31 +178,66 @@ export default function ChatPage() {
     localStorage.removeItem('userActivity');
   };
 
-  // Save chat to history when messages change (only for NEW chats, not loaded ones)
+  // Save chat to history when messages change
   useEffect(() => {
-    // Skip if we're viewing an existing chat from history
+    // Skip if we're viewing an existing chat from history (selectedChatId is set)
     if (selectedChatId) return;
     
     if (messages.length > 0) {
       const firstUserMessage = messages.find(m => m.sender === 'user');
       if (firstUserMessage) {
-        const existingChat = chatHistory.find(ch => 
-          ch.preview === firstUserMessage.text.substring(0, 50) ||
-          ch.title === firstUserMessage.text.substring(0, 50) + (firstUserMessage.text.length > 50 ? '...' : '')
-        );
-        
-        if (!existingChat) {
-          const newChat: ChatHistory = {
-            id: Date.now().toString(),
-            title: firstUserMessage.text.substring(0, 50) + (firstUserMessage.text.length > 50 ? '...' : ''),
-            timestamp: new Date(),
-            preview: firstUserMessage.text.substring(0, 100),
-          };
-          setChatHistory(prev => [newChat, ...prev]);
+        // If we have a currentChatId, update that chat entry
+        if (currentChatId) {
+          setChatHistory(prev => prev.map(ch => {
+            if (ch.id === currentChatId) {
+              return {
+                ...ch,
+                timestamp: new Date(),
+                preview: messages[messages.length - 1]?.text.substring(0, 100) || ch.preview,
+                messages: messages.map(m => ({
+                  text: m.text,
+                  sender: m.sender,
+                  timestamp: m.timestamp.toISOString(),
+                })),
+              };
+            }
+            return ch;
+          }));
+        } else {
+          // Create new chat entry only if not already exists
+          const existingChat = chatHistory.find(ch => 
+            ch.preview === firstUserMessage.text.substring(0, 50) ||
+            ch.title === firstUserMessage.text.substring(0, 50) + (firstUserMessage.text.length > 50 ? '...' : '')
+          );
+          
+          if (!existingChat) {
+            const newChatId = Date.now().toString();
+            const newChat: ChatHistory = {
+              id: newChatId,
+              title: firstUserMessage.text.substring(0, 50) + (firstUserMessage.text.length > 50 ? '...' : ''),
+              timestamp: new Date(),
+              preview: firstUserMessage.text.substring(0, 100),
+              messages: messages.map(m => ({
+                text: m.text,
+                sender: m.sender,
+                timestamp: m.timestamp.toISOString(),
+              })),
+            };
+            setChatHistory(prev => [newChat, ...prev]);
+            setCurrentChatId(newChatId); // Set current chat ID for future messages in this conversation
+          }
         }
       }
     }
-  }, [messages, selectedChatId]);
+  }, [messages, selectedChatId, currentChatId]);
+
+  // Filter chat history based on search query
+  const filteredChatHistory = searchQuery.trim() 
+    ? chatHistory.filter(chat => 
+        chat.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        chat.preview.toLowerCase().includes(searchQuery.toLowerCase())
+      )
+    : chatHistory;
 
   // Group chat history by time
   const groupChatHistory = () => {
@@ -218,7 +255,7 @@ export default function ChatPage() {
       'Older': []
     };
 
-    chatHistory.forEach(chat => {
+    filteredChatHistory.forEach(chat => {
       const chatDate = new Date(chat.timestamp);
       if (chatDate >= today) {
         groups['Today'].push(chat);
@@ -237,6 +274,8 @@ export default function ChatPage() {
   const handleNewChat = () => {
     setMessages([]);
     setInput("");
+    setSelectedChatId(null);
+    setCurrentChatId(null); // Clear current chat ID to start fresh conversation
   };
 
   const handleDeleteChat = async (chatId: string) => {
@@ -545,7 +584,7 @@ export default function ChatPage() {
       {/* Left Sidebar - Collapsible */}
       <aside className={`${showSidebar ? 'w-72' : 'w-0'} transition-all duration-300 ease-in-out overflow-hidden bg-gray-50 dark:bg-gray-900 border-r border-gray-200 dark:border-gray-800 flex flex-col fixed lg:relative h-full z-50 lg:z-auto`}>
         {/* New Chat Button - Prominent */}
-        <div className="px-3 pt-4 pb-4">
+        <div className="px-3 pt-4 pb-2">
           <button
             onClick={handleNewChat}
             className="w-full py-3 px-4 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-700 text-gray-900 dark:text-white rounded-full hover:bg-gray-50 dark:hover:bg-gray-750 transition-all shadow-sm hover:shadow-md font-medium text-sm flex items-center gap-3"
@@ -555,8 +594,36 @@ export default function ChatPage() {
           </button>
         </div>
 
+        {/* Search Bar */}
+        <div className="px-3 pb-3">
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
+            <input
+              type="text"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              placeholder="Search chats..."
+              className="w-full pl-9 pr-8 py-2 text-sm bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-700 rounded-lg text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
+            />
+            {searchQuery && (
+              <button
+                onClick={() => setSearchQuery("")}
+                className="absolute right-2 top-1/2 transform -translate-y-1/2 p-1 hover:bg-gray-200 dark:hover:bg-gray-700 rounded"
+              >
+                <X className="w-3 h-3 text-gray-500" />
+              </button>
+            )}
+          </div>
+        </div>
+
         {/* Navigation List - Chat History */}
         <div className="flex-1 overflow-y-auto px-2">
+          {/* No results message */}
+          {searchQuery && filteredChatHistory.length === 0 && (
+            <div className="px-3 py-4 text-center text-sm text-gray-500 dark:text-gray-400">
+              No chats found for "{searchQuery}"
+            </div>
+          )}
           <div className="space-y-1">
             {Object.entries(groupChatHistory()).map(([group, chats]) => (
               chats.length > 0 && (
@@ -582,11 +649,15 @@ export default function ChatPage() {
                               timestamp: new Date(m.timestamp || new Date()),
                             }));
                             setMessages(mapped);
+                          } else {
+                            setMessages([]);
                           }
                           setSelectedChatId(chat.id);
+                          setCurrentChatId(chat.id); // Set current chat ID for continuing conversation
+                          setSearchQuery(""); // Clear search when selecting a chat
                         }}
                         className={`group relative px-3 py-2.5 mx-1 rounded-lg transition-colors cursor-pointer ${
-                          selectedChatId === chat.id 
+                          (selectedChatId === chat.id || currentChatId === chat.id)
                             ? 'bg-gray-200 dark:bg-gray-800' 
                             : 'hover:bg-gray-100 dark:hover:bg-gray-800'
                         }`}
