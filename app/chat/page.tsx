@@ -141,7 +141,7 @@ export default function ChatPage() {
       .split(/\s+/)
       .filter(word => word.length > 4)
       .filter(word => !['about', 'would', 'could', 'should', 'there', 'their', 'which', 'where', 'please', 'thanks', 'thank'].includes(word));
-    return [...new Set(keywords)].slice(0, 5);
+    return Array.from(new Set(keywords)).slice(0, 5);
   };
 
   // Update user activity when sending a message
@@ -149,7 +149,7 @@ export default function ChatPage() {
     const newTopics = extractTopics(message);
     setUserActivity(prev => {
       const updatedActivity = {
-        topics: [...new Set([...newTopics, ...prev.topics])].slice(0, 20),
+        topics: Array.from(new Set([...newTopics, ...prev.topics])).slice(0, 20),
         preferredStyle: prev.preferredStyle,
         recentQueries: [message.substring(0, 100), ...prev.recentQueries].slice(0, 10),
         interactionCount: prev.interactionCount + 1
