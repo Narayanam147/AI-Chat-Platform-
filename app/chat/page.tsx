@@ -459,17 +459,40 @@ export default function ChatPage() {
 
   // Share chat by copying a link to clipboard
   const handleShare = async (chatId: string) => {
-    if (!chatId) {
+    // determine effective id
+    const id = chatId || selectedChatId || currentChatId;
+    if (!id) {
       alert('No chat selected to share');
       return;
     }
-    const url = `${window.location.origin}/chat?chatId=${encodeURIComponent(chatId)}`;
+    const url = `${window.location.origin}/chat?chatId=${encodeURIComponent(id)}`;
     try {
-      await navigator.clipboard.writeText(url);
-      alert('Shareable link copied to clipboard');
-    } catch (e) {
-      console.error('Failed to copy share link', e);
+      // Prefer Web Share API on mobile
+      if (navigator.share) {
+        await navigator.share({
+          title: 'Chat from Chat Assistant',
+          text: 'Open this chat in Chat Assistant',
+          url,
+        });
+        return;
+      }
+
+      // Fallback: try clipboard
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        await navigator.clipboard.writeText(url);
+        alert('Shareable link copied to clipboard');
+        return;
+      }
+
+      // Last resort: show prompt so user can copy manually
       prompt('Copy this link:', url);
+    } catch (e) {
+      console.error('Failed to share link', e);
+      try {
+        prompt('Copy this link:', url);
+      } catch (_) {
+        // swallow
+      }
     }
   };
 
