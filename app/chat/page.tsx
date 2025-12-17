@@ -22,7 +22,10 @@ interface ChatHistory {
 }
 
 export default function ChatPage() {
-  const { data: session } = useSession();
+    const { data: session } = useSession();
+    // Simple admin check (add your admin email(s) here)
+    const adminEmails = ["admin@example.com", "sarvanmdubey@gmail.com"];
+    const isAdmin = session?.user?.email && adminEmails.includes(session.user.email);
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState("");
   const [isLoading, setIsLoading] = useState(false);
@@ -46,11 +49,19 @@ export default function ChatPage() {
     preferredStyle: string;
     recentQueries: string[];
     interactionCount: number;
+    writingStyle: string;
+    preferredLength: string;
+    expertise: { [key: string]: number };
+    conversationPatterns: string[];
   }>({
     topics: [],
     preferredStyle: 'balanced',
     recentQueries: [],
-    interactionCount: 0
+    interactionCount: 0,
+    writingStyle: 'conversational',
+    preferredLength: 'medium',
+    expertise: {},
+    conversationPatterns: []
   });
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -144,15 +155,72 @@ export default function ChatPage() {
     return Array.from(new Set(keywords)).slice(0, 5);
   };
 
+  // Detect conversation patterns and user preferences
+  const analyzeUserBehavior = (message: string, allMessages: Message[]) => {
+    const patterns: string[] = [];
+    const msgLower = message.toLowerCase();
+    
+    // Detect question types
+    if (msgLower.includes('how to') || msgLower.includes('how do')) patterns.push('tutorial_seeker');
+    if (msgLower.includes('explain') || msgLower.includes('what is')) patterns.push('explanation_seeker');
+    if (msgLower.includes('code') || msgLower.includes('program') || msgLower.includes('function')) patterns.push('coder');
+    if (msgLower.includes('write') || msgLower.includes('create') || msgLower.includes('generate')) patterns.push('creator');
+    if (msgLower.includes('summarize') || msgLower.includes('tldr') || msgLower.includes('brief')) patterns.push('prefers_concise');
+    if (msgLower.includes('detail') || msgLower.includes('elaborate') || msgLower.includes('explain more')) patterns.push('prefers_detailed');
+    
+    // Detect expertise areas
+    const expertiseAreas: { [key: string]: string[] } = {
+      'programming': ['code', 'programming', 'developer', 'javascript', 'python', 'api', 'function', 'debug'],
+      'business': ['business', 'marketing', 'strategy', 'growth', 'revenue', 'sales', 'startup'],
+      'creative': ['creative', 'design', 'art', 'writing', 'story', 'content', 'brand'],
+      'technical': ['technical', 'engineering', 'system', 'architecture', 'database', 'server'],
+      'academic': ['research', 'study', 'thesis', 'academic', 'paper', 'citation', 'analysis'],
+    };
+    
+    const detectedExpertise: { [key: string]: number } = {};
+    for (const [area, keywords] of Object.entries(expertiseAreas)) {
+      for (const keyword of keywords) {
+        if (msgLower.includes(keyword)) {
+          detectedExpertise[area] = (detectedExpertise[area] || 0) + 1;
+        }
+      }
+    }
+    
+    // Analyze response length preference from chat history
+    const userMessages = allMessages.filter(m => m.sender === 'user');
+    const avgLength = userMessages.length > 0 
+      ? userMessages.reduce((sum, m) => sum + m.text.length, 0) / userMessages.length 
+      : 100;
+    
+    let preferredLength = 'medium';
+    if (avgLength < 50) preferredLength = 'short';
+    else if (avgLength > 200) preferredLength = 'detailed';
+    
+    return { patterns, detectedExpertise, preferredLength };
+  };
+
   // Update user activity when sending a message
   const updateUserActivity = (message: string) => {
     const newTopics = extractTopics(message);
+    const { patterns, detectedExpertise, preferredLength } = analyzeUserBehavior(message, messages);
+    
     setUserActivity(prev => {
+      // Merge expertise scores
+      const mergedExpertise = { ...prev.expertise };
+      for (const [area, score] of Object.entries(detectedExpertise)) {
+        mergedExpertise[area] = (mergedExpertise[area] || 0) + score;
+      }
+      
       const updatedActivity = {
-        topics: Array.from(new Set([...newTopics, ...prev.topics])).slice(0, 20),
+        topics: Array.from(new Set([...newTopics, ...prev.topics])).slice(0, 30),
         preferredStyle: prev.preferredStyle,
-        recentQueries: [message.substring(0, 100), ...prev.recentQueries].slice(0, 10),
-        interactionCount: prev.interactionCount + 1
+        recentQueries: [message.substring(0, 100), ...prev.recentQueries].slice(0, 15),
+        interactionCount: prev.interactionCount + 1,
+        writingStyle: patterns.includes('prefers_concise') ? 'concise' : 
+                      patterns.includes('prefers_detailed') ? 'detailed' : 'conversational',
+        preferredLength,
+        expertise: mergedExpertise,
+        conversationPatterns: Array.from(new Set([...patterns, ...prev.conversationPatterns])).slice(0, 10)
       };
       localStorage.setItem('userActivity', JSON.stringify(updatedActivity));
       return updatedActivity;
@@ -172,24 +240,33 @@ export default function ChatPage() {
       topics: [],
       preferredStyle: 'balanced',
       recentQueries: [],
-      interactionCount: 0
+      interactionCount: 0,
+      writingStyle: 'conversational',
+      preferredLength: 'medium',
+      expertise: {},
+      conversationPatterns: []
     };
     setUserActivity(emptyActivity);
     localStorage.removeItem('userActivity');
   };
 
-  // Save chat to history when messages change
+  // Save chat to history when messages change (local state only for UI updates)
   useEffect(() => {
-    // Skip if we're viewing an existing chat from history (selectedChatId is set)
-    if (selectedChatId) return;
+    // Skip if no messages
+    if (messages.length === 0) return;
     
-    if (messages.length > 0) {
-      const firstUserMessage = messages.find(m => m.sender === 'user');
-      if (firstUserMessage) {
-        // If we have a currentChatId, update that chat entry
-        if (currentChatId) {
-          setChatHistory(prev => prev.map(ch => {
-            if (ch.id === currentChatId) {
+    const firstUserMessage = messages.find(m => m.sender === 'user');
+    if (!firstUserMessage) return;
+
+    // If we have a currentChatId or selectedChatId, update that chat entry in local state
+    const activeId = currentChatId || selectedChatId;
+    
+    if (activeId) {
+      setChatHistory(prev => {
+        const exists = prev.some(ch => ch.id === activeId);
+        if (exists) {
+          return prev.map(ch => {
+            if (ch.id === activeId) {
               return {
                 ...ch,
                 timestamp: new Date(),
@@ -197,40 +274,40 @@ export default function ChatPage() {
                 messages: messages.map(m => ({
                   text: m.text,
                   sender: m.sender,
-                  timestamp: m.timestamp.toISOString(),
+                  timestamp: typeof m.timestamp === 'string' ? m.timestamp : m.timestamp.toISOString(),
                 })),
               };
             }
             return ch;
-          }));
-        } else {
-          // Create new chat entry only if not already exists
-          const existingChat = chatHistory.find(ch => 
-            ch.preview === firstUserMessage.text.substring(0, 50) ||
-            ch.title === firstUserMessage.text.substring(0, 50) + (firstUserMessage.text.length > 50 ? '...' : '')
-          );
-          
-          if (!existingChat) {
-            const newChatId = Date.now().toString();
-            const newChat: ChatHistory = {
-              id: newChatId,
-              title: firstUserMessage.text.substring(0, 50) + (firstUserMessage.text.length > 50 ? '...' : ''),
-              timestamp: new Date(),
-              preview: firstUserMessage.text.substring(0, 100),
-              messages: messages.map(m => ({
-                text: m.text,
-                sender: m.sender,
-                timestamp: m.timestamp.toISOString(),
-              })),
-            };
-            setChatHistory(prev => [newChat, ...prev]);
-            setCurrentChatId(newChatId); // Set current chat ID for future messages in this conversation
-          }
+          });
         }
+        return prev;
+      });
+    } else {
+      // No active chat - this shouldn't happen as currentChatId is set when first message is sent
+      // But as fallback, create a temporary local entry
+      const existingChat = chatHistory.find(ch => 
+        ch.title === firstUserMessage.text.substring(0, 50) + (firstUserMessage.text.length > 50 ? '...' : '')
+      );
+      
+      if (!existingChat) {
+        const tempId = `temp-${Date.now()}`;
+        const newChat: ChatHistory = {
+          id: tempId,
+          title: firstUserMessage.text.substring(0, 50) + (firstUserMessage.text.length > 50 ? '...' : ''),
+          timestamp: new Date(),
+          preview: firstUserMessage.text.substring(0, 100),
+          messages: messages.map(m => ({
+            text: m.text,
+            sender: m.sender,
+            timestamp: typeof m.timestamp === 'string' ? m.timestamp : m.timestamp.toISOString(),
+          })),
+        };
+        setChatHistory(prev => [newChat, ...prev]);
       }
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [messages, selectedChatId, currentChatId]);
+  }, [messages]);
 
   // Filter chat history based on search query
   const filteredChatHistory = searchQuery.trim() 
@@ -490,12 +567,21 @@ export default function ChatPage() {
         ? `${input}\n\n(Note: User attached files: ${fileNames.join(', ')}. File content analysis is not yet supported.)`
         : input;
 
-      // Prepare personalization context
+      // Prepare enhanced personalization context (Gemini-style adaptive learning)
       const personalizationContext = personalizationEnabled ? {
         enabled: true,
         topics: userActivity.topics,
-        recentQueries: userActivity.recentQueries.slice(0, 3),
-        interactionCount: userActivity.interactionCount
+        recentQueries: userActivity.recentQueries.slice(0, 5),
+        interactionCount: userActivity.interactionCount,
+        writingStyle: userActivity.writingStyle,
+        preferredLength: userActivity.preferredLength,
+        expertise: userActivity.expertise,
+        conversationPatterns: userActivity.conversationPatterns,
+        // Include current chat context for better continuity
+        currentChatContext: messages.slice(-6).map(m => ({
+          role: m.sender,
+          content: m.text.substring(0, 200)
+        }))
       } : null;
 
       const response = await fetch("/api/chat", {
@@ -506,11 +592,17 @@ export default function ChatPage() {
         body: JSON.stringify({ 
           prompt: promptText,
           userId: session?.user?.email,
-          personalization: personalizationContext
+          personalization: personalizationContext,
+          chatId: currentChatId // Send current chat ID to append messages
         }),
       });
 
       const data = await response.json();
+
+      // Update currentChatId if a new chat was created
+      if (data.chatId && !currentChatId) {
+        setCurrentChatId(data.chatId);
+      }
 
       const aiMessage: Message = {
         id: (Date.now() + 1).toString(),
@@ -1158,8 +1250,13 @@ export default function ChatPage() {
               <div>
                 <h3 className="text-sm font-semibold text-gray-900 dark:text-white mb-3 flex items-center gap-2">
                   <Brain className="w-4 h-4" />
-                  Personalization
+                  Your Past Chats with AI
                 </h3>
+                <div className="p-4 bg-purple-50 dark:bg-purple-900/20 rounded-lg border border-purple-200 dark:border-purple-800 mb-3">
+                  <p className="text-xs text-purple-800 dark:text-purple-300">
+                    AI learns from your past chats, understanding more about you and your preferences to personalize your experience. You can manage and delete your data, or turn this off anytime.
+                  </p>
+                </div>
                 <div className="space-y-3">
                   <div className="flex items-center justify-between p-4 bg-gray-100 dark:bg-gray-700 rounded-lg">
                     <div className="flex-1">
@@ -1179,21 +1276,65 @@ export default function ChatPage() {
                     </button>
                   </div>
                   
-                  {personalizationEnabled && (
+                  {personalizationEnabled && isAdmin && (
                     <div className="p-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg border border-blue-200 dark:border-blue-800">
-                      <p className="text-xs font-medium text-blue-800 dark:text-blue-300 mb-2">Your Activity Summary</p>
-                      <div className="space-y-1 text-xs text-blue-700 dark:text-blue-400">
-                        <p>• Interactions: {userActivity.interactionCount}</p>
-                        <p>• Topics tracked: {userActivity.topics.length}</p>
+                      <p className="text-xs font-medium text-blue-800 dark:text-blue-300 mb-3">📊 User Learning Profile (Admin Only)</p>
+                      <div className="space-y-2 text-xs text-blue-700 dark:text-blue-400">
+                        <div className="flex justify-between">
+                          <span>Total Interactions:</span>
+                          <span className="font-medium">{userActivity.interactionCount}</span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span>Topics Learned:</span>
+                          <span className="font-medium">{userActivity.topics.length}</span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span>Writing Style:</span>
+                          <span className="font-medium capitalize">{userActivity.writingStyle}</span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span>Response Length:</span>
+                          <span className="font-medium capitalize">{userActivity.preferredLength}</span>
+                        </div>
+                        {Object.keys(userActivity.expertise).length > 0 && (
+                          <div>
+                            <span className="block mb-1">Expertise Areas:</span>
+                            <div className="flex flex-wrap gap-1 mt-1">
+                              {Object.entries(userActivity.expertise)
+                                .sort((a, b) => (b[1] as number) - (a[1] as number))
+                                .slice(0, 4)
+                                .map(([area]) => (
+                                  <span key={area} className="px-2 py-0.5 bg-blue-200 dark:bg-blue-800 rounded text-xs capitalize">
+                                    {area}
+                                  </span>
+                                ))}
+                            </div>
+                          </div>
+                        )}
+                        {userActivity.conversationPatterns.length > 0 && (
+                          <div>
+                            <span className="block mb-1">Conversation Style:</span>
+                            <div className="flex flex-wrap gap-1 mt-1">
+                              {userActivity.conversationPatterns.slice(0, 3).map((pattern) => (
+                                <span key={pattern} className="px-2 py-0.5 bg-purple-200 dark:bg-purple-800 rounded text-xs">
+                                  {pattern.replace('_', ' ')}
+                                </span>
+                              ))}
+                            </div>
+                          </div>
+                        )}
                         {userActivity.topics.length > 0 && (
-                          <p className="truncate">• Recent topics: {userActivity.topics.slice(0, 5).join(', ')}</p>
+                          <div>
+                            <span className="block mb-1">Recent Topics:</span>
+                            <p className="text-xs opacity-80 truncate">{userActivity.topics.slice(0, 8).join(', ')}</p>
+                          </div>
                         )}
                       </div>
                       <button
                         onClick={clearUserActivity}
-                        className="mt-3 text-xs text-blue-600 dark:text-blue-400 hover:underline"
+                        className="mt-4 w-full px-3 py-2 text-xs text-red-600 dark:text-red-400 border border-red-300 dark:border-red-700 rounded-lg hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors"
                       >
-                        Clear activity data
+                        🗑️ Clear All Activity Data
                       </button>
                     </div>
                   )}

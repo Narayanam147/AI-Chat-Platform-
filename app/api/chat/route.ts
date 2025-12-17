@@ -3,7 +3,7 @@ import { ChatModel } from '@/models/Chat';
 
 export async function POST(request: NextRequest) {
   try {
-    const { prompt, userId, personalization } = await request.json();
+    const { prompt, userId, personalization, chatId } = await request.json();
 
     if (!prompt) {
       return NextResponse.json(
@@ -12,31 +12,64 @@ export async function POST(request: NextRequest) {
       );
     }
 
+
     let searchContext = '';
     const lowerPrompt = prompt.toLowerCase();
     const isNewsQuery = lowerPrompt.includes('news') || lowerPrompt.includes('headlines') || lowerPrompt.includes('today') || lowerPrompt.includes('latest') || lowerPrompt.includes('current events');
 
-    // For news queries, try NewsAPI first (free tier: 100 requests/day)
-    if (isNewsQuery && process.env.NEWS_API_KEY) {
+    // Weather query detection
+    const weatherKeywords = ['weather', 'temperature', 'forecast', 'humidity', 'rain', 'snow', 'wind'];
+    const isWeatherQuery = weatherKeywords.some(word => lowerPrompt.includes(word));
+    // Simple city extraction: look for 'in [city]' or 'at [city]'
+    let weatherCity = null;
+    const cityMatch = lowerPrompt.match(/(?:in|at)\s+([a-zA-Z\s]+)/);
+    if (isWeatherQuery && cityMatch && cityMatch[1]) {
+      weatherCity = cityMatch[1].trim().replace(/\?$/, '');
+    } else if (isWeatherQuery) {
+      // fallback: try to extract last word if it looks like a city
+      const words = lowerPrompt.split(' ');
+      if (words.length > 1) {
+        weatherCity = words[words.length - 1].replace(/\?$/, '');
+      }
+    }
+
+    // For weather queries, call weather API first
+    if (isWeatherQuery && weatherCity) {
       try {
-        const newsUrl = `https://newsapi.org/v2/top-headlines?country=us&pageSize=10&apiKey=${process.env.NEWS_API_KEY}`;
-        console.log('📰 Fetching top headlines...');
-        const newsResponse = await fetch(newsUrl);
-        
-        if (newsResponse.ok) {
-          const newsData = await newsResponse.json();
-          if (newsData.articles && newsData.articles.length > 0) {
-            searchContext = '\n\n[TODAY\'S TOP NEWS HEADLINES - December 16, 2025:]\n' + 
-              newsData.articles.slice(0, 10).map((article: any, index: number) => 
-                `${index + 1}. **${article.title}**\n${article.description || ''}\nSource: ${article.source?.name} - ${article.url}`
-              ).join('\n\n');
-            console.log('✅ News headlines added:', newsData.articles.length);
-          }
+        const weatherRes = await fetch(`${process.env.NEXT_PUBLIC_BASE_URL || ''}/api/weather?city=${encodeURIComponent(weatherCity)}`);
+        if (weatherRes.ok) {
+          const weatherData = await weatherRes.json();
+          searchContext = `\n\n[CURRENT WEATHER for ${weatherData.city}: ${weatherData.temp}°C, ${weatherData.desc}]`;
         } else {
-          console.error('❌ News API error:', await newsResponse.text());
+          const err = await weatherRes.text();
+          console.error('❌ Weather API error:', err);
         }
-      } catch (newsError) {
-        console.error('❌ News fetch error:', newsError);
+      } catch (weatherError) {
+        console.error('❌ Weather fetch error:', weatherError);
+      }
+    } else {
+      // For news queries, try NewsAPI first (free tier: 100 requests/day)
+      if (isNewsQuery && process.env.NEWS_API_KEY) {
+        try {
+          const newsUrl = `https://newsapi.org/v2/top-headlines?country=us&pageSize=10&apiKey=${process.env.NEWS_API_KEY}`;
+          console.log('📰 Fetching top headlines...');
+          const newsResponse = await fetch(newsUrl);
+          
+          if (newsResponse.ok) {
+            const newsData = await newsResponse.json();
+            if (newsData.articles && newsData.articles.length > 0) {
+              searchContext = "\n\n[TODAY'S TOP NEWS HEADLINES - December 16, 2025:]\n" + 
+                newsData.articles.slice(0, 10).map((article: any, index: number) => 
+                  `${index + 1}. **${article.title}**\n${article.description || ''}\nSource: ${article.source?.name} - ${article.url}`
+                ).join('\n\n');
+              console.log('✅ News headlines added:', newsData.articles.length);
+            }
+          } else {
+            console.error('❌ News API error:', await newsResponse.text());
+          }
+        } catch (newsError) {
+          console.error('❌ News fetch error:', newsError);
+        }
       }
     }
     
@@ -83,24 +116,84 @@ export async function POST(request: NextRequest) {
     if (personalization?.enabled) {
       const personalizationContext = [];
       
-      if (personalization.topics?.length > 0) {
-        personalizationContext.push(`The user has shown interest in these topics: ${personalization.topics.slice(0, 10).join(', ')}.`);
-      }
-      
-      if (personalization.interactionCount > 0) {
-        if (personalization.interactionCount > 50) {
-          personalizationContext.push('This is an experienced user who has had many conversations with you. Be more concise and technical when appropriate.');
-        } else if (personalization.interactionCount > 10) {
-          personalizationContext.push('This user has had several conversations with you. Feel free to build on previous context.');
+      // Expertise-based adaptation
+      if (personalization.expertise && Object.keys(personalization.expertise).length > 0) {
+        const topExpertise = Object.entries(personalization.expertise)
+          .sort((a, b) => (b[1] as number) - (a[1] as number))
+          .slice(0, 3)
+          .map(([area]) => area);
+        if (topExpertise.length > 0) {
+          personalizationContext.push(`User has expertise/interest in: ${topExpertise.join(', ')}. Adjust technical depth accordingly.`);
         }
       }
       
+      // Writing style adaptation
+      if (personalization.writingStyle) {
+        const styleInstructions: { [key: string]: string } = {
+          'concise': 'User prefers brief, to-the-point responses. Be concise.',
+          'detailed': 'User enjoys detailed explanations. Feel free to elaborate.',
+          'conversational': 'Use a friendly, conversational tone.'
+        };
+        personalizationContext.push(styleInstructions[personalization.writingStyle] || '');
+      }
+      
+      // Response length preference
+      if (personalization.preferredLength) {
+        const lengthInstructions: { [key: string]: string } = {
+          'short': 'Keep responses brief (2-3 paragraphs max).',
+          'medium': 'Use moderate length responses.',
+          'detailed': 'Provide comprehensive, detailed responses.'
+        };
+        personalizationContext.push(lengthInstructions[personalization.preferredLength] || '');
+      }
+      
+      // Conversation patterns
+      if (personalization.conversationPatterns?.length > 0) {
+        const patternInstructions: { [key: string]: string } = {
+          'tutorial_seeker': 'User often asks how-to questions. Provide step-by-step guidance.',
+          'explanation_seeker': 'User likes explanations. Break down concepts clearly.',
+          'coder': 'User is interested in coding. Include code examples when relevant.',
+          'creator': 'User is creative. Be innovative in suggestions.',
+        };
+        const relevantPatterns = personalization.conversationPatterns
+          .filter((p: string) => patternInstructions[p])
+          .map((p: string) => patternInstructions[p]);
+        if (relevantPatterns.length > 0) {
+          personalizationContext.push(relevantPatterns.join(' '));
+        }
+      }
+      
+      // Topics of interest
+      if (personalization.topics?.length > 0) {
+        personalizationContext.push(`User has shown interest in: ${personalization.topics.slice(0, 10).join(', ')}.`);
+      }
+      
+      // Experience level
+      if (personalization.interactionCount > 0) {
+        if (personalization.interactionCount > 100) {
+          personalizationContext.push('Power user with extensive chat history. Be efficient and skip basic explanations unless asked.');
+        } else if (personalization.interactionCount > 50) {
+          personalizationContext.push('Experienced user. Can handle more advanced concepts.');
+        } else if (personalization.interactionCount > 10) {
+          personalizationContext.push('Regular user. Build on established rapport.');
+        }
+      }
+      
+      // Recent context for continuity
       if (personalization.recentQueries?.length > 0) {
-        personalizationContext.push(`Recent topics discussed: ${personalization.recentQueries.join('; ')}`);
+        personalizationContext.push(`Recent topics discussed: ${personalization.recentQueries.slice(0, 3).join('; ')}`);
+      }
+      
+      // Current chat context for better continuity
+      if (personalization.currentChatContext?.length > 0) {
+        const contextSummary = personalization.currentChatContext
+          .map((m: any) => `${m.role}: ${m.content}`)
+          .join('\n');
+        personalizationContext.push(`\nRecent conversation context:\n${contextSummary}`);
       }
       
       if (personalizationContext.length > 0) {
-        systemPrompt += '\n\nUser Context (use to personalize responses):\n' + personalizationContext.join('\n');
+        systemPrompt += '\n\n📊 USER PROFILE (Adaptive Learning - use to personalize responses):\n' + personalizationContext.join('\n');
       }
     }
 
@@ -139,18 +232,41 @@ export async function POST(request: NextRequest) {
     const data = await response.json();
     const aiResponse = data.choices?.[0]?.message?.content || 'No response generated';
 
+    let savedChatId = chatId;
+
     // Save to database if userId is provided
     if (userId) {
       try {
-        await ChatModel.create({
-          user_id: userId,
-          messages: [
-            { text: prompt, sender: 'user', timestamp: new Date().toISOString() },
-            { text: aiResponse, sender: 'ai', timestamp: new Date().toISOString() },
-          ],
-          title: prompt.substring(0, 50),
-        });
-        console.log('✅ Chat saved to Supabase');
+        const userMessage = { text: prompt, sender: 'user', timestamp: new Date().toISOString() };
+        const assistantMessage = { text: aiResponse, sender: 'ai', timestamp: new Date().toISOString() };
+
+        if (chatId) {
+          // Update existing chat - append messages
+          const existingChat = await ChatModel.findById(chatId);
+          if (existingChat) {
+            const updatedMessages = [...(existingChat.messages || []), userMessage, assistantMessage];
+            await ChatModel.update(chatId, { messages: updatedMessages });
+            console.log('✅ Chat updated in Supabase (chatId:', chatId, ')');
+          } else {
+            // Chat not found, create new one
+            const newChat = await ChatModel.create({
+              user_id: userId,
+              messages: [userMessage, assistantMessage],
+              title: prompt.substring(0, 50),
+            });
+            savedChatId = newChat?.id || null;
+            console.log('✅ New chat created (old not found):', savedChatId);
+          }
+        } else {
+          // Create new chat
+          const newChat = await ChatModel.create({
+            user_id: userId,
+            messages: [userMessage, assistantMessage],
+            title: prompt.substring(0, 50),
+          });
+          savedChatId = newChat?.id || null;
+          console.log('✅ New chat created:', savedChatId);
+        }
         
       } catch (dbError) {
         console.error('❌ Supabase save error:', dbError);
@@ -158,7 +274,7 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    return NextResponse.json({ response: aiResponse });
+    return NextResponse.json({ response: aiResponse, chatId: savedChatId });
   } catch (error) {
     console.error('Chat API error:', error);
     return NextResponse.json(
