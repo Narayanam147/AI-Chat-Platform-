@@ -44,6 +44,9 @@ export default function ChatPage() {
   const [attachedFiles, setAttachedFiles] = useState<File[]>([]);
   const [personalizationEnabled, setPersonalizationEnabled] = useState(true);
   const [currentChatId, setCurrentChatId] = useState<string | null>(null);
+  const [renameMode, setRenameMode] = useState(false);
+  const [renameValue, setRenameValue] = useState('');
+  const renameInputRef = useRef<HTMLInputElement>(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [userActivity, setUserActivity] = useState<{
     topics: string[];
@@ -381,6 +384,29 @@ export default function ChatPage() {
       console.error('Delete error', e);
       setChatHistory(previous); // rollback
     }
+  };
+
+  const startRename = () => {
+    const id = selectedChatId || currentChatId;
+    if (!id) return;
+    const title = chatHistory.find(c => c.id === id)?.title || '';
+    setRenameValue(title);
+    setRenameMode(true);
+    setTimeout(() => renameInputRef.current?.focus(), 50);
+  };
+
+  const saveRename = async () => {
+    const id = selectedChatId || currentChatId;
+    if (!id) return;
+    const title = renameValue.trim() || 'Untitled Chat';
+    setChatHistory(prev => prev.map(c => c.id === id ? { ...c, title } : c));
+    setRenameMode(false);
+    await persistChatTitle(id, title);
+  };
+
+  const cancelRename = () => {
+    setRenameMode(false);
+    setRenameValue('');
   };
 
   const handleClearAllChats = async () => {
@@ -841,6 +867,19 @@ export default function ChatPage() {
                           >
                             <svg className={`w-3.5 h-3.5 ${chat.pinned ? 'text-yellow-500' : 'text-gray-600 dark:text-gray-400'}`} fill="currentColor" viewBox="0 0 20 20"><path d="M7.05 2.29a1 1 0 011.41 0L10 3.83l1.54-1.54a1 1 0 011.41 1.41L11.41 5.24l1.54 1.54a1 1 0 01-1.41 1.41L10 6.66l-1.54 1.54a1 1 0 01-1.41-1.41l1.54-1.54L6.05 3.7a1 1 0 010-1.41z"/></svg>
                           </button>
+                          {/* Rename in sidebar */}
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setSelectedChatId(chat.id);
+                              setCurrentChatId(chat.id);
+                              startRename();
+                            }}
+                            className="opacity-0 group-hover:opacity-100 p-1 hover:bg-gray-300 dark:hover:bg-gray-700 rounded transition-all ml-1"
+                            title="Rename chat"
+                          >
+                            <svg className="w-3.5 h-3.5 text-gray-600 dark:text-gray-400" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M15.232 5.232l3.536 3.536M9 11l6-6 3 3-6 6H9v-3z"/></svg>
+                          </button>
                         </div>
                       </div>
                     ))}
@@ -981,34 +1020,30 @@ export default function ChatPage() {
           <div className="flex items-center justify-between px-8 py-4 border-b border-gray-200 dark:border-gray-800 bg-white/80 dark:bg-gray-900/80 sticky top-0 z-30">
             <div className="flex items-center gap-3">
               <Sparkles className="w-7 h-7 text-blue-600" />
-              <input
-                className="text-2xl font-bold bg-transparent outline-none border-none text-gray-900 dark:text-white max-w-xs truncate"
-                value={
-                  chatHistory.find((c) => c.id === (selectedChatId || currentChatId))?.title || 'Untitled Chat'
-                }
-                onChange={e => {
-                  const newTitle = e.target.value;
-                  setChatHistory(prev => prev.map(ch =>
-                    ch.id === (selectedChatId || currentChatId)
-                      ? { ...ch, title: newTitle }
-                      : ch
-                  ));
-                }}
-                onBlur={() => {
-                  const id = selectedChatId || currentChatId;
-                  if (!id) return;
-                  const title = chatHistory.find(c => c.id === id)?.title || '';
-                  persistChatTitle(id, title);
-                }}
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter') {
-                    (e.target as HTMLInputElement).blur();
-                  }
-                }}
-                aria-label="Rename chat"
-              />
+              {!renameMode ? (
+                <h2 className="text-2xl font-bold text-gray-900 dark:text-white max-w-xs truncate">
+                  {chatHistory.find((c) => c.id === (selectedChatId || currentChatId))?.title || 'Untitled Chat'}
+                </h2>
+              ) : (
+                <input
+                  ref={renameInputRef}
+                  className="text-2xl font-bold bg-transparent outline-none border-b border-gray-200 dark:border-gray-700 text-gray-900 dark:text-white max-w-xs"
+                  value={renameValue}
+                  onChange={(e) => setRenameValue(e.target.value)}
+                  onBlur={saveRename}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') saveRename();
+                    if (e.key === 'Escape') cancelRename();
+                  }}
+                  aria-label="Rename chat"
+                />
+              )}
             </div>
             <div className="flex items-center gap-2">
+              {/* Rename (visible on mobile) */}
+              <button className="p-2 rounded hover:bg-gray-200 dark:hover:bg-gray-700" title="Rename chat" onClick={() => startRename()}>
+                <svg className="w-5 h-5 text-gray-600 dark:text-gray-300" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M15.232 5.232l3.536 3.536M9 11l6-6 3 3-6 6H9v-3z"/></svg>
+              </button>
               {/* Pin */}
               <button className="p-2 rounded hover:bg-gray-200 dark:hover:bg-gray-700" title="Pin chat" onClick={() => togglePin(selectedChatId || currentChatId || '')}>
                 <svg className="w-5 h-5 text-gray-600 dark:text-gray-300" fill="currentColor" viewBox="0 0 20 20"><path d="M7.05 2.29a1 1 0 011.41 0L10 3.83l1.54-1.54a1 1 0 011.41 1.41L11.41 5.24l1.54 1.54a1 1 0 01-1.41 1.41L10 6.66l-1.54 1.54a1 1 0 01-1.41-1.41l1.54-1.54L6.05 3.7a1 1 0 010-1.41z"/></svg>
