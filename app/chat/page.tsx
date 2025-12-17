@@ -19,6 +19,7 @@ interface ChatHistory {
   timestamp: Date;
   preview: string;
   messages?: any[];
+  pinned?: boolean;
 }
 
 export default function ChatPage() {
@@ -302,6 +303,7 @@ export default function ChatPage() {
             sender: m.sender,
             timestamp: typeof m.timestamp === 'string' ? m.timestamp : m.timestamp.toISOString(),
           })),
+          pinned: false,
         };
         setChatHistory(prev => [newChat, ...prev]);
       }
@@ -401,6 +403,61 @@ export default function ChatPage() {
     } catch (e) {
       console.error('Clear all error', e);
       setChatHistory(previous);
+    }
+  };
+
+  // Toggle pin state for a chat and reorder locally (persist to backend)
+  const togglePin = async (chatId: string) => {
+    if (!chatId) return;
+    // compute new pinned state from current local state
+    const current = chatHistory.find(ch => ch.id === chatId);
+    const newPinned = !Boolean(current?.pinned);
+    setChatHistory(prev => {
+      const updated = prev.map(ch => ch.id === chatId ? { ...ch, pinned: newPinned } : ch);
+      // reorder pinned chats to top
+      const pinned = updated.filter(ch => ch.pinned);
+      const others = updated.filter(ch => !ch.pinned);
+      return [...pinned, ...others];
+    });
+
+    try {
+      await fetch(`/api/history/${encodeURIComponent(chatId)}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ pinned: newPinned }),
+      });
+    } catch (e) {
+      console.error('Failed to persist pin state', e);
+    }
+  };
+
+  // Share chat by copying a link to clipboard
+  const handleShare = async (chatId: string) => {
+    if (!chatId) {
+      alert('No chat selected to share');
+      return;
+    }
+    const url = `${window.location.origin}/chat?chatId=${encodeURIComponent(chatId)}`;
+    try {
+      await navigator.clipboard.writeText(url);
+      alert('Shareable link copied to clipboard');
+    } catch (e) {
+      console.error('Failed to copy share link', e);
+      prompt('Copy this link:', url);
+    }
+  };
+
+  // Persist chat title change to backend
+  const persistChatTitle = async (chatId: string, title: string) => {
+    if (!chatId) return;
+    try {
+      await fetch(`/api/history/${encodeURIComponent(chatId)}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ title }),
+      });
+    } catch (e) {
+      console.error('Failed to persist chat title', e);
     }
   };
 
@@ -515,6 +572,7 @@ export default function ChatPage() {
             timestamp: new Date(c.lastMessageAt),
             preview: c.snippet,
             messages: c.messages || [],
+            pinned: c.pinned || false,
           }));
           setChatHistory(mapped);
         }
@@ -764,12 +822,24 @@ export default function ChatPage() {
                           <button
                             onClick={(e) => {
                               e.stopPropagation();
+                              if (!confirm('Delete this chat? This cannot be undone.')) return;
                               handleDeleteChat(chat.id);
                             }}
                             className="opacity-0 group-hover:opacity-100 p-1 hover:bg-gray-300 dark:hover:bg-gray-700 rounded transition-all"
                             title="Delete chat"
                           >
                             <Trash2 className="w-3.5 h-3.5 text-gray-600 dark:text-gray-400" />
+                          </button>
+                          {/* Pin Button */}
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              togglePin(chat.id);
+                            }}
+                            className="opacity-0 group-hover:opacity-100 p-1 hover:bg-gray-300 dark:hover:bg-gray-700 rounded transition-all ml-1"
+                            title={chat.pinned ? 'Unpin chat' : 'Pin chat'}
+                          >
+                            <svg className={`w-3.5 h-3.5 ${chat.pinned ? 'text-yellow-500' : 'text-gray-600 dark:text-gray-400'}`} fill="currentColor" viewBox="0 0 20 20"><path d="M7.05 2.29a1 1 0 011.41 0L10 3.83l1.54-1.54a1 1 0 011.41 1.41L11.41 5.24l1.54 1.54a1 1 0 01-1.41 1.41L10 6.66l-1.54 1.54a1 1 0 01-1.41-1.41l1.54-1.54L6.05 3.7a1 1 0 010-1.41z"/></svg>
                           </button>
                         </div>
                       </div>
@@ -905,6 +975,55 @@ export default function ChatPage() {
             )}
           </div>
         </header>
+
+        {/* Chat Heading with Options (Gemini-style) */}
+        {(selectedChatId || currentChatId) && (
+          <div className="flex items-center justify-between px-8 py-4 border-b border-gray-200 dark:border-gray-800 bg-white/80 dark:bg-gray-900/80 sticky top-0 z-30">
+            <div className="flex items-center gap-3">
+              <Sparkles className="w-7 h-7 text-blue-600" />
+              <input
+                className="text-2xl font-bold bg-transparent outline-none border-none text-gray-900 dark:text-white max-w-xs truncate"
+                value={
+                  chatHistory.find((c) => c.id === (selectedChatId || currentChatId))?.title || 'Untitled Chat'
+                }
+                onChange={e => {
+                  const newTitle = e.target.value;
+                  setChatHistory(prev => prev.map(ch =>
+                    ch.id === (selectedChatId || currentChatId)
+                      ? { ...ch, title: newTitle }
+                      : ch
+                  ));
+                }}
+                onBlur={() => {
+                  const id = selectedChatId || currentChatId;
+                  if (!id) return;
+                  const title = chatHistory.find(c => c.id === id)?.title || '';
+                  persistChatTitle(id, title);
+                }}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') {
+                    (e.target as HTMLInputElement).blur();
+                  }
+                }}
+                aria-label="Rename chat"
+              />
+            </div>
+            <div className="flex items-center gap-2">
+              {/* Pin */}
+              <button className="p-2 rounded hover:bg-gray-200 dark:hover:bg-gray-700" title="Pin chat" onClick={() => togglePin(selectedChatId || currentChatId || '')}>
+                <svg className="w-5 h-5 text-gray-600 dark:text-gray-300" fill="currentColor" viewBox="0 0 20 20"><path d="M7.05 2.29a1 1 0 011.41 0L10 3.83l1.54-1.54a1 1 0 011.41 1.41L11.41 5.24l1.54 1.54a1 1 0 01-1.41 1.41L10 6.66l-1.54 1.54a1 1 0 01-1.41-1.41l1.54-1.54L6.05 3.7a1 1 0 010-1.41z"/></svg>
+              </button>
+              {/* Share */}
+              <button className="p-2 rounded hover:bg-gray-200 dark:hover:bg-gray-700" title="Share chat" onClick={() => handleShare(selectedChatId || currentChatId || '')}>
+                <svg className="w-5 h-5 text-gray-600 dark:text-gray-300" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M15 8a3 3 0 11-6 0 3 3 0 016 0zm6 8a3 3 0 11-6 0 3 3 0 016 0zm-6 0a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
+              </button>
+              {/* Delete */}
+              <button className="p-2 rounded hover:bg-red-100 dark:hover:bg-red-900/40" title="Delete chat" onClick={() => { const id = selectedChatId || currentChatId; if (!id) return; if (!confirm('Delete this chat? This cannot be undone.')) return; handleDeleteChat(id); }}>
+                <Trash2 className="w-5 h-5 text-red-600 dark:text-red-400" />
+              </button>
+            </div>
+          </div>
+        )}
 
         {/* Conversation View - Messages */}
         <div className="flex-1 overflow-y-auto p-6">
