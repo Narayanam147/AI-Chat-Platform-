@@ -1,0 +1,9 @@
+#!/usr/bin/env node
+// pre-push hook to require user confirmation before pushing to remote
+const path = require('path');
+try {
+  require(path.join(__dirname, '..', 'scripts', 'prepush-confirm.js'));
+} catch (e) {
+  console.error('Failed to run pre-push confirmation script:', e);
+  process.exit(1);
+}

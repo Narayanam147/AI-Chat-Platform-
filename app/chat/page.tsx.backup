@@ -2,7 +2,7 @@
 
 import { useSession, signOut, signIn } from "next-auth/react";
 import { useState, useRef, useEffect } from "react";
-import { Send, Upload, Download, Menu, LogOut, User, Sparkles, FileText, Image as ImageIcon, X, MessageSquare, Clock, Trash2, Plus, Settings, HelpCircle, FolderOpen, Code, Moon, Sun, Mail, KeyRound, Copy, Check, Brain, ToggleLeft, ToggleRight, Search } from "lucide-react";
+import { Send, Upload, Download, Menu, LogOut, User, Sparkles, FileText, Image as ImageIcon, X, MessageSquare, Clock, Trash2, Plus, Settings, HelpCircle, FolderOpen, Code, Moon, Sun, Mail, KeyRound, Copy, Check, Brain, ToggleLeft, ToggleRight, Search, ChevronDown } from "lucide-react";
 import ReactMarkdown from "react-markdown";
 
 interface Message {
@@ -48,16 +48,7 @@ export default function ChatPage() {
   const [renameValue, setRenameValue] = useState('');
   const renameInputRef = useRef<HTMLInputElement>(null);
   const [searchQuery, setSearchQuery] = useState("");
-  const [userActivity, setUserActivity] = useState<{
-    topics: string[];
-    preferredStyle: string;
-    recentQueries: string[];
-    interactionCount: number;
-    writingStyle: string;
-    preferredLength: string;
-    expertise: { [key: string]: number };
-    conversationPatterns: string[];
-  }>({
+  const [userActivity, setUserActivity] = useState({
     topics: [],
     preferredStyle: 'balanced',
     recentQueries: [],
@@ -66,6 +57,15 @@ export default function ChatPage() {
     preferredLength: 'medium',
     expertise: {},
     conversationPatterns: []
+  } as {
+    topics: string[];
+    preferredStyle: string;
+    recentQueries: string[];
+    interactionCount: number;
+    writingStyle: string;
+    preferredLength: string;
+    expertise: { [key: string]: number };
+    conversationPatterns: string[];
   });
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -73,10 +73,8 @@ export default function ChatPage() {
   const profileMenuRef = useRef<HTMLDivElement>(null);
   const settingsModalRef = useRef<HTMLDivElement>(null);
   const feedbackModalRef = useRef<HTMLDivElement>(null);
-  const headingMenuRef = useRef<HTMLButtonElement | null>(null);
-  const [headingMenuOpen, setHeadingMenuOpen] = useState(false);
-  const sidebarMenuRef = useRef<HTMLDivElement | null>(null);
-  const [openSidebarMenuId, setOpenSidebarMenuId] = useState<string | null>(null);
+  const chatMenuRef = useRef<HTMLDivElement | null>(null);
+  const [openChatMenuId, setOpenChatMenuId] = useState<string | null>(null);
 
   // Handle file selection
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -372,12 +370,10 @@ export default function ChatPage() {
     try {
       const res = await fetch(`/api/history/${encodeURIComponent(chatId)}`, {
         method: 'DELETE',
-        credentials: 'include',
       });
       if (!res.ok) {
         const txt = await res.text();
         console.error('Failed to delete chat:', res.status, txt);
-        alert(`Failed to delete chat: ${res.status} ${txt}`);
         setChatHistory(previous); // rollback
         return;
       }
@@ -386,10 +382,8 @@ export default function ChatPage() {
         setSelectedChatId(null);
         setMessages([]);
       }
-      alert('Chat deleted');
     } catch (e) {
       console.error('Delete error', e);
-      alert('Error deleting chat');
       setChatHistory(previous); // rollback
     }
   };
@@ -465,42 +459,53 @@ export default function ChatPage() {
     }
   };
 
-  // Share chat by copying a link to clipboard
+  // Simple toast/snackbar helper state
+  const [toast, setToast] = useState({ visible: false, message: '' } as { visible: boolean; message: string; type?: 'success' | 'error' | 'info' });
+  const showToast = (message: string, type: 'success' | 'error' | 'info' = 'info', duration = 3000) => {
+    setToast({ visible: true, message, type });
+    setTimeout(() => setToast({ visible: false, message: '' }), duration);
+  };
+
+  // Share chat by copying a link to clipboard or using Web Share API
   const handleShare = async (chatId?: string) => {
-    // determine effective id
     const id = chatId || selectedChatId || currentChatId;
     if (!id) {
-      alert('No chat selected to share');
+      showToast('No chat selected to share', 'error');
       return;
     }
+
     const url = `${window.location.origin}/chat?chatId=${encodeURIComponent(id)}`;
+
+    // First try Web Share API (best UX on mobile)
     try {
-      // Prefer Web Share API on mobile
       if (navigator.share) {
-        await navigator.share({
-          title: 'Chat from Chat Assistant',
-          text: 'Open this chat in Chat Assistant',
-          url,
-        });
+        await navigator.share({ title: 'Chat from Chat Assistant', text: 'Open this chat in Chat Assistant', url });
+        showToast('Shared successfully', 'success');
         return;
       }
+    } catch (e) {
+      console.warn('Web Share failed, falling back to clipboard', e);
+    }
 
-      // Fallback: try clipboard
+    // Try Clipboard API (works on HTTPS or localhost)
+    try {
       if (navigator.clipboard && navigator.clipboard.writeText) {
         await navigator.clipboard.writeText(url);
-        alert('Shareable link copied to clipboard');
+        showToast('Shareable link copied to clipboard', 'success');
         return;
       }
-
-      // Last resort: show prompt so user can copy manually
-      prompt('Copy this link:', url);
     } catch (e) {
-      console.error('Failed to share link', e);
-      try {
-        prompt('Copy this link:', url);
-      } catch (_) {
-        // swallow
-      }
+      console.warn('Clipboard write failed', e);
+    }
+
+    // Fallback: open prompt for manual copy
+    try {
+      // Use prompt only as last resort so mobile users still have a way to copy
+      prompt('Copy this link:', url);
+      showToast('Copy the link to share', 'info');
+    } catch (e) {
+      console.error('Unable to share or copy link', e);
+      showToast('Unable to share link on this device', 'error');
     }
   };
 
@@ -600,8 +605,8 @@ export default function ChatPage() {
       if (feedbackModalRef.current && !feedbackModalRef.current.contains(event.target as Node)) {
         setShowFeedbackModal(false);
       }
-      if (sidebarMenuRef.current && !sidebarMenuRef.current.contains(event.target as Node)) {
-        setOpenSidebarMenuId(null);
+      if (chatMenuRef.current && !chatMenuRef.current.contains(event.target as Node)) {
+        setOpenChatMenuId(null);
       }
     };
 
@@ -643,6 +648,47 @@ export default function ChatPage() {
 
     load();
   }, [session?.user?.email]);
+
+  // Handle opening a shared chat via ?chatId=<id>
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const sharedId = params.get('chatId');
+    if (!sharedId) return;
+
+    const loadSharedChat = async () => {
+      try {
+        const res = await fetch(`/api/history/${encodeURIComponent(sharedId)}`);
+        if (!res.ok) {
+          console.error('Failed to fetch shared chat', res.status, await res.text());
+          showToast('Unable to load shared chat', 'error');
+          return;
+        }
+        const chat = await res.json();
+        // Map messages into UI shape
+        const mapped = (chat.messages || []).map((m: any, i: number) => ({
+          id: `${chat.id}-${i}`,
+          text: m.text,
+          sender: (m.sender === 'ai' ? 'ai' : 'user') as 'ai' | 'user',
+          timestamp: new Date(m.timestamp || new Date()),
+        }));
+        setMessages(mapped);
+        setSelectedChatId(chat.id);
+        setCurrentChatId(chat.id);
+        // Add to local chatHistory for visibility
+        setChatHistory(prev => {
+          if (prev.some(ch => ch.id === chat.id)) return prev;
+          return [{ id: chat.id, title: chat.title || 'Shared Chat', timestamp: new Date(chat.updated_at || Date.now()), preview: (chat.messages[chat.messages.length - 1]?.text || '').substring(0, 100), messages: chat.messages }, ...prev];
+        });
+        showToast('Loaded shared chat', 'success');
+      } catch (e) {
+        console.error('Error loading shared chat', e);
+        showToast('Unable to load shared chat', 'error');
+      }
+    };
+
+    loadSharedChat();
+  }, []);
+
 
   const handleSend = async () => {
     if ((!input.trim() && attachedFiles.length === 0) || isLoading) return;
@@ -781,37 +827,8 @@ export default function ChatPage() {
       alert('Failed to export. Please try again.');
     }
   };
-  return (
-    <div className="flex h-screen bg-white dark:bg-gray-900">
-      {/* Overlay for mobile when sidebar is open */}
-      {showSidebar && (
-        <div 
-          className="lg:hidden fixed inset-0 bg-black bg-opacity-50 z-40"
-          onClick={() => setShowSidebar(false)}
-        />
-      )}
 
-      {/* Left Sidebar - Collapsible */}
-      <aside className={`${showSidebar ? 'w-72' : 'w-0'} transition-all duration-300 ease-in-out overflow-hidden bg-gray-50 dark:bg-gray-900 border-r border-gray-200 dark:border-gray-800 flex flex-col fixed lg:relative h-full z-50 lg:z-auto`}>
-        {/* New Chat Button - Prominent */}
-        <div className="px-3 pt-4 pb-2">
-          <button
-            onClick={handleNewChat}
-            className="w-full py-3 px-4 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-700 text-gray-900 dark:text-white rounded-full hover:bg-gray-50 dark:hover:bg-gray-750 transition-all shadow-sm hover:shadow-md font-medium text-sm flex items-center gap-3"
-          >
-            <Plus className="w-5 h-5" />
-            New chat
-          </button>
-        </div>
-
-        {/* Search Bar */}
-        <div className="px-3 pb-3">
-          <div className="relative">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
-            <input
-              type="text"
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
+  return <div />;              onChange={(e) => setSearchQuery(e.target.value)}
               placeholder="Search chats..."
               className="w-full pl-9 pr-8 py-2 text-sm bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-700 rounded-lg text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
             />
@@ -874,40 +891,66 @@ export default function ChatPage() {
                       >
                         <div className="flex items-center gap-3">
                           <MessageSquare className="w-4 h-4 text-gray-500 dark:text-gray-400 flex-shrink-0" />
-                          <p className="text-sm text-gray-900 dark:text-gray-100 line-clamp-1 flex-1 pl-0">
+                          <p className="text-sm text-gray-900 dark:text-gray-100 line-clamp-1 flex-1">
                             {chat.title}
                           </p>
-                          {/* Overflow chevron menu for sidebar item (only action trigger) */}
-                          <div className="relative">
-                            <button
-                              onClick={(e) => { e.stopPropagation(); setOpenSidebarMenuId(prev => prev === chat.id ? null : chat.id); }}
-                              className="p-1 hover:bg-gray-300 dark:hover:bg-gray-700 rounded transition-all ml-1"
-                              aria-haspopup="true"
-                              aria-expanded={openSidebarMenuId === chat.id}
-                              title="More actions"
-                            >
-                              <svg className="w-3.5 h-3.5 text-gray-600 dark:text-gray-400" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24" aria-hidden>
-                                <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
-                              </svg>
-                            </button>
-
-                            {openSidebarMenuId === chat.id && (
-                              <div ref={sidebarMenuRef} className="absolute right-0 mt-2 w-40 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-xl z-50 overflow-hidden">
-                                <button className="w-full text-left px-3 py-2 hover:bg-gray-100 dark:hover:bg-gray-700" onClick={(e) => { e.stopPropagation(); togglePin(chat.id); setOpenSidebarMenuId(null); }}>
-                                  {chat.pinned ? 'Unpin' : 'Pin'}
-                                </button>
-                                <button className="w-full text-left px-3 py-2 hover:bg-gray-100 dark:hover:bg-gray-700" onClick={(e) => { e.stopPropagation(); setSelectedChatId(chat.id); setCurrentChatId(chat.id); startRename(); setOpenSidebarMenuId(null); }}>
-                                  Rename
-                                </button>
-                                <button className="w-full text-left px-3 py-2 hover:bg-gray-100 dark:hover:bg-gray-700" onClick={(e) => { e.stopPropagation(); handleShare(chat.id); setOpenSidebarMenuId(null); }}>
-                                  Share
-                                </button>
-                                <button className="w-full text-left px-3 py-2 text-red-600 hover:bg-red-50 dark:hover:bg-red-900/40" onClick={(e) => { e.stopPropagation(); if (!confirm('Delete this chat? This cannot be undone.')) return; handleDeleteChat(chat.id); setOpenSidebarMenuId(null); }}>
-                                  Delete
-                                </button>
-                              </div>
-                            )}
-                          </div>
+                          {/* Delete Button */}
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              if (!confirm('Delete this chat? This cannot be undone.')) return;
+                              handleDeleteChat(chat.id);
+                            }}
+                            className="opacity-0 group-hover:opacity-100 p-1 hover:bg-gray-300 dark:hover:bg-gray-700 rounded transition-all"
+                            title="Delete chat"
+                          >
+                            <Trash2 className="w-3.5 h-3.5 text-gray-600 dark:text-gray-400" />
+                          </button>
+                          {/* Pin Button */}
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              togglePin(chat.id);
+                            }}
+                            className="opacity-0 group-hover:opacity-100 p-1 hover:bg-gray-300 dark:hover:bg-gray-700 rounded transition-all ml-1"
+                            title={chat.pinned ? 'Unpin chat' : 'Pin chat'}
+                          >
+                            <svg className={`w-3.5 h-3.5 ${chat.pinned ? 'text-yellow-500' : 'text-gray-600 dark:text-gray-400'}`} fill="currentColor" viewBox="0 0 20 20"><path d="M7.05 2.29a1 1 0 011.41 0L10 3.83l1.54-1.54a1 1 0 011.41 1.41L11.41 5.24l1.54 1.54a1 1 0 01-1.41 1.41L10 6.66l-1.54 1.54a1 1 0 01-1.41-1.41l1.54-1.54L6.05 3.7a1 1 0 010-1.41z"/></svg>
+                          </button>
+                          {/* Rename in sidebar */}
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setSelectedChatId(chat.id);
+                              setCurrentChatId(chat.id);
+                              startRename();
+                            }}
+                            className="opacity-0 group-hover:opacity-100 p-1 hover:bg-gray-300 dark:hover:bg-gray-700 rounded transition-all ml-1"
+                            title="Rename chat"
+                          >
+                            <svg className="w-3.5 h-3.5 text-gray-600 dark:text-gray-400" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M15.232 5.232l3.536 3.536M9 11l6-6 3 3-6 6H9v-3z"/></svg>
+                          </button>
++                          {/* Overflow menu toggle */}
++                          <div className="relative" ref={el => { if (el) chatMenuRef.current = el; }}>
++                            <button
++                              onClick={(e) => { e.stopPropagation(); setOpenChatMenuId(openChatMenuId === chat.id ? null : chat.id); }}
++                              className="opacity-0 group-hover:opacity-100 p-1 hover:bg-gray-300 dark:hover:bg-gray-700 rounded transition-all ml-1"
++                              aria-haspopup="true"
++                              aria-expanded={openChatMenuId === chat.id}
++                              title="More"
++                            >
++                              <ChevronDown className="w-4 h-4 text-gray-600 dark:text-gray-400" />
++                            </button>
++
++                            {openChatMenuId === chat.id && (
++                              <div className="absolute right-0 mt-2 w-40 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-lg z-50">
++                                <button onClick={(e) => { e.stopPropagation(); togglePin(chat.id); setOpenChatMenuId(null); }} className="w-full text-left px-3 py-2 hover:bg-gray-100 dark:hover:bg-gray-700">{chat.pinned ? 'Unpin' : 'Pin'}</button>
++                                <button onClick={(e) => { e.stopPropagation(); setSelectedChatId(chat.id); setCurrentChatId(chat.id); startRename(); setOpenChatMenuId(null); }} className="w-full text-left px-3 py-2 hover:bg-gray-100 dark:hover:bg-gray-700">Rename</button>
++                                <button onClick={(e) => { e.stopPropagation(); handleShare(chat.id); setOpenChatMenuId(null); }} className="w-full text-left px-3 py-2 hover:bg-gray-100 dark:hover:bg-gray-700">Share</button>
++                                <button onClick={(e) => { e.stopPropagation(); if (!confirm('Delete this chat? This cannot be undone.')) return; handleDeleteChat(chat.id); setOpenChatMenuId(null); }} className="w-full text-left px-3 py-2 text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20">Delete</button>
++                              </div>
++                            )}
++                          </div>
                         </div>
                       </div>
                     ))}
@@ -1067,36 +1110,23 @@ export default function ChatPage() {
                 />
               )}
             </div>
-            <div className="relative">
-              <button
-                onClick={(e) => { e.stopPropagation(); setHeadingMenuOpen(v => !v); }}
-                aria-haspopup="true"
-                aria-expanded={headingMenuOpen}
-                ref={headingMenuRef}
-                className="p-2 rounded hover:bg-gray-200 dark:hover:bg-gray-700"
-                title="Open actions"
-              >
-                <svg className="w-5 h-5 text-gray-600 dark:text-gray-300" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24" aria-hidden>
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
-                </svg>
+            <div className="flex items-center gap-2">
+              {/* Rename (visible on mobile) */}
+              <button className="p-2 rounded hover:bg-gray-200 dark:hover:bg-gray-700" title="Rename chat" onClick={() => startRename()}>
+                <svg className="w-5 h-5 text-gray-600 dark:text-gray-300" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M15.232 5.232l3.536 3.536M9 11l6-6 3 3-6 6H9v-3z"/></svg>
               </button>
-
-              {headingMenuOpen && (
-                <div className="absolute right-0 mt-2 w-44 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-xl z-50 overflow-hidden">
-                  <button className="w-full text-left px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-700" onClick={(e) => { e.stopPropagation(); const id = selectedChatId || currentChatId; if (!id) return; togglePin(id); setHeadingMenuOpen(false); }}>
-                    {chatHistory.find(c => c.id === (selectedChatId || currentChatId))?.pinned ? 'Unpin' : 'Pin'}
-                  </button>
-                  <button className="w-full text-left px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-700" onClick={(e) => { e.stopPropagation(); startRename(); setHeadingMenuOpen(false); }}>
-                    Rename
-                  </button>
-                  <button className="w-full text-left px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-700" onClick={(e) => { e.stopPropagation(); handleShare(selectedChatId || currentChatId || undefined); setHeadingMenuOpen(false); }}>
-                    Share
-                  </button>
-                  <button className="w-full text-left px-4 py-2 text-red-600 hover:bg-red-50 dark:hover:bg-red-900/40" onClick={(e) => { e.stopPropagation(); const id = selectedChatId || currentChatId; if (!id) return; if (!confirm('Delete this chat? This cannot be undone.')) return; handleDeleteChat(id); setHeadingMenuOpen(false); }}>
-                    Delete
-                  </button>
-                </div>
-              )}
+              {/* Pin */}
+              <button className="p-2 rounded hover:bg-gray-200 dark:hover:bg-gray-700" title="Pin chat" onClick={() => togglePin(selectedChatId || currentChatId || '')}>
+                <svg className="w-5 h-5 text-gray-600 dark:text-gray-300" fill="currentColor" viewBox="0 0 20 20"><path d="M7.05 2.29a1 1 0 011.41 0L10 3.83l1.54-1.54a1 1 0 011.41 1.41L11.41 5.24l1.54 1.54a1 1 0 01-1.41 1.41L10 6.66l-1.54 1.54a1 1 0 01-1.41-1.41l1.54-1.54L6.05 3.7a1 1 0 010-1.41z"/></svg>
+              </button>
+              {/* Share */}
+              <button className="p-2 rounded hover:bg-gray-200 dark:hover:bg-gray-700" title="Share chat" onClick={() => handleShare(selectedChatId || currentChatId || '')}>
+                <svg className="w-5 h-5 text-gray-600 dark:text-gray-300" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M15 8a3 3 0 11-6 0 3 3 0 016 0zm6 8a3 3 0 11-6 0 3 3 0 016 0zm-6 0a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
+              </button>
+              {/* Delete */}
+              <button className="p-2 rounded hover:bg-red-100 dark:hover:bg-red-900/40" title="Delete chat" onClick={() => { const id = selectedChatId || currentChatId; if (!id) return; if (!confirm('Delete this chat? This cannot be undone.')) return; handleDeleteChat(id); }}>
+                <Trash2 className="w-5 h-5 text-red-600 dark:text-red-400" />
+              </button>
             </div>
           </div>
         )}
@@ -1592,6 +1622,15 @@ export default function ChatPage() {
                 </button>
               </div>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* Toast */}
+      {toast.visible && (
+        <div className="fixed bottom-6 right-6 z-50">
+          <div className={`px-4 py-2 rounded shadow-md ${toast.type === 'success' ? 'bg-green-600 text-white' : toast.type === 'error' ? 'bg-red-600 text-white' : 'bg-gray-800 text-white'}`}>
+            {toast.message}
           </div>
         </div>
       )}
