@@ -792,7 +792,7 @@ export default function ChatPage() {
             className="w-full py-3 px-4 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-700 text-gray-900 dark:text-white rounded-full hover:bg-gray-50 dark:hover:bg-gray-750 transition-all shadow-sm hover:shadow-md font-medium text-sm flex items-center gap-3"
           >
             <Plus className="w-5 h-5" />
-            <p className="flex-1 text-left">+ New chat</p>
+            <p className="flex-1 text-left">New chat</p>
             <MessageSquare className="w-4 h-4 text-gray-500 dark:text-gray-300" />
           </button>
         </div>
