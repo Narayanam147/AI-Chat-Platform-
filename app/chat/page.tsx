@@ -73,7 +73,7 @@ export default function ChatPage() {
   const profileMenuRef = useRef<HTMLDivElement>(null);
   const settingsModalRef = useRef<HTMLDivElement>(null);
   const feedbackModalRef = useRef<HTMLDivElement>(null);
-  const headingMenuRef = useRef<HTMLDivElement | null>(null);
+  const headingMenuRef = useRef<HTMLButtonElement | null>(null);
   const [headingMenuOpen, setHeadingMenuOpen] = useState(false);
 
   // Handle file selection
