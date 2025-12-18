@@ -460,7 +460,7 @@ export default function ChatPage() {
   };
 
   // Share chat by copying a link to clipboard
-  const handleShare = async (chatId: string) => {
+  const handleShare = async (chatId?: string) => {
     // determine effective id
     const id = chatId || selectedChatId || currentChatId;
     if (!id) {
