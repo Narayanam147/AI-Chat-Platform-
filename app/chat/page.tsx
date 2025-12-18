@@ -73,10 +73,8 @@ export default function ChatPage() {
   const profileMenuRef = useRef<HTMLDivElement>(null);
   const settingsModalRef = useRef<HTMLDivElement>(null);
   const feedbackModalRef = useRef<HTMLDivElement>(null);
-  const headingMenuRef = useRef<HTMLButtonElement | null>(null);
+  const headingMenuRef = useRef<HTMLDivElement | null>(null);
   const [headingMenuOpen, setHeadingMenuOpen] = useState(false);
-  const sidebarMenuRef = useRef<HTMLDivElement | null>(null);
-  const [openSidebarMenuId, setOpenSidebarMenuId] = useState<string | null>(null);
 
   // Handle file selection
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -372,12 +370,10 @@ export default function ChatPage() {
     try {
       const res = await fetch(`/api/history/${encodeURIComponent(chatId)}`, {
         method: 'DELETE',
-        credentials: 'include',
       });
       if (!res.ok) {
         const txt = await res.text();
         console.error('Failed to delete chat:', res.status, txt);
-        alert(`Failed to delete chat: ${res.status} ${txt}`);
         setChatHistory(previous); // rollback
         return;
       }
@@ -386,10 +382,8 @@ export default function ChatPage() {
         setSelectedChatId(null);
         setMessages([]);
       }
-      alert('Chat deleted');
     } catch (e) {
       console.error('Delete error', e);
-      alert('Error deleting chat');
       setChatHistory(previous); // rollback
     }
   };
@@ -466,7 +460,7 @@ export default function ChatPage() {
   };
 
   // Share chat by copying a link to clipboard
-  const handleShare = async (chatId?: string) => {
+  const handleShare = async (chatId: string) => {
     // determine effective id
     const id = chatId || selectedChatId || currentChatId;
     if (!id) {
@@ -599,9 +593,6 @@ export default function ChatPage() {
       }
       if (feedbackModalRef.current && !feedbackModalRef.current.contains(event.target as Node)) {
         setShowFeedbackModal(false);
-      }
-      if (sidebarMenuRef.current && !sidebarMenuRef.current.contains(event.target as Node)) {
-        setOpenSidebarMenuId(null);
       }
     };
 
@@ -781,6 +772,7 @@ export default function ChatPage() {
       alert('Failed to export. Please try again.');
     }
   };
+
   return (
     <div className="flex h-screen bg-white dark:bg-gray-900">
       {/* Overlay for mobile when sidebar is open */}
@@ -873,41 +865,45 @@ export default function ChatPage() {
                         }`}
                       >
                         <div className="flex items-center gap-3">
-                          <MessageSquare className="w-4 h-4 text-gray-500 dark:text-gray-400 flex-shrink-0" />
-                          <p className="text-sm text-gray-900 dark:text-gray-100 line-clamp-1 flex-1 pl-0">
+                          <p className="text-sm text-gray-900 dark:text-gray-100 line-clamp-1 flex-1">
                             {chat.title}
                           </p>
-                          {/* Overflow chevron menu for sidebar item (only action trigger) */}
-                          <div className="relative">
-                            <button
-                              onClick={(e) => { e.stopPropagation(); setOpenSidebarMenuId(prev => prev === chat.id ? null : chat.id); }}
-                              className="p-1 hover:bg-gray-300 dark:hover:bg-gray-700 rounded transition-all ml-1"
-                              aria-haspopup="true"
-                              aria-expanded={openSidebarMenuId === chat.id}
-                              title="More actions"
-                            >
-                              <svg className="w-3.5 h-3.5 text-gray-600 dark:text-gray-400" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24" aria-hidden>
-                                <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
-                              </svg>
-                            </button>
-
-                            {openSidebarMenuId === chat.id && (
-                              <div ref={sidebarMenuRef} className="absolute right-0 mt-2 w-40 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-xl z-50 overflow-hidden">
-                                <button className="w-full text-left px-3 py-2 hover:bg-gray-100 dark:hover:bg-gray-700" onClick={(e) => { e.stopPropagation(); togglePin(chat.id); setOpenSidebarMenuId(null); }}>
-                                  {chat.pinned ? 'Unpin' : 'Pin'}
-                                </button>
-                                <button className="w-full text-left px-3 py-2 hover:bg-gray-100 dark:hover:bg-gray-700" onClick={(e) => { e.stopPropagation(); setSelectedChatId(chat.id); setCurrentChatId(chat.id); startRename(); setOpenSidebarMenuId(null); }}>
-                                  Rename
-                                </button>
-                                <button className="w-full text-left px-3 py-2 hover:bg-gray-100 dark:hover:bg-gray-700" onClick={(e) => { e.stopPropagation(); handleShare(chat.id); setOpenSidebarMenuId(null); }}>
-                                  Share
-                                </button>
-                                <button className="w-full text-left px-3 py-2 text-red-600 hover:bg-red-50 dark:hover:bg-red-900/40" onClick={(e) => { e.stopPropagation(); if (!confirm('Delete this chat? This cannot be undone.')) return; handleDeleteChat(chat.id); setOpenSidebarMenuId(null); }}>
-                                  Delete
-                                </button>
-                              </div>
-                            )}
-                          </div>
+                          {/* Delete Button */}
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              if (!confirm('Delete this chat? This cannot be undone.')) return;
+                              handleDeleteChat(chat.id);
+                            }}
+                            className="opacity-0 group-hover:opacity-100 p-1 hover:bg-gray-300 dark:hover:bg-gray-700 rounded transition-all"
+                            title="Delete chat"
+                          >
+                            <Trash2 className="w-3.5 h-3.5 text-gray-600 dark:text-gray-400" />
+                          </button>
+                          {/* Pin Button */}
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              togglePin(chat.id);
+                            }}
+                            className="opacity-0 group-hover:opacity-100 p-1 hover:bg-gray-300 dark:hover:bg-gray-700 rounded transition-all ml-1"
+                            title={chat.pinned ? 'Unpin chat' : 'Pin chat'}
+                          >
+                            <svg className={`w-3.5 h-3.5 ${chat.pinned ? 'text-yellow-500' : 'text-gray-600 dark:text-gray-400'}`} fill="currentColor" viewBox="0 0 20 20"><path d="M7.05 2.29a1 1 0 011.41 0L10 3.83l1.54-1.54a1 1 0 011.41 1.41L11.41 5.24l1.54 1.54a1 1 0 01-1.41 1.41L10 6.66l-1.54 1.54a1 1 0 01-1.41-1.41l1.54-1.54L6.05 3.7a1 1 0 010-1.41z"/></svg>
+                          </button>
+                          {/* Rename in sidebar */}
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setSelectedChatId(chat.id);
+                              setCurrentChatId(chat.id);
+                              startRename();
+                            }}
+                            className="opacity-0 group-hover:opacity-100 p-1 hover:bg-gray-300 dark:hover:bg-gray-700 rounded transition-all ml-1"
+                            title="Rename chat"
+                          >
+                            <svg className="w-3.5 h-3.5 text-gray-600 dark:text-gray-400" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M15.232 5.232l3.536 3.536M9 11l6-6 3 3-6 6H9v-3z"/></svg>
+                          </button>
                         </div>
                       </div>
                     ))}
@@ -1069,7 +1065,7 @@ export default function ChatPage() {
             </div>
             <div className="relative">
               <button
-                onClick={(e) => { e.stopPropagation(); setHeadingMenuOpen(v => !v); }}
+                onClick={() => setHeadingMenuOpen(v => !v)}
                 aria-haspopup="true"
                 aria-expanded={headingMenuOpen}
                 ref={headingMenuRef}
@@ -1083,16 +1079,39 @@ export default function ChatPage() {
 
               {headingMenuOpen && (
                 <div className="absolute right-0 mt-2 w-44 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-xl z-50 overflow-hidden">
-                  <button className="w-full text-left px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-700" onClick={(e) => { e.stopPropagation(); const id = selectedChatId || currentChatId; if (!id) return; togglePin(id); setHeadingMenuOpen(false); }}>
+                  <button
+                    onClick={() => {
+                      const id = selectedChatId || currentChatId;
+                      if (!id) return;
+                      togglePin(id);
+                      setHeadingMenuOpen(false);
+                    }}
+                    className="w-full text-left px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-700"
+                  >
                     {chatHistory.find(c => c.id === (selectedChatId || currentChatId))?.pinned ? 'Unpin' : 'Pin'}
                   </button>
-                  <button className="w-full text-left px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-700" onClick={(e) => { e.stopPropagation(); startRename(); setHeadingMenuOpen(false); }}>
+                  <button
+                    onClick={() => { startRename(); setHeadingMenuOpen(false); }}
+                    className="w-full text-left px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-700"
+                  >
                     Rename
                   </button>
-                  <button className="w-full text-left px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-700" onClick={(e) => { e.stopPropagation(); handleShare(selectedChatId || currentChatId || undefined); setHeadingMenuOpen(false); }}>
+                  <button
+                    onClick={() => { handleShare(selectedChatId || currentChatId || undefined); setHeadingMenuOpen(false); }}
+                    className="w-full text-left px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-700"
+                  >
                     Share
                   </button>
-                  <button className="w-full text-left px-4 py-2 text-red-600 hover:bg-red-50 dark:hover:bg-red-900/40" onClick={(e) => { e.stopPropagation(); const id = selectedChatId || currentChatId; if (!id) return; if (!confirm('Delete this chat? This cannot be undone.')) return; handleDeleteChat(id); setHeadingMenuOpen(false); }}>
+                  <button
+                    onClick={() => {
+                      const id = selectedChatId || currentChatId;
+                      if (!id) return;
+                      if (!confirm('Delete this chat? This cannot be undone.')) return;
+                      handleDeleteChat(id);
+                      setHeadingMenuOpen(false);
+                    }}
+                    className="w-full text-left px-4 py-2 text-red-600 hover:bg-red-50 dark:hover:bg-red-900/40"
+                  >
                     Delete
                   </button>
                 </div>
