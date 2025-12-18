@@ -792,7 +792,8 @@ export default function ChatPage() {
             className="w-full py-3 px-4 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-700 text-gray-900 dark:text-white rounded-full hover:bg-gray-50 dark:hover:bg-gray-750 transition-all shadow-sm hover:shadow-md font-medium text-sm flex items-center gap-3"
           >
             <Plus className="w-5 h-5" />
-            New chat
+            <p className="flex-1 text-left">+ New chat</p>
+            <MessageSquare className="w-4 h-4 text-gray-500 dark:text-gray-300" />
           </button>
         </div>
 
@@ -816,6 +817,11 @@ export default function ChatPage() {
               </button>
             )}
           </div>
+        </div>
+
+        {/* Small header for chat list */}
+        <div className="px-3 pb-2">
+          <h3 className="text-xs font-semibold text-gray-500 dark:text-gray-500 uppercase tracking-wide">Chats</h3>
         </div>
 
         {/* Navigation List - Chat History */}
