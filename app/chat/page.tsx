@@ -2,7 +2,7 @@
 
 import { useSession, signOut, signIn } from "next-auth/react";
 import { useState, useRef, useEffect } from "react";
-import { Send, Upload, Download, Menu, LogOut, User, Sparkles, FileText, Image as ImageIcon, X, MessageSquare, Clock, Trash2, Plus, Settings, HelpCircle, FolderOpen, Code, Moon, Sun, Mail, KeyRound, Copy, Check, Brain, ToggleLeft, ToggleRight, Search } from "lucide-react";
+import { Send, Upload, Download, Menu, LogOut, User, Sparkles, FileText, Image as ImageIcon, X, MessageSquare, Clock, Trash2, Plus, Settings, HelpCircle, FolderOpen, Code, Moon, Sun, Mail, KeyRound, Copy, Check, Brain, ToggleLeft, ToggleRight, Search, Lock } from "lucide-react";
 import ReactMarkdown from "react-markdown";
 
 interface Message {
@@ -1154,14 +1154,14 @@ export default function ChatPage() {
           </div>
         </div>
 
-        {/* Sidebar Footer - Settings and Help */}
+        {/* Sidebar Footer - Settings */}
         <div className="border-t border-gray-200 dark:border-gray-800 p-3">
           <button 
             onClick={() => setShowSettingsModal(true)}
             className="w-full px-3 py-2.5 text-left text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-800 rounded-lg transition-colors flex items-center gap-3"
           >
             <Settings className="w-4 h-4" />
-            Settings and help
+            Settings
           </button>
         </div>
       </aside>
