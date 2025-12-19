@@ -75,6 +75,42 @@ export default function ChatPage() {
   const feedbackModalRef = useRef<HTMLDivElement>(null);
   const headingMenuRef = useRef<HTMLButtonElement | null>(null);
   const [headingMenuOpen, setHeadingMenuOpen] = useState(false);
+  const [openDropdownId, setOpenDropdownId] = useState<string | null>(null);
+  const [chatFilter, setChatFilter] = useState<'all' | 'today' | 'pinned'>('all');
+  const [searchSourceFilter, setSearchSourceFilter] = useState<'all' | 'web' | 'code' | 'images' | 'news'>('all');
+  const [showSearchFilterMenu, setShowSearchFilterMenu] = useState(false);
+  const searchFilterRef = useRef<HTMLDivElement>(null);
+
+  // Shorthand commands mapping
+  const shorthands: { [key: string]: string } = {
+    '/sum': 'Summarize the key points from our conversation so far',
+    '/trans': 'Translate the previous response to a different language',
+    '/code': 'Provide code snippets or examples for this topic',
+    '/explain': 'Explain this in simpler terms',
+    '/expand': 'Provide more details and elaborate on this topic',
+    '/tldr': 'Give me a brief summary in bullet points',
+    '/q': 'Generate questions about this topic to test understanding',
+    '/example': 'Give me real-world examples of this concept',
+    '/compare': 'Compare and contrast the key differences',
+    '/pros': 'List the pros and cons of this approach',
+    '/help': 'Show available shorthand commands',
+  };
+
+  // Process shorthand input
+  const processShorthandInput = (text: string): string => {
+    const trimmed = text.trim();
+    for (const [shorthand, expansion] of Object.entries(shorthands)) {
+      if (trimmed.toLowerCase().startsWith(shorthand.toLowerCase())) {
+        const rest = trimmed.substring(shorthand.length).trim();
+        if (rest) {
+          return `${expansion}\n\nContext: ${rest}`;
+        } else {
+          return expansion;
+        }
+      }
+    }
+    return text;
+  };
 
   // Handle file selection
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -316,13 +352,44 @@ export default function ChatPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [messages]);
 
-  // Filter chat history based on search query
-  const filteredChatHistory = searchQuery.trim() 
+  // Filter chat history based on search query and filter type
+  let filteredChatHistory = searchQuery.trim() 
     ? chatHistory.filter(chat => 
         chat.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
         chat.preview.toLowerCase().includes(searchQuery.toLowerCase())
       )
     : chatHistory;
+
+  // Apply source filter based on content keywords
+  if (searchSourceFilter !== 'all') {
+    filteredChatHistory = filteredChatHistory.filter(chat => {
+      const content = (chat.title + ' ' + chat.preview).toLowerCase();
+      
+      if (searchSourceFilter === 'code') {
+        return /code|javascript|python|typescript|react|function|const|let|var|import|export|class|interface/.test(content);
+      } else if (searchSourceFilter === 'web') {
+        return /html|website|page|link|url|http|web|search|google|browser/.test(content) || !/(code|image|image|photo|news|article|report)/.test(content);
+      } else if (searchSourceFilter === 'images') {
+        return /image|photo|picture|visual|design|graphic|ui|ux|screenshot|icon/.test(content);
+      } else if (searchSourceFilter === 'news') {
+        return /news|article|report|update|event|announcement|breaking|latest|today/.test(content);
+      }
+      return true;
+    });
+  }
+
+  // Apply additional filters
+  if (chatFilter === 'today') {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    filteredChatHistory = filteredChatHistory.filter(chat => {
+      const chatDate = new Date(chat.timestamp);
+      chatDate.setHours(0, 0, 0, 0);
+      return chatDate.getTime() === today.getTime();
+    });
+  } else if (chatFilter === 'pinned') {
+    filteredChatHistory = filteredChatHistory.filter(chat => chat.pinned === true);
+  }
 
   // Group chat history by time
   const groupChatHistory = () => {
@@ -594,13 +661,16 @@ export default function ChatPage() {
       if (feedbackModalRef.current && !feedbackModalRef.current.contains(event.target as Node)) {
         setShowFeedbackModal(false);
       }
+      if (searchFilterRef.current && !searchFilterRef.current.contains(event.target as Node)) {
+        setShowSearchFilterMenu(false);
+      }
     };
 
-    if (showAttachMenu || showProfileMenu || showSettingsModal || showFeedbackModal) {
+    if (showAttachMenu || showProfileMenu || showSettingsModal || showFeedbackModal || showSearchFilterMenu) {
       document.addEventListener('mousedown', handleClickOutside);
       return () => document.removeEventListener('mousedown', handleClickOutside);
     }
-  }, [showAttachMenu, showProfileMenu, showSettingsModal, showFeedbackModal]);
+  }, [showAttachMenu, showProfileMenu, showSettingsModal, showFeedbackModal, showSearchFilterMenu]);
 
   // Load history from backend for signed-in user
   useEffect(() => {
@@ -652,9 +722,12 @@ export default function ChatPage() {
       }
     }
 
+    // Process shorthand input before sending
+    const processedText = processShorthandInput(messageText);
+
     const userMessage: Message = {
       id: Date.now().toString(),
-      text: messageText,
+      text: processedText,
       sender: 'user',
       timestamp: new Date(),
       attachments: fileNames.length > 0 ? fileNames : undefined,
@@ -667,14 +740,14 @@ export default function ChatPage() {
 
     // Update user activity for personalization
     if (personalizationEnabled) {
-      updateUserActivity(input);
+      updateUserActivity(processedText);
     }
 
     try {
       // For now, send text to API (file processing would need backend support)
       const promptText = attachedFiles.length > 0 
-        ? `${input}\n\n(Note: User attached files: ${fileNames.join(', ')}. File content analysis is not yet supported.)`
-        : input;
+        ? `${processedText}\n\n(Note: User attached files: ${fileNames.join(', ')}. File content analysis is not yet supported.)`
+        : processedText;
 
       // Prepare enhanced personalization context (Gemini-style adaptive learning)
       const personalizationContext = personalizationEnabled ? {
@@ -797,8 +870,8 @@ export default function ChatPage() {
           </button>
         </div>
 
-        {/* Search Bar */}
-        <div className="px-3 pb-3">
+        {/* Search Bar with Source Filter */}
+        <div className="px-3 pb-3 space-y-2">
           <div className="relative">
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
             <input
@@ -817,6 +890,85 @@ export default function ChatPage() {
               </button>
             )}
           </div>
+
+          {/* Source Filter Dropdown */}
+          <div className="relative" ref={searchFilterRef}>
+            <button
+              onClick={() => setShowSearchFilterMenu(!showSearchFilterMenu)}
+              className="w-full px-3 py-2 text-xs font-medium bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-700 rounded-lg text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-750 transition-colors flex items-center justify-between"
+            >
+              <span>
+                {searchSourceFilter === 'all' ? '🔍 All Sources' : 
+                 searchSourceFilter === 'web' ? '🌐 Web' :
+                 searchSourceFilter === 'code' ? '💻 Code' :
+                 searchSourceFilter === 'images' ? '🖼️ Images' :
+                 '📰 News'}
+              </span>
+              <span className="text-gray-400 text-xs">▼</span>
+            </button>
+
+            {showSearchFilterMenu && (
+              <div className="absolute top-full left-0 right-0 mt-1 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-700 rounded-lg shadow-lg z-50 py-1">
+                {[
+                  { value: 'all', label: '🔍 All Sources', desc: 'Search everything' },
+                  { value: 'web', label: '🌐 Web', desc: 'Web pages & links' },
+                  { value: 'code', label: '💻 Code', desc: 'Code snippets' },
+                  { value: 'images', label: '🖼️ Images', desc: 'Images & visual' },
+                  { value: 'news', label: '📰 News', desc: 'News & articles' },
+                ].map((option) => (
+                  <button
+                    key={option.value}
+                    onClick={() => {
+                      setSearchSourceFilter(option.value as any);
+                      setShowSearchFilterMenu(false);
+                    }}
+                    className={`w-full text-left px-3 py-2 transition-colors ${
+                      searchSourceFilter === option.value
+                        ? 'bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400'
+                        : 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700'
+                    }`}
+                  >
+                    <div className="text-sm font-medium">{option.label}</div>
+                    <div className="text-xs text-gray-500 dark:text-gray-400">{option.desc}</div>
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* Filter Buttons */}
+        <div className="px-3 pb-3 flex gap-2">
+          <button
+            onClick={() => setChatFilter('all')}
+            className={`flex-1 px-3 py-1.5 text-xs font-medium rounded-lg transition-colors ${
+              chatFilter === 'all'
+                ? 'bg-blue-600 text-white'
+                : 'bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-300 dark:hover:bg-gray-600'
+            }`}
+          >
+            All
+          </button>
+          <button
+            onClick={() => setChatFilter('today')}
+            className={`flex-1 px-3 py-1.5 text-xs font-medium rounded-lg transition-colors ${
+              chatFilter === 'today'
+                ? 'bg-blue-600 text-white'
+                : 'bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-300 dark:hover:bg-gray-600'
+            }`}
+          >
+            Today
+          </button>
+          <button
+            onClick={() => setChatFilter('pinned')}
+            className={`flex-1 px-3 py-1.5 text-xs font-medium rounded-lg transition-colors ${
+              chatFilter === 'pinned'
+                ? 'bg-blue-600 text-white'
+                : 'bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-300 dark:hover:bg-gray-600'
+            }`}
+          >
+            Pinned
+          </button>
         </div>
 
         {/* Small header for chat list */}
@@ -870,46 +1022,80 @@ export default function ChatPage() {
                             : 'hover:bg-gray-100 dark:hover:bg-gray-800'
                         }`}
                       >
-                        <div className="flex items-center gap-3">
+                        <div className="flex items-center gap-2">
                           <p className="text-sm text-gray-900 dark:text-gray-100 line-clamp-1 flex-1">
                             {chat.title}
                           </p>
-                          {/* Delete Button */}
-                          <button
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              if (!confirm('Delete this chat? This cannot be undone.')) return;
-                              handleDeleteChat(chat.id);
-                            }}
-                            className="opacity-0 group-hover:opacity-100 p-1 hover:bg-gray-300 dark:hover:bg-gray-700 rounded transition-all"
-                            title="Delete chat"
-                          >
-                            <Trash2 className="w-3.5 h-3.5 text-gray-600 dark:text-gray-400" />
-                          </button>
-                          {/* Pin Button */}
-                          <button
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              togglePin(chat.id);
-                            }}
-                            className="opacity-0 group-hover:opacity-100 p-1 hover:bg-gray-300 dark:hover:bg-gray-700 rounded transition-all ml-1"
-                            title={chat.pinned ? 'Unpin chat' : 'Pin chat'}
-                          >
-                            <svg className={`w-3.5 h-3.5 ${chat.pinned ? 'text-yellow-500' : 'text-gray-600 dark:text-gray-400'}`} fill="currentColor" viewBox="0 0 20 20"><path d="M7.05 2.29a1 1 0 011.41 0L10 3.83l1.54-1.54a1 1 0 011.41 1.41L11.41 5.24l1.54 1.54a1 1 0 01-1.41 1.41L10 6.66l-1.54 1.54a1 1 0 01-1.41-1.41l1.54-1.54L6.05 3.7a1 1 0 010-1.41z"/></svg>
-                          </button>
-                          {/* Rename in sidebar */}
-                          <button
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              setSelectedChatId(chat.id);
-                              setCurrentChatId(chat.id);
-                              startRename();
-                            }}
-                            className="opacity-0 group-hover:opacity-100 p-1 hover:bg-gray-300 dark:hover:bg-gray-700 rounded transition-all ml-1"
-                            title="Rename chat"
-                          >
-                            <svg className="w-3.5 h-3.5 text-gray-600 dark:text-gray-400" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M15.232 5.232l3.536 3.536M9 11l6-6 3 3-6 6H9v-3z"/></svg>
-                          </button>
+                          {/* Dropdown Menu Button */}
+                          <div className="relative">
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setOpenDropdownId(openDropdownId === chat.id ? null : chat.id);
+                              }}
+                              className="opacity-0 group-hover:opacity-100 p-1 hover:bg-gray-300 dark:hover:bg-gray-700 rounded transition-all"
+                              title="More options"
+                              aria-haspopup="true"
+                              aria-expanded={openDropdownId === chat.id}
+                            >
+                              <svg className="w-4 h-4 text-gray-600 dark:text-gray-400" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
+                              </svg>
+                            </button>
+
+                            {/* Dropdown Menu */}
+                            {openDropdownId === chat.id && (
+                              <div className="absolute right-0 mt-1 w-40 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-xl z-50 overflow-hidden" onClick={(e) => e.stopPropagation()}>
+                                <button
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    togglePin(chat.id);
+                                    setOpenDropdownId(null);
+                                  }}
+                                  className="w-full text-left px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-700 text-sm text-gray-700 dark:text-gray-300 transition-colors flex items-center gap-2"
+                                >
+                                  <svg className={`w-4 h-4 ${chat.pinned ? 'text-yellow-500' : 'text-gray-600 dark:text-gray-400'}`} fill="currentColor" viewBox="0 0 20 20"><path d="M7.05 2.29a1 1 0 011.41 0L10 3.83l1.54-1.54a1 1 0 011.41 1.41L11.41 5.24l1.54 1.54a1 1 0 01-1.41 1.41L10 6.66l-1.54 1.54a1 1 0 01-1.41-1.41l1.54-1.54L6.05 3.7a1 1 0 010-1.41z"/></svg>
+                                  {chat.pinned ? 'Unpin' : 'Pin'}
+                                </button>
+                                <button
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    setSelectedChatId(chat.id);
+                                    setCurrentChatId(chat.id);
+                                    startRename();
+                                    setOpenDropdownId(null);
+                                  }}
+                                  className="w-full text-left px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-700 text-sm text-gray-700 dark:text-gray-300 transition-colors flex items-center gap-2"
+                                >
+                                  <svg className="w-4 h-4 text-gray-600 dark:text-gray-400" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M15.232 5.232l3.536 3.536M9 11l6-6 3 3-6 6H9v-3z"/></svg>
+                                  Rename
+                                </button>
+                                <button
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    handleShare(chat.id);
+                                    setOpenDropdownId(null);
+                                  }}
+                                  className="w-full text-left px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-700 text-sm text-gray-700 dark:text-gray-300 transition-colors flex items-center gap-2"
+                                >
+                                  <svg className="w-4 h-4 text-gray-600 dark:text-gray-400" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg>
+                                  Share
+                                </button>
+                                <button
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    if (!confirm('Delete this chat? This cannot be undone.')) return;
+                                    handleDeleteChat(chat.id);
+                                    setOpenDropdownId(null);
+                                  }}
+                                  className="w-full text-left px-4 py-2 hover:bg-red-50 dark:hover:bg-red-900/40 text-sm text-red-600 dark:text-red-400 transition-colors flex items-center gap-2"
+                                >
+                                  <Trash2 className="w-4 h-4" />
+                                  Delete
+                                </button>
+                              </div>
+                            )}
+                          </div>
                         </div>
                       </div>
                     ))}
@@ -1045,19 +1231,18 @@ export default function ChatPage() {
           </div>
         </header>
 
-        {/* Chat Heading with Options (Gemini-style) */}
-        {(selectedChatId || currentChatId) && (
-          <div className="flex items-center justify-between px-8 py-4 border-b border-gray-200 dark:border-gray-800 bg-white/80 dark:bg-gray-900/80 sticky top-0 z-30">
+        {/* Chat Heading with Options (Gemini-style) - Shows only when messages exist */}
+        {(selectedChatId || currentChatId) && messages.length > 0 && (
+          <div className="flex items-center justify-between px-8 py-3 border-b border-gray-200 dark:border-gray-800 bg-white/50 dark:bg-gray-900/50 backdrop-blur-sm transition-all duration-300">
             <div className="flex items-center gap-3">
-              <Sparkles className="w-7 h-7 text-blue-600" />
               {!renameMode ? (
-                <h2 className="text-2xl font-bold text-gray-900 dark:text-white max-w-xs truncate">
-                  {chatHistory.find((c) => c.id === (selectedChatId || currentChatId))?.title || 'Untitled Chat'}
+                <h2 className="text-sm font-medium text-gray-700 dark:text-gray-200 max-w-2xl truncate">
+                  {chatHistory.find((c) => c.id === (selectedChatId || currentChatId))?.title || 'New chat'}
                 </h2>
               ) : (
                 <input
                   ref={renameInputRef}
-                  className="text-2xl font-bold bg-transparent outline-none border-b border-gray-200 dark:border-gray-700 text-gray-900 dark:text-white max-w-xs"
+                  className="text-sm font-medium bg-transparent outline-none border-b border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-200 max-w-2xl"
                   value={renameValue}
                   onChange={(e) => setRenameValue(e.target.value)}
                   onBlur={saveRename}
@@ -1075,10 +1260,10 @@ export default function ChatPage() {
                 aria-haspopup="true"
                 aria-expanded={headingMenuOpen}
                 ref={headingMenuRef}
-                className="p-2 rounded hover:bg-gray-200 dark:hover:bg-gray-700"
+                className="p-2 rounded hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors"
                 title="Open actions"
               >
-                <svg className="w-5 h-5 text-gray-600 dark:text-gray-300" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24" aria-hidden>
+                <svg className="w-5 h-5 text-gray-600 dark:text-gray-400" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24" aria-hidden>
                   <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
                 </svg>
               </button>
@@ -1127,22 +1312,26 @@ export default function ChatPage() {
         )}
 
         {/* Conversation View - Messages */}
-        <div className="flex-1 overflow-y-auto p-6">
-          {messages.length === 0 ? (
-            <div className="flex items-center justify-center h-full">
+        <div className="flex-1 overflow-y-auto p-6 bg-gradient-to-b from-white/50 dark:from-gray-900/30 to-white dark:to-gray-900 transition-all duration-300">
+          {/* Greeting State - ONLY when no messages */}
+          {messages.length === 0 && (
+            <div className="flex items-center justify-center h-full animate-fadeIn">
               <div className="text-center max-w-2xl">
-                <div className="w-20 h-20 bg-gradient-to-br from-blue-500 to-purple-600 rounded-3xl flex items-center justify-center mx-auto mb-6 shadow-lg">
-                  <Sparkles className="w-10 h-10 text-white" />
-                </div>
-                <h2 className="text-4xl font-bold text-gray-900 dark:text-white mb-4">
-                  Hello, {session?.user?.name?.split(' ')[0] || 'there'}
+                <h2 className="text-4xl font-semibold text-gray-900 dark:text-white mb-4">
+                  Chat Assistant
                 </h2>
-                <p className="text-xl text-gray-600 dark:text-gray-400">
+                <p className="text-lg text-gray-600 dark:text-gray-400 mb-2">
+                  Hello, {session?.user?.name?.split(' ')[0] || 'there'}
+                </p>
+                <p className="text-lg text-gray-600 dark:text-gray-400">
                   How can I help you today?
                 </p>
               </div>
             </div>
-          ) : (
+          )}
+
+          {/* Conversation State - ONLY when messages exist */}
+          {messages.length > 0 && (
             <div className="max-w-4xl mx-auto space-y-6">
               {messages.map((message) => (
                 <div
@@ -1168,9 +1357,9 @@ export default function ChatPage() {
 
                   {/* Message Content */}
                   <div className="flex-1 max-w-3xl group">
-                    <div className={`relative rounded-2xl px-5 py-3 ${
+                    <div className={`relative rounded-lg px-4 py-2.5 ${
                       message.sender === 'user'
-                        ? 'bg-gray-100 dark:bg-gray-800 text-gray-900 dark:text-gray-100'
+                        ? 'bg-blue-50 dark:bg-gray-800/60 text-gray-900 dark:text-gray-100'
                         : 'bg-transparent text-gray-900 dark:text-white'
                     }`}>
                       {message.sender === 'ai' ? (
@@ -1183,7 +1372,7 @@ export default function ChatPage() {
                       {/* Copy Button */}
                       <button
                         onClick={() => handleCopyMessage(message.id, message.text)}
-                        className={`absolute ${message.sender === 'user' ? 'left-2' : 'right-2'} top-2 p-1.5 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600`}
+                        className={`absolute ${message.sender === 'user' ? 'left-2' : 'right-2'} top-1.5 p-1.5 rounded-md opacity-0 group-hover:opacity-100 transition-opacity bg-gray-200/70 dark:bg-gray-700/50 hover:bg-gray-300 dark:hover:bg-gray-600`}
                         title="Copy message"
                       >
                         {copiedMessageId === message.id ? (
@@ -1220,17 +1409,17 @@ export default function ChatPage() {
         </div>
 
         {/* Chat Input Bar - Multi-functional (Gemini-style) */}
-        <div className="border-t border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 p-4">
+        <div className="border-t border-gray-200/50 dark:border-gray-800/50 bg-white/70 dark:bg-gray-900/50 backdrop-blur-sm p-4">
           <div className="max-w-4xl mx-auto">
-            <div className="flex items-end gap-2 bg-gray-50 dark:bg-gray-800 rounded-3xl border border-gray-300 dark:border-gray-700 p-2 shadow-sm focus-within:shadow-md focus-within:border-blue-500 transition-all">
+            <div className="relative flex items-end gap-2 bg-gray-100/60 dark:bg-gray-800/40 rounded-full border border-gray-300/50 dark:border-gray-700/40 p-2 focus-within:bg-gray-100 dark:focus-within:bg-gray-800/60 focus-within:border-gray-400 dark:focus-within:border-gray-600 transition-all">
               {/* Attachment/Tools Menu */}
               <div className="relative" ref={attachMenuRef}>
                 <button
                   onClick={() => setShowAttachMenu(!showAttachMenu)}
-                  className="p-3 hover:bg-gray-200 dark:hover:bg-gray-700 rounded-full transition-colors"
+                  className="p-2.5 hover:bg-gray-200/60 dark:hover:bg-gray-700/40 rounded-full transition-colors"
                   title="Add attachments"
                 >
-                  <Plus className="w-5 h-5 text-gray-700 dark:text-gray-300" />
+                  <Plus className="w-5 h-5 text-gray-600 dark:text-gray-400" />
                 </button>
 
                 {showAttachMenu && (
@@ -1271,7 +1460,7 @@ export default function ChatPage() {
               {attachedFiles.length > 0 && (
                 <div className="flex flex-wrap gap-2 px-2">
                   {attachedFiles.map((file, index) => (
-                    <div key={index} className="flex items-center gap-2 bg-gray-200 dark:bg-gray-700 rounded-lg px-3 py-1.5">
+                    <div key={index} className="flex items-center gap-2 bg-gray-200/60 dark:bg-gray-700/50 rounded-lg px-3 py-1.5">
                       {file.type.startsWith('image/') ? (
                         <ImageIcon className="w-4 h-4 text-blue-500" />
                       ) : (
@@ -1301,8 +1490,8 @@ export default function ChatPage() {
                     handleSend();
                   }
                 }}
-                placeholder="Ask Chat Assistant"
-                className="flex-1 px-4 py-3 bg-transparent border-none focus:outline-none resize-none text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 text-[15px] min-h-[48px] max-h-[200px]"
+                placeholder="Message (Try /help for shortcuts)"
+                className="flex-1 px-3 py-2.5 bg-transparent border-none focus:outline-none resize-none text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 text-[15px] min-h-[40px] max-h-[200px]"
                 rows={1}
                 disabled={isLoading}
                 style={{
@@ -1315,7 +1504,7 @@ export default function ChatPage() {
               <button
                 onClick={handleSend}
                 disabled={isLoading || !input.trim()}
-                className="p-3 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-300 dark:disabled:bg-gray-700 rounded-full transition-colors disabled:cursor-not-allowed"
+                className="p-2.5 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-400 dark:disabled:bg-gray-700/60 rounded-full transition-colors disabled:cursor-not-allowed"
                 title="Send message"
               >
                 <Send className="w-5 h-5 text-white" />
@@ -1323,9 +1512,33 @@ export default function ChatPage() {
             </div>
 
             {/* Input helper text */}
-            <p className="text-xs text-gray-500 dark:text-gray-500 text-center mt-2">
-              Chat Assistant can make mistakes. Check important info.
+            <p className="text-xs text-gray-500 dark:text-gray-500 text-center mt-2.5">
+              AI can make mistakes. Verify important information.
             </p>
+
+            {/* Shorthand suggestions popup */}
+            {input.startsWith('/') && (
+              <div className="absolute bottom-full left-0 right-0 mb-2 max-h-64 overflow-y-auto bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-lg z-50">
+                <div className="p-3 space-y-1">
+                  {Object.entries(shorthands).map(([shorthand, description]) => (
+                    <button
+                      key={shorthand}
+                      onClick={() => setInput(shorthand)}
+                      className="w-full text-left px-3 py-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded transition-colors group"
+                    >
+                      <div className="flex items-start gap-2">
+                        <code className="text-blue-600 dark:text-blue-400 font-semibold text-sm flex-shrink-0">
+                          {shorthand}
+                        </code>
+                        <span className="text-xs text-gray-600 dark:text-gray-400 group-hover:text-gray-900 dark:group-hover:text-white transition-colors">
+                          {description}
+                        </span>
+                      </div>
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
           </div>
         </div>
       </div>
