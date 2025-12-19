@@ -77,6 +77,14 @@ export default function ChatPage() {
   const [headingMenuOpen, setHeadingMenuOpen] = useState(false);
   const [openDropdownId, setOpenDropdownId] = useState<string | null>(null);
   const [chatFilter, setChatFilter] = useState<'all' | 'today' | 'pinned'>('all');
+  const [showAuthModal, setShowAuthModal] = useState(false);
+  const [authMode, setAuthMode] = useState<'login' | 'signup'>('login');
+  const [authEmail, setAuthEmail] = useState('');
+  const [authPassword, setAuthPassword] = useState('');
+  const [authName, setAuthName] = useState('');
+  const [authLoading, setAuthLoading] = useState(false);
+  const [authError, setAuthError] = useState('');
+  const authModalRef = useRef<HTMLDivElement>(null);
 
   // Shorthand commands mapping
   const shorthands: { [key: string]: string } = {
@@ -152,6 +160,68 @@ export default function ChatPage() {
       return session.user.email[0].toUpperCase();
     }
     return 'U';
+  };
+
+  // Handle email/password authentication
+  const handleAuthSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setAuthError('');
+    setAuthLoading(true);
+
+    try {
+      if (authMode === 'signup') {
+        // Sign up - create user via register API
+        const registerRes = await fetch('/api/register', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            email: authEmail,
+            password: authPassword,
+            name: authName,
+          }),
+        });
+
+        if (!registerRes.ok) {
+          const error = await registerRes.json();
+          throw new Error(error.error || 'Registration failed');
+        }
+
+        // Auto sign in after registration
+        const result = await signIn('credentials', {
+          email: authEmail,
+          password: authPassword,
+          redirect: false,
+        });
+
+        if (result?.error) {
+          throw new Error(result.error);
+        }
+
+        setShowAuthModal(false);
+        setAuthEmail('');
+        setAuthPassword('');
+        setAuthName('');
+      } else {
+        // Login
+        const result = await signIn('credentials', {
+          email: authEmail,
+          password: authPassword,
+          redirect: false,
+        });
+
+        if (result?.error) {
+          throw new Error(result.error);
+        }
+
+        setShowAuthModal(false);
+        setAuthEmail('');
+        setAuthPassword('');
+      }
+    } catch (error) {
+      setAuthError(error instanceof Error ? error.message : 'Authentication failed');
+    } finally {
+      setAuthLoading(false);
+    }
   };
 
   // Load theme from localStorage on mount
@@ -640,13 +710,16 @@ export default function ChatPage() {
       if (feedbackModalRef.current && !feedbackModalRef.current.contains(event.target as Node)) {
         setShowFeedbackModal(false);
       }
+      if (authModalRef.current && !authModalRef.current.contains(event.target as Node)) {
+        setShowAuthModal(false);
+      }
     };
 
-    if (showAttachMenu || showProfileMenu || showSettingsModal || showFeedbackModal) {
+    if (showAttachMenu || showProfileMenu || showSettingsModal || showFeedbackModal || showAuthModal) {
       document.addEventListener('mousedown', handleClickOutside);
       return () => document.removeEventListener('mousedown', handleClickOutside);
     }
-  }, [showAttachMenu, showProfileMenu, showSettingsModal, showFeedbackModal]);
+  }, [showAttachMenu, showProfileMenu, showSettingsModal, showFeedbackModal, showAuthModal]);
 
   // Load history from backend for signed-in user
   useEffect(() => {
@@ -742,6 +815,8 @@ export default function ChatPage() {
         }))
       } : null;
 
+      console.log('📤 Sending to /api/chat:', { promptText: promptText.substring(0, 100), userId: session?.user?.email });
+
       const response = await fetch("/api/chat", {
         method: "POST",
         headers: {
@@ -755,7 +830,49 @@ export default function ChatPage() {
         }),
       });
 
-      const data = await response.json();
+      console.log('📥 Response status:', response.status, response.statusText);
+
+      let data;
+      const contentType = response.headers.get('content-type');
+      
+      if (!response.ok) {
+        let errorMessage = `API error: ${response.status}`;
+        
+        try {
+          if (contentType?.includes('application/json')) {
+            const errorData = await response.json();
+            errorMessage = errorData.error || errorMessage;
+          } else {
+            // For non-JSON responses, read as text
+            const text = await response.text();
+            console.error('API returned non-JSON response:', text.substring(0, 200));
+            errorMessage = text || 'Server error - check console for details';
+          }
+        } catch (parseError) {
+          console.error('Failed to parse error response:', parseError);
+        }
+        
+        throw new Error(errorMessage);
+      }
+
+      // Parse successful response - always try to read as JSON first
+      try {
+        data = await response.json();
+      } catch (parseError) {
+        console.error('Failed to parse JSON response:', parseError);
+        // Try to get text response for better debugging
+        try {
+          const text = await response.text();
+          console.error('Response body:', text.substring(0, 500));
+        } catch (e) {
+          console.error('Could not read response body');
+        }
+        throw new Error('Invalid response format from server');
+      }
+
+      if (!data.response) {
+        throw new Error(data.error || 'No response from AI');
+      }
 
       // Update currentChatId if a new chat was created
       if (data.chatId && !currentChatId) {
@@ -764,17 +881,17 @@ export default function ChatPage() {
 
       const aiMessage: Message = {
         id: (Date.now() + 1).toString(),
-        text: data.response || "Sorry, I couldn't generate a response.",
+        text: data.response,
         sender: 'ai',
         timestamp: new Date(),
       };
 
       setMessages(prev => [...prev, aiMessage]);
     } catch (error) {
-      console.error("Error:", error);
+      console.error("Chat error:", error);
       const errorMessage: Message = {
         id: (Date.now() + 1).toString(),
-        text: "Sorry, there was an error processing your request.",
+        text: error instanceof Error ? `Error: ${error.message}` : "Sorry, there was an error processing your request.",
         sender: 'ai',
         timestamp: new Date(),
       };
@@ -1098,13 +1215,21 @@ export default function ChatPage() {
             {!session && (
               <div className="flex items-center gap-3">
                 <button
-                  onClick={() => signIn()}
+                  onClick={() => {
+                    setAuthMode('login');
+                    setShowAuthModal(true);
+                    setAuthError('');
+                  }}
                   className="px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
                 >
                   Log In
                 </button>
                 <button
-                  onClick={() => signIn()}
+                  onClick={() => {
+                    setAuthMode('signup');
+                    setShowAuthModal(true);
+                    setAuthError('');
+                  }}
                   className="px-4 py-2 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-lg transition-colors"
                 >
                   Sign Up
@@ -1421,7 +1546,7 @@ export default function ChatPage() {
                     handleSend();
                   }
                 }}
-                placeholder="Message (Try /help for shortcuts)"
+                placeholder="Ask AI Assistant"
                 className="flex-1 px-3 py-2.5 bg-transparent border-none focus:outline-none resize-none text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 text-[15px] min-h-[40px] max-h-[200px]"
                 rows={1}
                 disabled={isLoading}
@@ -1761,6 +1886,134 @@ export default function ChatPage() {
                 </button>
               </div>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* Auth Modal */}
+      {showAuthModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div 
+            ref={authModalRef}
+            className="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl w-full max-w-md overflow-hidden"
+          >
+            {/* Modal Header */}
+            <div className="p-6 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between">
+              <h2 className="text-xl font-semibold text-gray-900 dark:text-white">
+                {authMode === 'login' ? 'Log In' : 'Sign Up'}
+              </h2>
+              <button
+                onClick={() => {
+                  setShowAuthModal(false);
+                  setAuthError('');
+                }}
+                className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-full transition-colors"
+                aria-label="Close"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {/* Modal Body */}
+            <form onSubmit={handleAuthSubmit} className="p-6 space-y-4">
+              {authError && (
+                <div className="p-3 bg-red-100 dark:bg-red-900/30 border border-red-300 dark:border-red-700 rounded-lg">
+                  <p className="text-sm text-red-700 dark:text-red-400">{authError}</p>
+                </div>
+              )}
+
+              {authMode === 'signup' && (
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                    Full Name
+                  </label>
+                  <input
+                    type="text"
+                    value={authName}
+                    onChange={(e) => setAuthName(e.target.value)}
+                    placeholder="Your name"
+                    className="w-full px-4 py-2 bg-gray-100 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    required
+                  />
+                </div>
+              )}
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                  Email
+                </label>
+                <input
+                  type="email"
+                  value={authEmail}
+                  onChange={(e) => setAuthEmail(e.target.value)}
+                  placeholder="your.email@example.com"
+                  className="w-full px-4 py-2 bg-gray-100 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  required
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                  Password
+                </label>
+                <input
+                  type="password"
+                  value={authPassword}
+                  onChange={(e) => setAuthPassword(e.target.value)}
+                  placeholder="••••••••"
+                  className="w-full px-4 py-2 bg-gray-100 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  required
+                  minLength={6}
+                />
+              </div>
+
+              <button
+                type="submit"
+                disabled={authLoading}
+                className="w-full px-4 py-2.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors font-medium"
+              >
+                {authLoading ? 'Processing...' : (authMode === 'login' ? 'Log In' : 'Sign Up')}
+              </button>
+
+              <div className="text-center pt-2">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setAuthMode(authMode === 'login' ? 'signup' : 'login');
+                    setAuthError('');
+                    setAuthPassword('');
+                  }}
+                  className="text-sm text-blue-600 dark:text-blue-400 hover:underline"
+                >
+                  {authMode === 'login' ? 'Need an account? Sign Up' : 'Already have an account? Log In'}
+                </button>
+              </div>
+
+              <div className="relative pt-4">
+                <div className="absolute inset-0 flex items-center">
+                  <div className="w-full border-t border-gray-300 dark:border-gray-600"></div>
+                </div>
+                <div className="relative flex justify-center text-sm">
+                  <span className="px-2 bg-white dark:bg-gray-800 text-gray-500 dark:text-gray-400">Or continue with</span>
+                </div>
+              </div>
+
+              <button
+                type="button"
+                onClick={() => signIn('google')}
+                className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors font-medium flex items-center justify-center gap-2"
+              >
+                🔷 Google
+              </button>
+
+              <button
+                type="button"
+                onClick={() => signIn('facebook')}
+                className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors font-medium flex items-center justify-center gap-2"
+              >
+                🔵 Facebook
+              </button>
+            </form>
           </div>
         </div>
       )}

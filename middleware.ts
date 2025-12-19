@@ -1,5 +1,12 @@
-export { default } from 'next-auth/middleware';
+import { withAuth } from 'next-auth/middleware';
+import { NextRequest } from 'next/server';
+
+export default function middleware(request: NextRequest) {
+  // Allow unauthenticated requests to go through
+  // Only enforce auth if needed for specific features
+  return;
+}
 
 export const config = {
-  matcher: ['/api/chat/:path*', '/api/export/:path*', '/api/history/:path*'],
+  matcher: [], // Don't match any routes - allow all through
 };

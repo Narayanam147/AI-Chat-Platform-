@@ -6,11 +6,14 @@ export async function POST(request: NextRequest) {
     const { prompt, userId, personalization, chatId } = await request.json();
 
     if (!prompt) {
+      console.error('❌ No prompt provided');
       return NextResponse.json(
         { error: 'Prompt is required' },
         { status: 400 }
       );
     }
+    
+    console.log('✅ Received prompt:', prompt.substring(0, 100));
 
 
     let searchContext = '';
@@ -232,6 +235,8 @@ export async function POST(request: NextRequest) {
     const data = await response.json();
     const aiResponse = data.choices?.[0]?.message?.content || 'No response generated';
 
+    console.log('✅ AI Response:', aiResponse.substring(0, 100));
+
     let savedChatId = chatId;
 
     // Save to database if userId is provided
@@ -276,7 +281,7 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({ response: aiResponse, chatId: savedChatId });
   } catch (error) {
-    console.error('Chat API error:', error);
+    console.error('❌ Chat API error:', error);
     return NextResponse.json(
       { error: 'Internal server error' },
       { status: 500 }
