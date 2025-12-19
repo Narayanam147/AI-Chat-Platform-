@@ -1,4 +1,4 @@
-"use client";
+ "use client";
 /* eslint-disable react/no-unescaped-entities */
 
 import Link from 'next/link';
@@ -199,7 +199,7 @@ export default function PrivacyPolicy() {
               <li><strong>Withdraw Consent:</strong> Right to withdraw consent for data processing</li>
             </ul>
             <p className="text-gray-700 dark:text-gray-300 leading-relaxed mt-4">
-              To exercise these rights, contact us at: <a href="mailto:privacy@ai-chat.enginner" className="text-blue-600 dark:text-blue-400 hover:underline">privacy@ai-chat.enginner</a>
+              To exercise these rights, contact us at: <a href="mailto:privacy@ai-chat.engineer" className="text-blue-600 dark:text-blue-400 hover:underline">privacy@ai-chat.engineer</a>
             </p>
           </section>
 
@@ -228,7 +228,7 @@ export default function PrivacyPolicy() {
               <li>Right to non-discrimination for exercising CCPA rights</li>
             </ul>
             <p className="text-gray-700 dark:text-gray-300 leading-relaxed">
-              We do not sell your personal information. To submit a CCPA request, contact: <a href="mailto:privacy@ai-chat.enginner" className="text-blue-600 dark:text-blue-400 hover:underline">privacy@ai-chat.enginner</a>
+              We do not sell your personal information. To submit a CCPA request, contact: <a href="mailto:privacy@ai-chat.engineer" className="text-blue-600 dark:text-blue-400 hover:underline">privacy@ai-chat.engineer</a>
             </p>
           </section>
 
@@ -248,7 +248,7 @@ export default function PrivacyPolicy() {
               <li>Right to lodge a complaint with your data protection authority</li>
             </ul>
             <p className="text-gray-700 dark:text-gray-300 leading-relaxed">
-              Contact us at <a href="mailto:privacy@ai-chat.enginner" className="text-blue-600 dark:text-blue-400 hover:underline">privacy@ai-chat.enginner</a> to exercise your rights.
+              Contact us at <a href="mailto:privacy@ai-chat.engineer" className="text-blue-600 dark:text-blue-400 hover:underline">privacy@ai-chat.engineer</a> to exercise your rights.
             </p>
           </section>
 
@@ -288,9 +288,9 @@ export default function PrivacyPolicy() {
             <div className="bg-gray-100 dark:bg-gray-800 p-4 rounded-lg">
               <p className="text-gray-900 dark:text-white font-semibold">AI Chat Platform</p>
               <p className="text-gray-700 dark:text-gray-300">Owner: Narayanam Dubey</p>
-              <p className="text-gray-700 dark:text-gray-300">Email: privacy@ai-chat.enginner</p>
-              <p className="text-gray-700 dark:text-gray-300">Support: support@ai-chat.enginner</p>
-              <p className="text-gray-700 dark:text-gray-300">Website: www.ai-chat.enginner</p>
+              <p className="text-gray-700 dark:text-gray-300">Email: <a href="mailto:privacy@ai-chat.engineer" className="text-blue-600 dark:text-blue-400 hover:underline">privacy@ai-chat.engineer</a></p>
+              <p className="text-gray-700 dark:text-gray-300">Support: <a href="mailto:support@ai-chat.engineer" className="text-blue-600 dark:text-blue-400 hover:underline">support@ai-chat.engineer</a></p>
+              <p className="text-gray-700 dark:text-gray-300">Website: <a href="https://www.ai-chat.engineer" target="_blank" rel="noopener noreferrer" className="text-blue-600 dark:text-blue-400 hover:underline">www.ai-chat.engineer</a></p>
             </div>
           </section>
 

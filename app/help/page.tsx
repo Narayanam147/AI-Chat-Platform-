@@ -224,7 +224,7 @@ export default function HelpCenter() {
         <div className="mt-12 p-6 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg">
           <h3 className="font-semibold text-gray-900 dark:text-white mb-2">Still need help?</h3>
           <p className="text-gray-700 dark:text-gray-300 mb-4">Can't find what you're looking for? Contact our support team.</p>
-          <a href="mailto:support@ai-chat.enginner" className="inline-block px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors">
+          <a href="mailto:support@ai-chat.engineer" className="inline-block px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors">
             Contact Support
           </a>
         </div>
@@ -246,8 +246,8 @@ export default function HelpCenter() {
         <div className="mt-8 p-6 bg-gray-100 dark:bg-gray-800 rounded-lg">
           <h3 className="font-semibold text-gray-900 dark:text-white mb-3">AI Chat Platform</h3>
           <p className="text-gray-700 dark:text-gray-300 text-sm">Owner: Narayanam Dubey</p>
-          <p className="text-gray-700 dark:text-gray-300 text-sm">Email: <a href="mailto:support@ai-chat.enginner" className="text-blue-600 dark:text-blue-400 hover:underline">support@ai-chat.enginner</a></p>
-          <p className="text-gray-700 dark:text-gray-300 text-sm">Website: <a href="https://www.ai-chat.enginner" target="_blank" rel="noopener noreferrer" className="text-blue-600 dark:text-blue-400 hover:underline">www.ai-chat.enginner</a></p>
+          <p className="text-gray-700 dark:text-gray-300 text-sm">Email: <a href="mailto:support@ai-chat.engineer" className="text-blue-600 dark:text-blue-400 hover:underline">support@ai-chat.engineer</a></p>
+          <p className="text-gray-700 dark:text-gray-300 text-sm">Website: <a href="https://www.ai-chat.engineer" target="_blank" rel="noopener noreferrer" className="text-blue-600 dark:text-blue-400 hover:underline">www.ai-chat.engineer</a></p>
         </div>
       </div>
     </div>

@@ -12,14 +12,22 @@ export interface User {
 
 export const UserModel = {
   async findByEmail(email: string): Promise<User | null> {
-    const { data, error } = await supabase
-      .from('users')
-      .select('*')
-      .eq('email', email)
-      .single();
-    
-    if (error) return null;
-    return data;
+    try {
+      const { data, error } = await supabase
+        .from('users')
+        .select('*')
+        .eq('email', email)
+        .maybeSingle();
+
+      if (error) {
+        console.error('Error finding user by email:', error);
+        return null;
+      }
+      return data;
+    } catch (err) {
+      console.error('Unexpected error in findByEmail:', err);
+      return null;
+    }
   },
 
   async findById(id: string): Promise<User | null> {
@@ -39,11 +47,13 @@ export const UserModel = {
       .insert([user])
       .select()
       .single();
-    
+
     if (error) {
       console.error('Error creating user:', error);
-      return null;
+      // Throw to allow upstream handlers to capture the error details
+      throw new Error(JSON.stringify(error));
     }
+
     return data;
   },
 

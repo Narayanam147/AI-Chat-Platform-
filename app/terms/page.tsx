@@ -174,8 +174,8 @@ export default function TermsAndConditions() {
             <div className="bg-gray-100 dark:bg-gray-800 p-4 rounded-lg">
               <p className="text-gray-900 dark:text-white font-semibold">AI Chat Platform</p>
               <p className="text-gray-700 dark:text-gray-300">Owner: Narayanam Dubey</p>
-              <p className="text-gray-700 dark:text-gray-300">Email: support@ai-chat.enginner</p>
-              <p className="text-gray-700 dark:text-gray-300">Website: www.ai-chat.enginner</p>
+              <p className="text-gray-700 dark:text-gray-300">Email: <a href="mailto:support@ai-chat.engineer" className="text-blue-600 dark:text-blue-400 hover:underline">support@ai-chat.engineer</a></p>
+              <p className="text-gray-700 dark:text-gray-300">Website: <a href="https://www.ai-chat.engineer" target="_blank" rel="noopener noreferrer" className="text-blue-600 dark:text-blue-400 hover:underline">www.ai-chat.engineer</a></p>
             </div>
           </section>
 
