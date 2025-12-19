@@ -77,9 +77,6 @@ export default function ChatPage() {
   const [headingMenuOpen, setHeadingMenuOpen] = useState(false);
   const [openDropdownId, setOpenDropdownId] = useState<string | null>(null);
   const [chatFilter, setChatFilter] = useState<'all' | 'today' | 'pinned'>('all');
-  const [searchSourceFilter, setSearchSourceFilter] = useState<'all' | 'web' | 'code' | 'images' | 'news'>('all');
-  const [showSearchFilterMenu, setShowSearchFilterMenu] = useState(false);
-  const searchFilterRef = useRef<HTMLDivElement>(null);
 
   // Shorthand commands mapping
   const shorthands: { [key: string]: string } = {
@@ -359,24 +356,6 @@ export default function ChatPage() {
         chat.preview.toLowerCase().includes(searchQuery.toLowerCase())
       )
     : chatHistory;
-
-  // Apply source filter based on content keywords
-  if (searchSourceFilter !== 'all') {
-    filteredChatHistory = filteredChatHistory.filter(chat => {
-      const content = (chat.title + ' ' + chat.preview).toLowerCase();
-      
-      if (searchSourceFilter === 'code') {
-        return /code|javascript|python|typescript|react|function|const|let|var|import|export|class|interface/.test(content);
-      } else if (searchSourceFilter === 'web') {
-        return /html|website|page|link|url|http|web|search|google|browser/.test(content) || !/(code|image|image|photo|news|article|report)/.test(content);
-      } else if (searchSourceFilter === 'images') {
-        return /image|photo|picture|visual|design|graphic|ui|ux|screenshot|icon/.test(content);
-      } else if (searchSourceFilter === 'news') {
-        return /news|article|report|update|event|announcement|breaking|latest|today/.test(content);
-      }
-      return true;
-    });
-  }
 
   // Apply additional filters
   if (chatFilter === 'today') {
@@ -661,16 +640,13 @@ export default function ChatPage() {
       if (feedbackModalRef.current && !feedbackModalRef.current.contains(event.target as Node)) {
         setShowFeedbackModal(false);
       }
-      if (searchFilterRef.current && !searchFilterRef.current.contains(event.target as Node)) {
-        setShowSearchFilterMenu(false);
-      }
     };
 
-    if (showAttachMenu || showProfileMenu || showSettingsModal || showFeedbackModal || showSearchFilterMenu) {
+    if (showAttachMenu || showProfileMenu || showSettingsModal || showFeedbackModal) {
       document.addEventListener('mousedown', handleClickOutside);
       return () => document.removeEventListener('mousedown', handleClickOutside);
     }
-  }, [showAttachMenu, showProfileMenu, showSettingsModal, showFeedbackModal, showSearchFilterMenu]);
+  }, [showAttachMenu, showProfileMenu, showSettingsModal, showFeedbackModal]);
 
   // Load history from backend for signed-in user
   useEffect(() => {
@@ -870,8 +846,8 @@ export default function ChatPage() {
           </button>
         </div>
 
-        {/* Search Bar with Source Filter */}
-        <div className="px-3 pb-3 space-y-2">
+        {/* Search Bar */}
+        <div className="px-3 pb-3">
           <div className="relative">
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
             <input
@@ -888,51 +864,6 @@ export default function ChatPage() {
               >
                 <X className="w-3 h-3 text-gray-500" />
               </button>
-            )}
-          </div>
-
-          {/* Source Filter Dropdown */}
-          <div className="relative" ref={searchFilterRef}>
-            <button
-              onClick={() => setShowSearchFilterMenu(!showSearchFilterMenu)}
-              className="w-full px-3 py-2 text-xs font-medium bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-700 rounded-lg text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-750 transition-colors flex items-center justify-between"
-            >
-              <span>
-                {searchSourceFilter === 'all' ? '🔍 All Sources' : 
-                 searchSourceFilter === 'web' ? '🌐 Web' :
-                 searchSourceFilter === 'code' ? '💻 Code' :
-                 searchSourceFilter === 'images' ? '🖼️ Images' :
-                 '📰 News'}
-              </span>
-              <span className="text-gray-400 text-xs">▼</span>
-            </button>
-
-            {showSearchFilterMenu && (
-              <div className="absolute top-full left-0 right-0 mt-1 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-700 rounded-lg shadow-lg z-50 py-1">
-                {[
-                  { value: 'all', label: '🔍 All Sources', desc: 'Search everything' },
-                  { value: 'web', label: '🌐 Web', desc: 'Web pages & links' },
-                  { value: 'code', label: '💻 Code', desc: 'Code snippets' },
-                  { value: 'images', label: '🖼️ Images', desc: 'Images & visual' },
-                  { value: 'news', label: '📰 News', desc: 'News & articles' },
-                ].map((option) => (
-                  <button
-                    key={option.value}
-                    onClick={() => {
-                      setSearchSourceFilter(option.value as any);
-                      setShowSearchFilterMenu(false);
-                    }}
-                    className={`w-full text-left px-3 py-2 transition-colors ${
-                      searchSourceFilter === option.value
-                        ? 'bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400'
-                        : 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700'
-                    }`}
-                  >
-                    <div className="text-sm font-medium">{option.label}</div>
-                    <div className="text-xs text-gray-500 dark:text-gray-400">{option.desc}</div>
-                  </button>
-                ))}
-              </div>
             )}
           </div>
         </div>
