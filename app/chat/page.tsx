@@ -581,34 +581,36 @@ export default function ChatPage() {
       alert('No chat selected to share');
       return;
     }
-    const url = `${window.location.origin}/chat?chatId=${encodeURIComponent(id)}`;
     try {
+      const res = await fetch('/api/share', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id, expiresDays: 7 }),
+      });
+      if (!res.ok) {
+        const txt = await res.text();
+        throw new Error(txt || 'Failed to create share');
+      }
+      const json = await res.json();
+      const token = json.token;
+      const shareUrl = `${window.location.origin}/share/${encodeURIComponent(json.id)}?t=${encodeURIComponent(token)}`;
+
       // Prefer Web Share API on mobile
       if (navigator.share) {
-        await navigator.share({
-          title: 'Chat from Chat Assistant',
-          text: 'Open this chat in Chat Assistant',
-          url,
-        });
+        await navigator.share({ title: 'Shared chat', text: 'Open this shared chat', url: shareUrl });
         return;
       }
 
-      // Fallback: try clipboard
       if (navigator.clipboard && navigator.clipboard.writeText) {
-        await navigator.clipboard.writeText(url);
+        await navigator.clipboard.writeText(shareUrl);
         alert('Shareable link copied to clipboard');
         return;
       }
 
-      // Last resort: show prompt so user can copy manually
-      prompt('Copy this link:', url);
+      prompt('Copy this link:', shareUrl);
     } catch (e) {
-      console.error('Failed to share link', e);
-      try {
-        prompt('Copy this link:', url);
-      } catch (_) {
-        // swallow
-      }
+      console.error('Failed to create share link', e);
+      alert('Failed to create share link');
     }
   };
 
@@ -979,7 +981,7 @@ export default function ChatPage() {
       )}
 
       {/* Left Sidebar - Collapsible */}
-      <aside className={`${showSidebar ? 'w-72' : 'w-0'} transition-all duration-300 ease-in-out overflow-hidden bg-gray-50 dark:bg-gray-900 border-r border-gray-200 dark:border-gray-800 flex flex-col fixed lg:relative h-full z-50 lg:z-auto`}>
+      <aside className={`${showSidebar ? 'w-72' : 'w-0'} transition-all duration-300 ease-in-out overflow-visible bg-gray-50 dark:bg-gray-900 border-r border-gray-200 dark:border-gray-800 flex flex-col fixed lg:relative h-full z-50 lg:z-auto`}>
         {/* New Chat Button - Prominent */}
         <div className="px-3 pt-4 pb-2">
           <button
@@ -1121,8 +1123,8 @@ export default function ChatPage() {
                             </button>
 
                             {/* Dropdown Menu */}
-                            {openDropdownId === chat.id && (
-                              <div className="absolute right-0 mt-1 w-40 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-xl z-50 overflow-hidden" onClick={(e) => e.stopPropagation()}>
+                              {openDropdownId === chat.id && (
+                              <div className="absolute right-0 mt-1 w-40 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-xl z-50 overflow-visible pointer-events-auto" onClick={(e) => e.stopPropagation()}>
                                 <button
                                   onClick={(e) => {
                                     e.stopPropagation();

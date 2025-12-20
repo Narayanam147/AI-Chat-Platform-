@@ -134,3 +134,19 @@ FROM information_schema.tables t
 WHERE table_schema = 'public' 
   AND table_name IN ('users', 'chats', 'feedback')
 ORDER BY table_name;
+
+-- ============================================
+-- Table for tokenized share links
+-- ============================================
+CREATE TABLE IF NOT EXISTS public.chat_shares (
+  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  chat_id UUID NOT NULL,
+  token TEXT NOT NULL,
+  created_by TEXT,
+  expires_at TIMESTAMPTZ,
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS idx_chat_shares_chat_id ON public.chat_shares(chat_id);
+CREATE INDEX IF NOT EXISTS idx_chat_shares_token ON public.chat_shares(token);
+
