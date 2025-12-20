@@ -14,8 +14,22 @@ export async function GET(request: NextRequest) {
 
     const userId = session.user.email;
 
-    // Fetch chats from Supabase
-    const chats = await ChatModel.findByUserId(userId);
+    // Fetch chat_history entries (visible only where is_deleted = false)
+    // We still keep existing ChatModel usage for `chats` table in other flows,
+    // but history listing should show `chat_history` rows.
+    const { data, error } = await (await import('@/lib/supabase')).supabase
+      .from('chat_history')
+      .select('*')
+      .eq('is_deleted', false)
+      .eq('user_id', userId)
+      .order('created_at', { ascending: false });
+
+    if (error) {
+      console.error('Failed to fetch chat_history rows:', error);
+      return NextResponse.json([], { status: 200 });
+    }
+
+    const chats = data || [];
 
     // Filter chats with at least one message
     const validChats = chats.filter(chat => 

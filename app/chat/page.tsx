@@ -5,6 +5,7 @@ import { useState, useRef, useEffect } from "react";
 import { Send, Upload, Download, Menu, LogOut, User, Sparkles, FileText, Image as ImageIcon, X, MessageSquare, Clock, Trash2, Plus, Settings, HelpCircle, FolderOpen, Code, Moon, Sun, Mail, KeyRound, Copy, Check, Brain, ToggleLeft, ToggleRight, Search, Lock } from "lucide-react";
 import ReactMarkdown from "react-markdown";
 import chatClient from '@/lib/chatClient';
+import chatHistoryClient from '@/lib/chatHistoryClient';
 
 interface Message {
   id: string;
@@ -485,7 +486,7 @@ export default function ChatPage() {
     const previous = chatHistory;
     setChatHistory(prev => prev.filter(ch => ch.id !== chatId));
     try {
-      await chatClient.softDeleteChat(chatId, session?.user?.email ?? null);
+      await chatHistoryClient.softDeleteHistory(chatId, session?.user?.email ?? null);
       // If deleted chat was selected, clear messages
       if (selectedChatId === chatId) {
         setSelectedChatId(null);
@@ -534,7 +535,7 @@ export default function ChatPage() {
       // Soft-delete all chats via chatClient (ownership enforced)
       for (const chat of previous) {
         try {
-          await chatClient.softDeleteChat(chat.id, session?.user?.email ?? null);
+          await chatHistoryClient.softDeleteHistory(chat.id, session?.user?.email ?? null);
         } catch (e) {
           // Log and continue; we'll roll back on outer catch
           console.error('Failed to soft-delete chat', chat.id, e);
@@ -884,6 +885,35 @@ export default function ChatPage() {
       };
 
       setMessages(prev => [...prev, aiMessage]);
+
+      // Persist to chat_history table: save the prompt and AI response.
+      try {
+        const saved = await chatHistoryClient.saveHistoryEntry({
+          userId: session?.user?.email ?? null,
+          prompt: promptText,
+          response: data.response,
+        });
+
+        // Update local sidebar history immediately (optimistic)
+        const newEntry: ChatHistory = {
+          id: String(saved.id),
+          title: saved.prompt?.substring(0, 50) || 'Chat',
+          timestamp: new Date(saved.created_at || new Date().toISOString()),
+          preview: saved.response?.substring(0, 100) || '',
+          messages: [
+            { text: promptText, sender: 'user', timestamp: new Date().toISOString() },
+            { text: data.response, sender: 'ai', timestamp: new Date().toISOString() },
+          ],
+          pinned: false,
+        };
+
+        setChatHistory(prev => [newEntry, ...prev]);
+        // set current chat id to saved history id so further messages can be linked if desired
+        setCurrentChatId(String(saved.id));
+        setSelectedChatId(String(saved.id));
+      } catch (e) {
+        console.error('Failed to save chat_history entry:', e);
+      }
     } catch (error) {
       console.error("Chat error:", error);
       const errorMessage: Message = {
