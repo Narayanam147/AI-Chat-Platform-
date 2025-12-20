@@ -76,7 +76,6 @@ export default function ChatPage() {
   const headingMenuRef = useRef<HTMLButtonElement | null>(null);
   const [headingMenuOpen, setHeadingMenuOpen] = useState(false);
   const [openDropdownId, setOpenDropdownId] = useState<string | null>(null);
-  const [mobileDrawerChatId, setMobileDrawerChatId] = useState<string | null>(null); // For mobile bottom drawer
   const [chatFilter, setChatFilter] = useState<'all' | 'today' | 'pinned'>('all');
   const [showAuthModal, setShowAuthModal] = useState(false);
   const [authMode, setAuthMode] = useState<'login' | 'signup'>('login');
@@ -1083,12 +1082,7 @@ export default function ChatPage() {
                             <button
                               onClick={(e) => {
                                 e.stopPropagation();
-                                // Check if mobile (window width <= 768px)
-                                if (window.innerWidth <= 768) {
-                                  setMobileDrawerChatId(chat.id);
-                                } else {
-                                  setOpenDropdownId(openDropdownId === chat.id ? null : chat.id);
-                                }
+                                setOpenDropdownId(openDropdownId === chat.id ? null : chat.id);
                               }}
                               className="p-1.5 hover:bg-gray-300 dark:hover:bg-gray-700 rounded transition-all opacity-0 group-hover:opacity-100"
                               title="More options"
@@ -1100,9 +1094,9 @@ export default function ChatPage() {
                               </svg>
                             </button>
 
-                            {/* Desktop Dropdown Menu */}
+                            {/* Dropdown Menu */}
                             {openDropdownId === chat.id && (
-                              <div className="desktop-dropdown-menu absolute right-0 top-full mt-1 w-40 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-xl z-[70] overflow-hidden" onClick={(e) => e.stopPropagation()}>
+                              <div className="absolute right-0 top-full mt-1 w-40 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-xl z-[70] overflow-hidden" onClick={(e) => e.stopPropagation()}>
                                 <button
                                   onClick={(e) => {
                                     e.stopPropagation();
@@ -1166,7 +1160,10 @@ export default function ChatPage() {
         {/* Sidebar Footer - Settings (Sticky at bottom) */}
         <div className="mt-auto sticky bottom-0 bg-white dark:bg-gray-900 border-t border-gray-200 dark:border-gray-800 p-3">
           <button 
-            onClick={() => setShowSettingsModal(true)}
+            onClick={() => {
+              setShowSidebar(false); // Close sidebar first
+              setShowSettingsModal(true);
+            }}
             className="w-full px-3 py-2.5 text-left text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-800 rounded-lg transition-colors flex items-center gap-3"
           >
             <Settings className="w-4 h-4" />
@@ -1178,8 +1175,8 @@ export default function ChatPage() {
       {/* Main Chat Area - Right Column */}
       <div className="flex-1 flex flex-col overflow-hidden">
         {/* Header - Persistent Hamburger Menu + Title + User Profile */}
-        <header className="p-3 md:p-4 flex items-center justify-between border-b border-gray-200 dark:border-gray-800 gap-2">
-          <div className="flex items-center gap-2 md:gap-3 flex-shrink-0">
+        <header className="p-4 flex items-center justify-between border-b border-gray-200 dark:border-gray-800">
+          <div className="flex items-center gap-3">
             {/* Persistent Hamburger Menu - Always Visible */}
             <button
               onClick={() => setShowSidebar(!showSidebar)}
@@ -1209,9 +1206,9 @@ export default function ChatPage() {
               )}
             </button>
 
-            {/* Title - Show when sidebar is collapsed (hidden on small mobile) */}
+            {/* Title - Show when sidebar is collapsed */}
             {!showSidebar && (
-              <div className="hidden sm:flex items-center gap-2">
+              <div className="flex items-center gap-2">
                 <Sparkles className="w-6 h-6 text-blue-600" />
                 <h1 className="text-xl font-semibold text-gray-900 dark:text-white">Chat Assistant</h1>
               </div>
@@ -1219,17 +1216,17 @@ export default function ChatPage() {
           </div>
 
           {/* Simple User Profile Menu */}
-          <div className="relative flex-shrink-0" ref={profileMenuRef}>
+          <div className="relative" ref={profileMenuRef}>
             {/* For GUEST users - Show Log In / Sign Up buttons */}
             {!session && (
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-3">
                 <button
                   onClick={() => {
                     setAuthMode('login');
                     setShowAuthModal(true);
                     setAuthError('');
                   }}
-                  className="px-3 py-1.5 md:px-4 md:py-2 text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
+                  className="px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
                 >
                   Log In
                 </button>
@@ -1239,7 +1236,7 @@ export default function ChatPage() {
                     setShowAuthModal(true);
                     setAuthError('');
                   }}
-                  className="px-3 py-1.5 md:px-4 md:py-2 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-lg transition-colors"
+                  className="px-4 py-2 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-lg transition-colors"
                 >
                   Sign Up
                 </button>
@@ -1321,14 +1318,7 @@ export default function ChatPage() {
             </div>
             <div className="relative">
               <button
-                onClick={() => {
-                  // Check if mobile (window width <= 768px)
-                  if (window.innerWidth <= 768) {
-                    setMobileDrawerChatId(selectedChatId || currentChatId || null);
-                  } else {
-                    setHeadingMenuOpen(v => !v);
-                  }
-                }}
+                onClick={() => setHeadingMenuOpen(v => !v)}
                 aria-haspopup="true"
                 aria-expanded={headingMenuOpen}
                 ref={headingMenuRef}
@@ -1341,7 +1331,7 @@ export default function ChatPage() {
               </button>
 
               {headingMenuOpen && (
-                <div className="desktop-dropdown-menu absolute right-0 top-full mt-2 w-44 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-xl z-[70] overflow-hidden">
+                <div className="absolute right-0 top-full mt-2 w-44 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-xl z-[70] overflow-hidden">
                   <button
                     onClick={() => {
                       const id = selectedChatId || currentChatId;
@@ -1617,7 +1607,7 @@ export default function ChatPage() {
 
       {/* Settings Modal */}
       {showSettingsModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[80] p-4">
           <div 
             ref={settingsModalRef}
             className="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl w-full max-w-md overflow-hidden"
@@ -1852,7 +1842,7 @@ export default function ChatPage() {
 
       {/* Feedback Modal */}
       {showFeedbackModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[80] p-4">
           <div 
             ref={feedbackModalRef}
             className="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl w-full max-w-md overflow-hidden"
@@ -1908,7 +1898,7 @@ export default function ChatPage() {
 
       {/* Auth Modal */}
       {showAuthModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[80] p-4">
           <div 
             ref={authModalRef}
             className="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl w-full max-w-md overflow-hidden"
@@ -2032,108 +2022,6 @@ export default function ChatPage() {
             </form>
           </div>
         </div>
-      )}
-
-      {/* Mobile Bottom Drawer for Chat Actions */}
-      {mobileDrawerChatId && (
-        <>
-          {/* Backdrop */}
-          <div 
-            className="mobile-drawer-backdrop"
-            onClick={() => setMobileDrawerChatId(null)}
-          />
-          {/* Drawer */}
-          <div className="mobile-drawer">
-            <div className="mobile-drawer-handle" />
-            <div className="pb-6">
-              {/* Chat title */}
-              <div className="px-6 py-3 border-b border-gray-200 dark:border-gray-700">
-                <p className="text-sm font-medium text-gray-500 dark:text-gray-400">
-                  {chatHistory.find(c => c.id === mobileDrawerChatId)?.title || 'Chat Options'}
-                </p>
-              </div>
-              
-              {/* Pin/Unpin */}
-              <button
-                onClick={() => {
-                  togglePin(mobileDrawerChatId);
-                  setMobileDrawerChatId(null);
-                }}
-                className="mobile-drawer-item"
-              >
-                <svg className={`w-5 h-5 ${chatHistory.find(c => c.id === mobileDrawerChatId)?.pinned ? 'text-yellow-500' : 'text-gray-500'}`} fill="currentColor" viewBox="0 0 20 20">
-                  <path d="M10 3a1 1 0 011 1v4h4a1 1 0 110 2h-4v4a1 1 0 11-2 0v-4H5a1 1 0 110-2h4V4a1 1 0 011-1z"/>
-                </svg>
-                {chatHistory.find(c => c.id === mobileDrawerChatId)?.pinned ? 'Unpin Chat' : 'Pin Chat'}
-              </button>
-              
-              {/* Rename */}
-              <button
-                onClick={() => {
-                  setSelectedChatId(mobileDrawerChatId);
-                  setCurrentChatId(mobileDrawerChatId);
-                  startRename();
-                  setMobileDrawerChatId(null);
-                }}
-                className="mobile-drawer-item"
-              >
-                <svg className="w-5 h-5 text-gray-500" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M15.232 5.232l3.536 3.536M9 11l6-6 3 3-6 6H9v-3z"/>
-                </svg>
-                Rename
-              </button>
-              
-              {/* Share */}
-              <button
-                onClick={() => {
-                  handleShare(mobileDrawerChatId);
-                  setMobileDrawerChatId(null);
-                }}
-                className="mobile-drawer-item"
-              >
-                <svg className="w-5 h-5 text-gray-500" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z"/>
-                </svg>
-                Share
-              </button>
-              
-              {/* Delete */}
-              <button
-                onClick={() => {
-                  if (confirm('Delete this chat? This cannot be undone.')) {
-                    handleDeleteChat(mobileDrawerChatId);
-                  }
-                  setMobileDrawerChatId(null);
-                }}
-                className="mobile-drawer-item mobile-drawer-item-danger"
-              >
-                <Trash2 className="w-5 h-5" />
-                Delete
-              </button>
-              
-              {/* Cancel */}
-              <button
-                onClick={() => setMobileDrawerChatId(null)}
-                className="mobile-drawer-item text-gray-500 dark:text-gray-400"
-              >
-                <X className="w-5 h-5" />
-                Cancel
-              </button>
-            </div>
-          </div>
-        </>
-      )}
-
-      {/* Floating Sidebar Toggle Button - Only visible on mobile when sidebar is closed */}
-      {!showSidebar && (
-        <button
-          onClick={() => setShowSidebar(true)}
-          className="md:hidden fixed left-2 top-20 z-[50] p-2.5 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-full shadow-lg hover:shadow-xl transition-all active:scale-95"
-          aria-label="Open sidebar"
-          title="Open sidebar"
-        >
-          <Menu className="w-5 h-5 text-gray-600 dark:text-gray-400" />
-        </button>
       )}
 
     </div>
