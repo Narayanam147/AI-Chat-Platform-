@@ -975,13 +975,13 @@ export default function ChatPage() {
       {/* Overlay for mobile when sidebar is open */}
       {showSidebar && (
         <div 
-          className="lg:hidden fixed inset-0 bg-black bg-opacity-50 z-40"
+          className="lg:hidden fixed inset-0 bg-black bg-opacity-50 z-[55]"
           onClick={() => setShowSidebar(false)}
         />
       )}
 
       {/* Left Sidebar - Collapsible */}
-      <aside className={`${showSidebar ? 'w-72' : 'w-0'} transition-all duration-300 ease-in-out overflow-visible bg-gray-50 dark:bg-gray-900 border-r border-gray-200 dark:border-gray-800 flex flex-col fixed lg:relative h-full z-50 lg:z-auto`}>
+      <aside className={`${showSidebar ? 'w-72' : 'w-0'} transition-all duration-300 ease-in-out overflow-visible bg-white dark:bg-gray-900 border-r border-gray-200 dark:border-gray-800 flex flex-col fixed lg:relative h-full z-[50] lg:z-auto`}>
         {/* New Chat Button - Prominent */}
         <div className="px-3 pt-4 pb-2">
           <button
@@ -1124,7 +1124,7 @@ export default function ChatPage() {
 
                             {/* Dropdown Menu */}
                               {openDropdownId === chat.id && (
-                              <div className="absolute right-0 mt-1 w-40 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-xl z-50 overflow-visible pointer-events-auto" onClick={(e) => e.stopPropagation()}>
+                              <div className="absolute right-0 top-full mt-2 w-40 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-xl z-[60] overflow-visible pointer-events-auto" onClick={(e) => e.stopPropagation()}>
                                 <button
                                   onClick={(e) => {
                                     e.stopPropagation();
@@ -1186,7 +1186,7 @@ export default function ChatPage() {
         </div>
 
         {/* Sidebar Footer - Settings */}
-        <div className="border-t border-gray-200 dark:border-gray-800 p-3">
+        <div className="mt-auto border-t border-gray-200 dark:border-gray-800 p-3 bg-white dark:bg-gray-900">
           <button 
             onClick={() => setShowSettingsModal(true)}
             className="w-full px-3 py-2.5 text-left text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-800 rounded-lg transition-colors flex items-center gap-3"
