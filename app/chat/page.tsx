@@ -719,12 +719,14 @@ export default function ChatPage() {
     }
   }, [showAttachMenu, showProfileMenu, showSettingsModal, showFeedbackModal, showAuthModal]);
 
-  // Load history from backend for signed-in user
+  // Load history from backend for signed-in user or guests
   useEffect(() => {
     const load = async () => {
-      if (!session?.user?.email) return;
       try {
-        const res = await fetch(`/api/history?userId=${encodeURIComponent(session.user.email)}`);
+        const url = session?.user?.email
+          ? `/api/history?userId=${encodeURIComponent(session.user.email)}`
+          : `/api/history`;
+        const res = await fetch(url);
         if (!res.ok) {
           console.error('Failed to fetch history', await res.text());
           return;

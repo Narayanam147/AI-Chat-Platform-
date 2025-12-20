@@ -5,25 +5,21 @@ import { authOptions } from '@/lib/auth';
 
 export async function GET(request: NextRequest) {
   try {
-    // Validate session server-side
+    // Determine user context: logged-in users use their email as user_id;
+    // guests will receive rows where user_id IS NULL.
     const session = await getServerSession(authOptions);
-    
-    if (!session || !session.user?.email) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    const userId = session?.user?.email ?? null;
+
+    // Fetch chat_history entries (visible only where is_deleted = false).
+    const supabase = (await import('@/lib/supabase')).supabase;
+    let query: any = supabase.from('chat_history').select('*').eq('is_deleted', false).order('created_at', { ascending: false });
+    if (userId == null) {
+      query = query.is('user_id', null);
+    } else {
+      query = query.eq('user_id', userId);
     }
 
-    const userId = session.user.email;
-
-    // Fetch chat_history entries (visible only where is_deleted = false)
-    // We still keep existing ChatModel usage for `chats` table in other flows,
-    // but history listing should show `chat_history` rows.
-    const { data, error } = await (await import('@/lib/supabase')).supabase
-      .from('chat_history')
-      .select('*')
-      .eq('is_deleted', false)
-      .eq('user_id', userId)
-      .order('created_at', { ascending: false });
-
+    const { data, error } = await query;
     if (error) {
       console.error('Failed to fetch chat_history rows:', error);
       return NextResponse.json([], { status: 200 });
@@ -31,32 +27,16 @@ export async function GET(request: NextRequest) {
 
     const chats = data || [];
 
-    // Filter chats with at least one message
-    const validChats = chats.filter(chat => 
-      chat.messages && chat.messages.length > 0
-    );
-
-    // Remove duplicates efficiently using Map (keeps most recent due to sort)
-    const uniqueChatsMap = new Map();
-    
-    for (const chat of validChats) {
-      const firstMessage = chat.messages?.[0]?.text || '';
-      const key = `${chat.title}-${firstMessage.substring(0, 50)}`;
-      
-      if (!uniqueChatsMap.has(key)) {
-        uniqueChatsMap.set(key, chat);
-      }
-    }
-
-    // Convert to response format (direct array, not wrapped)
-    const uniqueChats = Array.from(uniqueChatsMap.values()).slice(0, 50);
-    
-    const response = uniqueChats.map((chat: any) => ({
-      id: chat.id,
-      title: chat.title || chat.messages[0]?.text.substring(0, 60) || 'New Chat',
-      snippet: chat.messages[chat.messages.length - 1]?.text.substring(0, 120) || '',
-      lastMessageAt: chat.updated_at || chat.created_at,
-      messages: chat.messages || [],
+    // Map chat_history rows into the frontend chat shape
+    const response = chats.map((row: any) => ({
+      id: row.id,
+      title: (row.prompt && String(row.prompt).substring(0, 60)) || 'New Chat',
+      snippet: (row.response && String(row.response).substring(0, 120)) || '',
+      lastMessageAt: row.created_at,
+      messages: [
+        { text: row.prompt, sender: 'user', timestamp: row.created_at },
+        { text: row.response, sender: 'ai', timestamp: row.created_at },
+      ],
     }));
 
     // Return direct array to match frontend expectations
