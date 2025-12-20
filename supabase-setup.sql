@@ -35,6 +35,8 @@ CREATE TABLE IF NOT EXISTS public.chats (
   user_id TEXT NOT NULL,
   messages JSONB DEFAULT '[]'::jsonb NOT NULL,
   title TEXT,
+  is_deleted BOOLEAN DEFAULT FALSE,
+  deleted_at TIMESTAMPTZ DEFAULT NULL,
   created_at TIMESTAMPTZ DEFAULT NOW(),
   updated_at TIMESTAMPTZ DEFAULT NOW()
 );
@@ -79,6 +81,10 @@ CREATE TRIGGER set_updated_at
   BEFORE UPDATE ON public.chats
   FOR EACH ROW
   EXECUTE FUNCTION public.update_updated_at();
+
+-- Add columns for soft-delete to existing table if missing
+ALTER TABLE public.chats ADD COLUMN IF NOT EXISTS is_deleted BOOLEAN DEFAULT FALSE;
+ALTER TABLE public.chats ADD COLUMN IF NOT EXISTS deleted_at TIMESTAMPTZ DEFAULT NULL;
 
 -- ============================================
 -- ENABLE ROW LEVEL SECURITY (RLS)

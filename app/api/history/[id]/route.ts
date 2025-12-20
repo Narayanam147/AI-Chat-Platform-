@@ -50,6 +50,10 @@ export async function PATCH(request: NextRequest, { params }: { params: { id: st
     const updates: any = {};
     if (typeof body.title === 'string') updates.title = body.title;
     if (typeof body.pinned !== 'undefined') updates.pinned = body.pinned;
+    if (typeof body.is_deleted !== 'undefined') {
+      updates.is_deleted = Boolean(body.is_deleted);
+      updates.deleted_at = body.is_deleted ? new Date().toISOString() : null;
+    }
 
     const updated = await ChatModel.update(id, updates);
     if (!updated) return NextResponse.json({ error: 'Failed to update' }, { status: 500 });
@@ -79,13 +83,17 @@ export async function DELETE(request: NextRequest, { params }: { params: { id: s
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     }
 
-    // Delete the chat
-    const success = await ChatModel.delete(id);
-    if (!success) {
-      return NextResponse.json({ error: 'Failed to delete chat' }, { status: 500 });
+    // Soft-delete: mark chat as deleted instead of removing from DB
+    const updated = await ChatModel.update(id, {
+      is_deleted: true,
+      deleted_at: new Date().toISOString(),
+    } as any);
+
+    if (!updated) {
+      return NextResponse.json({ error: 'Failed to soft-delete chat' }, { status: 500 });
     }
 
-    return NextResponse.json({ success: true });
+    return NextResponse.json({ success: true, data: updated });
   } catch (error) {
     console.error('DELETE /api/history/:id error:', error);
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });

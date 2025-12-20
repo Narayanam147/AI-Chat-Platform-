@@ -22,6 +22,7 @@ export const ChatModel = {
       .from('chats')
       .select('*')
       .eq('user_id', userId)
+      .eq('is_deleted', false)
       .order('updated_at', { ascending: false });
     
     if (error) {
