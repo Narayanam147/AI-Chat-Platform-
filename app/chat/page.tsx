@@ -947,7 +947,7 @@ export default function ChatPage() {
       {/* Overlay for mobile when sidebar is open */}
       {showSidebar && (
         <div 
-          className="fixed inset-0 bg-black bg-opacity-60 z-40 lg:hidden"
+          className="fixed inset-0 bg-black bg-opacity-60 z-[45] lg:hidden"
           onClick={() => setShowSidebar(false)}
         />
       )}
@@ -955,7 +955,7 @@ export default function ChatPage() {
       {/* Left Sidebar - Collapsible */}
       <aside className={`${
         showSidebar ? 'translate-x-0' : '-translate-x-full'
-      } lg:translate-x-0 fixed lg:relative top-0 left-0 h-full w-72 lg:w-64 bg-white dark:bg-gray-900 border-r border-gray-200 dark:border-gray-800 flex flex-col z-50 lg:z-auto shadow-2xl lg:shadow-none transition-transform duration-300 ease-in-out`}>
+      } lg:translate-x-0 fixed lg:relative top-0 left-0 h-full w-72 lg:w-64 bg-white dark:bg-gray-900 border-r border-gray-200 dark:border-gray-800 flex flex-col z-[46] lg:z-auto shadow-2xl lg:shadow-none transition-transform duration-300 ease-in-out`}>
         {/* New Chat Button - Prominent */}
         <div className="px-3 pt-4 pb-2">
           <button
@@ -1098,7 +1098,7 @@ export default function ChatPage() {
 
                             {/* Dropdown Menu */}
                             {openDropdownId === chat.id && (
-                              <div className="absolute right-0 top-full mt-1 w-40 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-xl z-[70] overflow-hidden" onClick={(e) => e.stopPropagation()}>
+                              <div className="absolute right-0 top-full mt-1 w-40 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-xl z-[60] overflow-hidden" onClick={(e) => e.stopPropagation()}>
                                 <button
                                   onClick={(e) => {
                                     e.stopPropagation();
@@ -1229,6 +1229,7 @@ export default function ChatPage() {
                 <button
                   onClick={() => {
                     setAuthMode('login');
+                    setShowSidebar(false);
                     setShowAuthModal(true);
                     setAuthError('');
                   }}
@@ -1239,6 +1240,7 @@ export default function ChatPage() {
                 <button
                   onClick={() => {
                     setAuthMode('signup');
+                    setShowSidebar(false);
                     setShowAuthModal(true);
                     setAuthError('');
                   }}
@@ -1337,7 +1339,7 @@ export default function ChatPage() {
               </button>
 
               {headingMenuOpen && (
-                <div className="absolute right-0 top-full mt-2 w-44 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-xl z-[70] overflow-hidden">
+                <div className="absolute right-0 top-full mt-2 w-44 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-xl z-[60] overflow-hidden">
                   <button
                     onClick={() => {
                       const id = selectedChatId || currentChatId;
@@ -1613,7 +1615,7 @@ export default function ChatPage() {
 
       {/* Settings Modal */}
       {showSettingsModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[80] p-4">
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[100] p-4">
           <div 
             ref={settingsModalRef}
             className="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl w-full max-w-md overflow-hidden"
@@ -1719,6 +1721,7 @@ export default function ChatPage() {
                   <button
                     onClick={() => {
                       setShowSettingsModal(false);
+                      setShowSidebar(false);
                       setShowFeedbackModal(true);
                     }}
                     className="w-full p-3 bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 rounded-lg transition-colors flex items-center gap-3 text-sm text-gray-700 dark:text-gray-300"
@@ -1848,7 +1851,7 @@ export default function ChatPage() {
 
       {/* Feedback Modal */}
       {showFeedbackModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[80] p-4">
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[100] p-4">
           <div 
             ref={feedbackModalRef}
             className="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl w-full max-w-md overflow-hidden"
@@ -1904,7 +1907,7 @@ export default function ChatPage() {
 
       {/* Auth Modal */}
       {showAuthModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[80] p-4">
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[100] p-4">
           <div 
             ref={authModalRef}
             className="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl w-full max-w-md overflow-hidden"
