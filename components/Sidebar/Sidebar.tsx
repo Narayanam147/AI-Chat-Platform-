@@ -86,19 +86,19 @@ export function Sidebar({ userId, onSelectHistory, onCloseMobile }: SidebarProps
   };
 
   return (
-    <div className="sidebar-container flex flex-col h-full">
-      <div className="flex-shrink-0 p-4 border-b border-gray-200 bg-white">
-        <h2 className="text-lg font-semibold text-gray-900">History</h2>
+    <div className="sidebar-container flex flex-col h-full bg-white dark:bg-gray-900">
+      <div className="flex-shrink-0 p-4 border-b border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900">
+        <h2 className="text-lg font-semibold text-gray-900 dark:text-white">History</h2>
       </div>
 
       {error && (
-        <div className="flex-shrink-0 px-4 py-3 bg-red-50 border-b border-red-200">
-          <p className="text-sm text-red-700">{error}</p>
-          <button onClick={() => setError(null)} className="mt-2 text-xs text-red-600 hover:text-red-800 underline">Dismiss</button>
+        <div className="flex-shrink-0 px-4 py-3 bg-red-50 dark:bg-red-900/20 border-b border-red-200 dark:border-red-800">
+          <p className="text-sm text-red-700 dark:text-red-400">{error}</p>
+          <button onClick={() => setError(null)} className="mt-2 text-xs text-red-600 dark:text-red-400 hover:text-red-800 dark:hover:text-red-300 underline">Dismiss</button>
         </div>
       )}
 
-      <div ref={scrollRef} onScroll={handleScroll} className="flex-1 overflow-y-auto overflow-x-hidden bg-white">
+      <div ref={scrollRef} onScroll={handleScroll} className="flex-1 overflow-y-auto overflow-x-hidden bg-white dark:bg-gray-900">
         {history.length === 0 && !loading ? (
           <div className="p-4 text-center text-gray-500"><p className="text-sm">No history yet</p></div>
         ) : (
@@ -119,8 +119,8 @@ export function Sidebar({ userId, onSelectHistory, onCloseMobile }: SidebarProps
         {!hasMore && history.length > 0 && (<div className="p-4 text-center text-gray-400 text-xs">No more history</div>)}
       </div>
 
-      <div className="flex-shrink-0 p-4 border-t border-gray-200 bg-white space-y-2">
-        <button onClick={() => loadHistory(0)} disabled={loading} className="w-full px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-md transition-colors disabled:opacity-50 disabled:cursor-not-allowed">Refresh</button>
+      <div className="mt-auto flex-shrink-0 sticky bottom-0 p-4 border-t border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 space-y-2">
+        <button onClick={() => loadHistory(0)} disabled={loading} className="w-full px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 rounded-md transition-colors disabled:opacity-50 disabled:cursor-not-allowed">Refresh</button>
       </div>
     </div>
   );

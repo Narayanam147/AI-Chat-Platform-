@@ -4,8 +4,6 @@ import { useSession, signOut, signIn } from "next-auth/react";
 import { useState, useRef, useEffect } from "react";
 import { Send, Upload, Download, Menu, LogOut, User, Sparkles, FileText, Image as ImageIcon, X, MessageSquare, Clock, Trash2, Plus, Settings, HelpCircle, FolderOpen, Code, Moon, Sun, Mail, KeyRound, Copy, Check, Brain, ToggleLeft, ToggleRight, Search, Lock } from "lucide-react";
 import ReactMarkdown from "react-markdown";
-import chatClient from '@/lib/chatClient';
-import chatHistoryClient from '@/lib/chatHistoryClient';
 
 interface Message {
   id: string;
@@ -486,7 +484,15 @@ export default function ChatPage() {
     const previous = chatHistory;
     setChatHistory(prev => prev.filter(ch => ch.id !== chatId));
     try {
-      await chatHistoryClient.softDeleteHistory(chatId, session?.user?.email ?? null);
+      const res = await fetch(`/api/history/${encodeURIComponent(chatId)}`, {
+        method: 'DELETE',
+      });
+      if (!res.ok) {
+        const txt = await res.text();
+        console.error('Failed to delete chat:', res.status, txt);
+        setChatHistory(previous); // rollback
+        return;
+      }
       // If deleted chat was selected, clear messages
       if (selectedChatId === chatId) {
         setSelectedChatId(null);
@@ -532,15 +538,11 @@ export default function ChatPage() {
     setSelectedChatId(null);
     
     try {
-      // Soft-delete all chats via chatClient (ownership enforced)
+      // Delete all chats from backend
       for (const chat of previous) {
-        try {
-          await chatHistoryClient.softDeleteHistory(chat.id, session?.user?.email ?? null);
-        } catch (e) {
-          // Log and continue; we'll roll back on outer catch
-          console.error('Failed to soft-delete chat', chat.id, e);
-          throw e;
-        }
+        await fetch(`/api/history/${encodeURIComponent(chat.id)}`, {
+          method: 'DELETE',
+        });
       }
     } catch (e) {
       console.error('Clear all error', e);
@@ -581,36 +583,34 @@ export default function ChatPage() {
       alert('No chat selected to share');
       return;
     }
+    const url = `${window.location.origin}/chat?chatId=${encodeURIComponent(id)}`;
     try {
-      const res = await fetch('/api/share', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ id, expiresDays: 7 }),
-      });
-      if (!res.ok) {
-        const txt = await res.text();
-        throw new Error(txt || 'Failed to create share');
-      }
-      const json = await res.json();
-      const token = json.token;
-      const shareUrl = `${window.location.origin}/share/${encodeURIComponent(json.id)}?t=${encodeURIComponent(token)}`;
-
       // Prefer Web Share API on mobile
       if (navigator.share) {
-        await navigator.share({ title: 'Shared chat', text: 'Open this shared chat', url: shareUrl });
+        await navigator.share({
+          title: 'Chat from Chat Assistant',
+          text: 'Open this chat in Chat Assistant',
+          url,
+        });
         return;
       }
 
+      // Fallback: try clipboard
       if (navigator.clipboard && navigator.clipboard.writeText) {
-        await navigator.clipboard.writeText(shareUrl);
+        await navigator.clipboard.writeText(url);
         alert('Shareable link copied to clipboard');
         return;
       }
 
-      prompt('Copy this link:', shareUrl);
+      // Last resort: show prompt so user can copy manually
+      prompt('Copy this link:', url);
     } catch (e) {
-      console.error('Failed to create share link', e);
-      alert('Failed to create share link');
+      console.error('Failed to share link', e);
+      try {
+        prompt('Copy this link:', url);
+      } catch (_) {
+        // swallow
+      }
     }
   };
 
@@ -721,14 +721,12 @@ export default function ChatPage() {
     }
   }, [showAttachMenu, showProfileMenu, showSettingsModal, showFeedbackModal, showAuthModal]);
 
-  // Load history from backend for signed-in user or guests
+  // Load history from backend for signed-in user
   useEffect(() => {
     const load = async () => {
+      if (!session?.user?.email) return;
       try {
-        const url = session?.user?.email
-          ? `/api/history?userId=${encodeURIComponent(session.user.email)}`
-          : `/api/history`;
-        const res = await fetch(url);
+        const res = await fetch(`/api/history?userId=${encodeURIComponent(session.user.email)}`);
         if (!res.ok) {
           console.error('Failed to fetch history', await res.text());
           return;
@@ -889,35 +887,6 @@ export default function ChatPage() {
       };
 
       setMessages(prev => [...prev, aiMessage]);
-
-      // Persist to chat_history table: save the prompt and AI response.
-      try {
-        const saved = await chatHistoryClient.saveHistoryEntry({
-          userId: session?.user?.email ?? null,
-          prompt: promptText,
-          response: data.response,
-        });
-
-        // Update local sidebar history immediately (optimistic)
-        const newEntry: ChatHistory = {
-          id: String(saved.id),
-          title: saved.prompt?.substring(0, 50) || 'Chat',
-          timestamp: new Date(saved.created_at || new Date().toISOString()),
-          preview: saved.response?.substring(0, 100) || '',
-          messages: [
-            { text: promptText, sender: 'user', timestamp: new Date().toISOString() },
-            { text: data.response, sender: 'ai', timestamp: new Date().toISOString() },
-          ],
-          pinned: false,
-        };
-
-        setChatHistory(prev => [newEntry, ...prev]);
-        // set current chat id to saved history id so further messages can be linked if desired
-        setCurrentChatId(String(saved.id));
-        setSelectedChatId(String(saved.id));
-      } catch (e) {
-        console.error('Failed to save chat_history entry:', e);
-      }
     } catch (error) {
       console.error("Chat error:", error);
       const errorMessage: Message = {
@@ -975,13 +944,13 @@ export default function ChatPage() {
       {/* Overlay for mobile when sidebar is open */}
       {showSidebar && (
         <div 
-          className="lg:hidden fixed inset-0 bg-black bg-opacity-50 z-[55]"
+          className="lg:hidden fixed inset-0 bg-black bg-opacity-60 z-[55]"
           onClick={() => setShowSidebar(false)}
         />
       )}
 
       {/* Left Sidebar - Collapsible */}
-      <aside className={`${showSidebar ? 'w-72' : 'w-0'} transition-all duration-300 ease-in-out overflow-visible bg-white dark:bg-gray-900 border-r border-gray-200 dark:border-gray-800 flex flex-col fixed lg:relative h-full z-[50] lg:z-auto`}>
+      <aside className={`${showSidebar ? 'w-72' : 'w-0'} transition-all duration-300 ease-in-out overflow-hidden bg-white dark:bg-gray-900 border-r border-gray-200 dark:border-gray-800 flex flex-col fixed lg:relative h-full z-[60] shadow-lg lg:shadow-none`}>
         {/* New Chat Button - Prominent */}
         <div className="px-3 pt-4 pb-2">
           <button
@@ -1123,8 +1092,8 @@ export default function ChatPage() {
                             </button>
 
                             {/* Dropdown Menu */}
-                              {openDropdownId === chat.id && (
-                              <div className="absolute right-0 top-full mt-2 w-40 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-xl z-[60] overflow-visible pointer-events-auto" onClick={(e) => e.stopPropagation()}>
+                            {openDropdownId === chat.id && (
+                              <div className="absolute left-0 top-full mt-1 w-40 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-xl z-[70] overflow-hidden" onClick={(e) => e.stopPropagation()}>
                                 <button
                                   onClick={(e) => {
                                     e.stopPropagation();
@@ -1185,8 +1154,8 @@ export default function ChatPage() {
           </div>
         </div>
 
-        {/* Sidebar Footer - Settings */}
-        <div className="mt-auto border-t border-gray-200 dark:border-gray-800 p-3 bg-white dark:bg-gray-900">
+        {/* Sidebar Footer - Settings (Sticky at bottom) */}
+        <div className="mt-auto sticky bottom-0 bg-white dark:bg-gray-900 border-t border-gray-200 dark:border-gray-800 p-3">
           <button 
             onClick={() => setShowSettingsModal(true)}
             className="w-full px-3 py-2.5 text-left text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-800 rounded-lg transition-colors flex items-center gap-3"
@@ -1293,7 +1262,7 @@ export default function ChatPage() {
 
                 {/* Simple Profile Dropdown */}
                 {showProfileMenu && (
-                  <div className="absolute right-0 top-12 w-64 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-xl z-50 overflow-hidden">
+                  <div className="absolute right-0 top-full mt-2 w-64 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-xl z-[70] overflow-hidden">
                     {/* User Email */}
                     <div className="p-4 border-b border-gray-200 dark:border-gray-700">
                       <p className="text-sm text-gray-700 dark:text-gray-300 font-medium truncate">
@@ -1356,7 +1325,7 @@ export default function ChatPage() {
               </button>
 
               {headingMenuOpen && (
-                <div className="absolute right-0 mt-2 w-44 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-xl z-50 overflow-hidden">
+                <div className="absolute right-0 top-full mt-2 w-44 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-xl z-[70] overflow-hidden">
                   <button
                     onClick={() => {
                       const id = selectedChatId || currentChatId;
@@ -1510,7 +1479,7 @@ export default function ChatPage() {
                 </button>
 
                 {showAttachMenu && (
-                  <div className="absolute bottom-full left-0 mb-2 w-56 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl shadow-xl py-2 z-50">
+                  <div className="absolute bottom-full left-0 mb-2 w-56 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl shadow-xl py-2 z-[70]">
                     <button
                       onClick={() => {
                         fileInputRef.current?.click();

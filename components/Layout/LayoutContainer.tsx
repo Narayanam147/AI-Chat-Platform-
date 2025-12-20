@@ -31,10 +31,10 @@ export function LayoutContainer({ children, showSidebar = true }: LayoutContaine
       {showSidebar && (
         <>
           {isMobile && sidebarOpen && (
-            <div className="mobile-overlay visible" onClick={() => setSidebarOpen(false)} />
+            <div className="fixed inset-0 bg-black bg-opacity-60 z-[55]" onClick={() => setSidebarOpen(false)} />
           )}
 
-          <div className={`sidebar-container transition-smooth ${isMobile && !sidebarOpen ? 'hidden' : 'open'}`}>
+          <div className={`fixed lg:relative h-full bg-white dark:bg-gray-900 border-r border-gray-200 dark:border-gray-800 z-[60] shadow-lg lg:shadow-none transition-transform duration-300 ease-in-out ${isMobile && !sidebarOpen ? '-translate-x-full' : 'translate-x-0'} ${isMobile ? 'w-72' : 'w-64'}`}>
             <Sidebar userId={user?.email ?? null} onCloseMobile={() => isMobile && setSidebarOpen(false)} />
           </div>
         </>

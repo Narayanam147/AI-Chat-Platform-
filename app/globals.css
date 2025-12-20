@@ -2,235 +2,105 @@
 @tailwind components;
 @tailwind utilities;
 
-/* Reset and Global Styles */
-* {
-  margin: 0;
-  padding: 0;
-  box-sizing: border-box;
+:root {
+  --background: #ffffff;
+  --foreground: #171717;
 }
 
-html,
-body {
-  height: 100%;
-  width: 100%;
-  overflow: hidden;
+@media (prefers-color-scheme: dark) {
+  :root {
+    --background: #0a0a0a;
+    --foreground: #ededed;
+  }
 }
 
 body {
-  @apply bg-white text-gray-900 dark:bg-gray-900 dark:text-gray-100;
-  font-family: Inter, ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial;
+  color: var(--foreground);
+  background: var(--background);
+  font-family: Arial, Helvetica, sans-serif;
 }
 
-/* Main Container - Flex Layout */
-.main-container {
-  display: flex;
-  height: 100vh;
-  width: 100vw;
-  position: relative;
-  z-index: 0;
-}
-
-/* Sidebar Styles - Fixed Position */
-.sidebar-container {
-  position: fixed;
-  left: 0;
-  top: 0;
-  height: 100vh;
-  width: 16rem; /* 256px = w-64 in Tailwind */
-  background-color: #ffffff;
-  border-right: 1px solid #e5e7eb;
-  box-shadow: 2px 0 8px rgba(0, 0, 0, 0.1);
-  z-index: 40; /* Higher than content */
-  overflow-y: auto;
-  overflow-x: hidden;
-  flex-shrink: 0;
-}
-
-/* Prevent sidebar from being hidden */
-.sidebar-container::-webkit-scrollbar {
-  width: 6px;
-}
-
-.sidebar-container::-webkit-scrollbar-track {
-  background: transparent;
-}
-
-.sidebar-container::-webkit-scrollbar-thumb {
-  background: #d1d5db;
-  border-radius: 3px;
-}
-
-.sidebar-container::-webkit-scrollbar-thumb:hover {
-  background: #9ca3af;
-}
-
-/* Main Content - Adjust for sidebar */
-.main-content {
-  margin-left: 16rem; /* Match sidebar width */
-  width: calc(100vw - 16rem);
-  height: 100vh;
-  overflow: hidden;
-  position: relative;
-  z-index: 0;
-}
-
-/* Chat Area - Full remaining space */
-.chat-area {
-  display: flex;
-  flex-direction: column;
-  height: 100%;
-  width: 100%;
-  overflow: hidden;
-}
-
-/* Chat Messages Container */
-.chat-messages {
-  flex: 1;
-  overflow-y: auto;
-  overflow-x: hidden;
-  padding: 1rem;
-  background-color: #ffffff;
-}
-
-/* Chat Input Container */
-.chat-input-container {
-  flex-shrink: 0;
-  border-top: 1px solid #e5e7eb;
-  padding: 1rem;
-  background-color: #ffffff;
-  z-index: 10;
-}
-
-/* Modal Overlay - Highest z-index */
-.modal-overlay {
-  position: fixed;
-  inset: 0;
-  background-color: rgba(0, 0, 0, 0.5);
-  z-index: 50;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-/* Modal */
-.modal {
-  position: relative;
-  z-index: 51;
-  background-color: white;
-  border-radius: 0.5rem;
-  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1);
-}
-
-/* Dropdown/Menu */
-.dropdown-menu {
-  position: absolute;
-  z-index: 30;
-  background-color: white;
-  border: 1px solid #e5e7eb;
-  border-radius: 0.375rem;
-  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
-}
-
-/* Toast Notifications */
-.toast {
-  position: fixed;
-  bottom: 1rem;
-  right: 1rem;
-  z-index: 60;
-  background-color: white;
-  border-radius: 0.5rem;
-  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
-  padding: 1rem;
-  max-width: 400px;
-}
-
-/* Responsive:  Mobile (< 768px) */
-@media (max-width: 768px) {
-  .sidebar-container {
-    position: fixed;
-    left: 0;
-    transform: translateX(-100%);
-    transition: transform 0.3s ease-in-out;
-    width: 100%;
-    max-width: 16rem;
-    z-index: 40;
+@layer utilities {
+  .text-balance {
+    text-wrap: balance;
   }
-
-  .sidebar-container.open {
-    transform: translateX(0);
+  
+  /* Fade in animation for empty state */
+  @keyframes fadeIn {
+    from {
+      opacity: 0;
+      transform: translateY(-10px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
   }
-
-  .main-content {
-    margin-left: 0;
-    width: 100vw;
-    z-index: 20;
-  }
-
-  .mobile-overlay {
-    display: none;
-    position: fixed;
-    inset: 0;
-    background-color: rgba(0, 0, 0, 0.5);
-    z-index: 39;
-  }
-
-  .mobile-overlay.visible {
-    display: block;
-  }
-
-  .sidebar-header-mobile {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    padding: 1rem;
-    background-color: white;
-    border-bottom: 1px solid #e5e7eb;
+  
+  .animate-fadeIn {
+    animation: fadeIn 0.4s ease-in-out;
   }
 }
 
-/* Tablet (768px - 1024px) */
-@media (min-width: 768px) and (max-width: 1024px) {
-  .sidebar-container {
-    width: 14rem; /* Slightly smaller on tablets */
+/* Z-index layer management */
+@layer components {
+  /* Overlay layer - behind sidebar */
+  .overlay-layer {
+    @apply z-[55];
   }
-
-  .main-content {
-    margin-left: 14rem;
-    width: calc(100vw - 14rem);
+  
+  /* Sidebar layer - above overlay */
+  .sidebar-layer {
+    @apply z-[60];
+  }
+  
+  /* Dropdown layer - above everything */
+  .dropdown-layer {
+    @apply z-[70];
+  }
+  
+  /* Modal layer - topmost */
+  .modal-layer {
+    @apply z-[80];
   }
 }
 
-/* Scrollbar Styling - Global */
+/* Ensure sidebar has solid background to prevent content bleed-through */
+.sidebar-solid {
+  @apply bg-white dark:bg-gray-900;
+  isolation: isolate;
+}
+
+/* Custom scrollbar */
 ::-webkit-scrollbar {
   width: 8px;
-  height: 8px;
 }
 
 ::-webkit-scrollbar-track {
-  background: #f1f5f9;
+  background: #f1f1f1;
 }
 
 ::-webkit-scrollbar-thumb {
-  background: #cbd5e1;
+  background: #888;
   border-radius: 4px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: #94a3b8;
+  background: #555;
 }
 
-/* Prevent text selection on UI elements */
-.no-select {
-  user-select: none;
-  -webkit-user-select: none;
-  -moz-user-select: none;
-  -ms-user-select: none;
-}
+/* Dark mode scrollbar */
+@media (prefers-color-scheme: dark) {
+  ::-webkit-scrollbar-track {
+    background: #1a1a1a;
+  }
 
-/* Smooth transitions */
-.transition-smooth {
-  transition-property: all;
-  transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
-  transition-duration: 0.2s;
+  ::-webkit-scrollbar-thumb {
+    background: #555;
+  }
+
+  ::-webkit-scrollbar-thumb:hover {
+    background: #777;
+  }
 }
 
