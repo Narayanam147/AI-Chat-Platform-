@@ -27,7 +27,7 @@ export default function PrivacyPolicy() {
           <section className="mb-8">
             <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-4">1. Introduction</h2>
             <p className="text-gray-700 dark:text-gray-300 leading-relaxed">
-              Welcome to AI Chat Platform ("we," "us," "our," or "Company"). We are committed to protecting your privacy and ensuring you have a positive experience on our platform. This Privacy Policy explains how we collect, use, disclose, and safeguard your information when you use our website and services.
+              Welcome to AI Chat Platform (&ldquo;we,&rdquo; &ldquo;us,&rdquo; &ldquo;our,&rdquo; or &ldquo;Company&rdquo;). We are committed to protecting your privacy and ensuring you have a positive experience on our platform. This Privacy Policy explains how we collect, use, disclose, and safeguard your information when you use our website and services.
             </p>
           </section>
 
@@ -204,7 +204,7 @@ export default function PrivacyPolicy() {
 
           {/* 9. Children's Privacy */}
           <section className="mb-8">
-            <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-4">9. Children's Privacy</h2>
+            <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-4">9. Children&apos;s Privacy</h2>
             <p className="text-gray-700 dark:text-gray-300 leading-relaxed mb-4">
               Our Service is not intended for children under 13 years old. We do not knowingly collect personal information from children under 13. If we learn that we have collected information from a child under 13, we will delete it immediately.
             </p>
@@ -240,7 +240,7 @@ export default function PrivacyPolicy() {
             <ul className="list-disc list-inside text-gray-700 dark:text-gray-300 space-y-2 mb-4">
               <li>Right to access your personal data</li>
               <li>Right to rectification of inaccurate data</li>
-              <li>Right to erasure ("right to be forgotten")</li>
+              <li>Right to erasure (&ldquo;right to be forgotten&rdquo;)</li>
               <li>Right to restrict processing</li>
               <li>Right to data portability</li>
               <li>Right to object to processing</li>
