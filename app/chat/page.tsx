@@ -1075,11 +1075,11 @@ export default function ChatPage() {
                         }`}
                       >
                         <div className="flex items-center gap-2">
-                          <p className="text-sm text-gray-900 dark:text-gray-100 line-clamp-1 flex-1">
+                          <p className="text-sm text-gray-900 dark:text-gray-100 line-clamp-1 flex-1 min-w-0">
                             {chat.title}
                           </p>
                           {/* Dropdown Menu Button */}
-                          <div className="relative">
+                          <div className="relative flex-shrink-0">
                             <button
                               onClick={(e) => {
                                 e.stopPropagation();
@@ -1090,7 +1090,7 @@ export default function ChatPage() {
                                   setOpenDropdownId(openDropdownId === chat.id ? null : chat.id);
                                 }
                               }}
-                              className="opacity-0 group-hover:opacity-100 p-1 hover:bg-gray-300 dark:hover:bg-gray-700 rounded transition-all md:opacity-0 max-md:opacity-100"
+                              className="p-1.5 hover:bg-gray-300 dark:hover:bg-gray-700 rounded transition-all opacity-0 group-hover:opacity-100"
                               title="More options"
                               aria-haspopup="true"
                               aria-expanded={openDropdownId === chat.id}
@@ -1102,7 +1102,7 @@ export default function ChatPage() {
 
                             {/* Desktop Dropdown Menu */}
                             {openDropdownId === chat.id && (
-                              <div className="desktop-dropdown-menu absolute left-0 top-full mt-1 w-40 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-xl z-[70] overflow-hidden" onClick={(e) => e.stopPropagation()}>
+                              <div className="desktop-dropdown-menu absolute right-0 top-full mt-1 w-40 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-xl z-[70] overflow-hidden" onClick={(e) => e.stopPropagation()}>
                                 <button
                                   onClick={(e) => {
                                     e.stopPropagation();
@@ -1178,8 +1178,8 @@ export default function ChatPage() {
       {/* Main Chat Area - Right Column */}
       <div className="flex-1 flex flex-col overflow-hidden">
         {/* Header - Persistent Hamburger Menu + Title + User Profile */}
-        <header className="p-4 flex items-center justify-between border-b border-gray-200 dark:border-gray-800">
-          <div className="flex items-center gap-3">
+        <header className="p-3 md:p-4 flex items-center justify-between border-b border-gray-200 dark:border-gray-800 gap-2">
+          <div className="flex items-center gap-2 md:gap-3 flex-shrink-0">
             {/* Persistent Hamburger Menu - Always Visible */}
             <button
               onClick={() => setShowSidebar(!showSidebar)}
@@ -1209,9 +1209,9 @@ export default function ChatPage() {
               )}
             </button>
 
-            {/* Title - Show when sidebar is collapsed */}
+            {/* Title - Show when sidebar is collapsed (hidden on small mobile) */}
             {!showSidebar && (
-              <div className="flex items-center gap-2">
+              <div className="hidden sm:flex items-center gap-2">
                 <Sparkles className="w-6 h-6 text-blue-600" />
                 <h1 className="text-xl font-semibold text-gray-900 dark:text-white">Chat Assistant</h1>
               </div>
@@ -1219,17 +1219,17 @@ export default function ChatPage() {
           </div>
 
           {/* Simple User Profile Menu */}
-          <div className="relative" ref={profileMenuRef}>
+          <div className="relative flex-shrink-0" ref={profileMenuRef}>
             {/* For GUEST users - Show Log In / Sign Up buttons */}
             {!session && (
-              <div className="flex items-center gap-3">
+              <div className="flex items-center gap-2">
                 <button
                   onClick={() => {
                     setAuthMode('login');
                     setShowAuthModal(true);
                     setAuthError('');
                   }}
-                  className="px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
+                  className="px-3 py-1.5 md:px-4 md:py-2 text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
                 >
                   Log In
                 </button>
@@ -1239,7 +1239,7 @@ export default function ChatPage() {
                     setShowAuthModal(true);
                     setAuthError('');
                   }}
-                  className="px-4 py-2 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-lg transition-colors"
+                  className="px-3 py-1.5 md:px-4 md:py-2 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-lg transition-colors"
                 >
                   Sign Up
                 </button>
