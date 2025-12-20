@@ -76,6 +76,7 @@ export default function ChatPage() {
   const headingMenuRef = useRef<HTMLButtonElement | null>(null);
   const [headingMenuOpen, setHeadingMenuOpen] = useState(false);
   const [openDropdownId, setOpenDropdownId] = useState<string | null>(null);
+  const [mobileDrawerChatId, setMobileDrawerChatId] = useState<string | null>(null); // For mobile bottom drawer
   const [chatFilter, setChatFilter] = useState<'all' | 'today' | 'pinned'>('all');
   const [showAuthModal, setShowAuthModal] = useState(false);
   const [authMode, setAuthMode] = useState<'login' | 'signup'>('login');
@@ -713,13 +714,16 @@ export default function ChatPage() {
       if (authModalRef.current && !authModalRef.current.contains(event.target as Node)) {
         setShowAuthModal(false);
       }
+      // Close dropdown menus when clicking outside
+      setOpenDropdownId(null);
+      setHeadingMenuOpen(false);
     };
 
-    if (showAttachMenu || showProfileMenu || showSettingsModal || showFeedbackModal || showAuthModal) {
+    if (showAttachMenu || showProfileMenu || showSettingsModal || showFeedbackModal || showAuthModal || openDropdownId || headingMenuOpen) {
       document.addEventListener('mousedown', handleClickOutside);
       return () => document.removeEventListener('mousedown', handleClickOutside);
     }
-  }, [showAttachMenu, showProfileMenu, showSettingsModal, showFeedbackModal, showAuthModal]);
+  }, [showAttachMenu, showProfileMenu, showSettingsModal, showFeedbackModal, showAuthModal, openDropdownId, headingMenuOpen]);
 
   // Load history from backend for signed-in user
   useEffect(() => {
@@ -1079,21 +1083,26 @@ export default function ChatPage() {
                             <button
                               onClick={(e) => {
                                 e.stopPropagation();
-                                setOpenDropdownId(openDropdownId === chat.id ? null : chat.id);
+                                // Check if mobile (window width <= 768px)
+                                if (window.innerWidth <= 768) {
+                                  setMobileDrawerChatId(chat.id);
+                                } else {
+                                  setOpenDropdownId(openDropdownId === chat.id ? null : chat.id);
+                                }
                               }}
-                              className="opacity-0 group-hover:opacity-100 p-1 hover:bg-gray-300 dark:hover:bg-gray-700 rounded transition-all"
+                              className="opacity-0 group-hover:opacity-100 p-1 hover:bg-gray-300 dark:hover:bg-gray-700 rounded transition-all md:opacity-0 max-md:opacity-100"
                               title="More options"
                               aria-haspopup="true"
                               aria-expanded={openDropdownId === chat.id}
                             >
                               <svg className="w-4 h-4 text-gray-600 dark:text-gray-400" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
+                                <path strokeLinecap="round" strokeLinejoin="round" d="M12 5v.01M12 12v.01M12 19v.01" />
                               </svg>
                             </button>
 
-                            {/* Dropdown Menu */}
+                            {/* Desktop Dropdown Menu */}
                             {openDropdownId === chat.id && (
-                              <div className="absolute left-0 top-full mt-1 w-40 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-xl z-[70] overflow-hidden" onClick={(e) => e.stopPropagation()}>
+                              <div className="desktop-dropdown-menu absolute left-0 top-full mt-1 w-40 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-xl z-[70] overflow-hidden" onClick={(e) => e.stopPropagation()}>
                                 <button
                                   onClick={(e) => {
                                     e.stopPropagation();
@@ -1312,7 +1321,14 @@ export default function ChatPage() {
             </div>
             <div className="relative">
               <button
-                onClick={() => setHeadingMenuOpen(v => !v)}
+                onClick={() => {
+                  // Check if mobile (window width <= 768px)
+                  if (window.innerWidth <= 768) {
+                    setMobileDrawerChatId(selectedChatId || currentChatId || null);
+                  } else {
+                    setHeadingMenuOpen(v => !v);
+                  }
+                }}
                 aria-haspopup="true"
                 aria-expanded={headingMenuOpen}
                 ref={headingMenuRef}
@@ -1320,12 +1336,12 @@ export default function ChatPage() {
                 title="Open actions"
               >
                 <svg className="w-5 h-5 text-gray-600 dark:text-gray-400" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24" aria-hidden>
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M12 5v.01M12 12v.01M12 19v.01" />
                 </svg>
               </button>
 
               {headingMenuOpen && (
-                <div className="absolute right-0 top-full mt-2 w-44 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-xl z-[70] overflow-hidden">
+                <div className="desktop-dropdown-menu absolute right-0 top-full mt-2 w-44 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-xl z-[70] overflow-hidden">
                   <button
                     onClick={() => {
                       const id = selectedChatId || currentChatId;
@@ -2016,6 +2032,108 @@ export default function ChatPage() {
             </form>
           </div>
         </div>
+      )}
+
+      {/* Mobile Bottom Drawer for Chat Actions */}
+      {mobileDrawerChatId && (
+        <>
+          {/* Backdrop */}
+          <div 
+            className="mobile-drawer-backdrop"
+            onClick={() => setMobileDrawerChatId(null)}
+          />
+          {/* Drawer */}
+          <div className="mobile-drawer">
+            <div className="mobile-drawer-handle" />
+            <div className="pb-6">
+              {/* Chat title */}
+              <div className="px-6 py-3 border-b border-gray-200 dark:border-gray-700">
+                <p className="text-sm font-medium text-gray-500 dark:text-gray-400">
+                  {chatHistory.find(c => c.id === mobileDrawerChatId)?.title || 'Chat Options'}
+                </p>
+              </div>
+              
+              {/* Pin/Unpin */}
+              <button
+                onClick={() => {
+                  togglePin(mobileDrawerChatId);
+                  setMobileDrawerChatId(null);
+                }}
+                className="mobile-drawer-item"
+              >
+                <svg className={`w-5 h-5 ${chatHistory.find(c => c.id === mobileDrawerChatId)?.pinned ? 'text-yellow-500' : 'text-gray-500'}`} fill="currentColor" viewBox="0 0 20 20">
+                  <path d="M10 3a1 1 0 011 1v4h4a1 1 0 110 2h-4v4a1 1 0 11-2 0v-4H5a1 1 0 110-2h4V4a1 1 0 011-1z"/>
+                </svg>
+                {chatHistory.find(c => c.id === mobileDrawerChatId)?.pinned ? 'Unpin Chat' : 'Pin Chat'}
+              </button>
+              
+              {/* Rename */}
+              <button
+                onClick={() => {
+                  setSelectedChatId(mobileDrawerChatId);
+                  setCurrentChatId(mobileDrawerChatId);
+                  startRename();
+                  setMobileDrawerChatId(null);
+                }}
+                className="mobile-drawer-item"
+              >
+                <svg className="w-5 h-5 text-gray-500" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M15.232 5.232l3.536 3.536M9 11l6-6 3 3-6 6H9v-3z"/>
+                </svg>
+                Rename
+              </button>
+              
+              {/* Share */}
+              <button
+                onClick={() => {
+                  handleShare(mobileDrawerChatId);
+                  setMobileDrawerChatId(null);
+                }}
+                className="mobile-drawer-item"
+              >
+                <svg className="w-5 h-5 text-gray-500" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z"/>
+                </svg>
+                Share
+              </button>
+              
+              {/* Delete */}
+              <button
+                onClick={() => {
+                  if (confirm('Delete this chat? This cannot be undone.')) {
+                    handleDeleteChat(mobileDrawerChatId);
+                  }
+                  setMobileDrawerChatId(null);
+                }}
+                className="mobile-drawer-item mobile-drawer-item-danger"
+              >
+                <Trash2 className="w-5 h-5" />
+                Delete
+              </button>
+              
+              {/* Cancel */}
+              <button
+                onClick={() => setMobileDrawerChatId(null)}
+                className="mobile-drawer-item text-gray-500 dark:text-gray-400"
+              >
+                <X className="w-5 h-5" />
+                Cancel
+              </button>
+            </div>
+          </div>
+        </>
+      )}
+
+      {/* Floating Sidebar Toggle Button - Only visible on mobile when sidebar is closed */}
+      {!showSidebar && (
+        <button
+          onClick={() => setShowSidebar(true)}
+          className="md:hidden fixed left-2 top-20 z-[50] p-2.5 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-full shadow-lg hover:shadow-xl transition-all active:scale-95"
+          aria-label="Open sidebar"
+          title="Open sidebar"
+        >
+          <Menu className="w-5 h-5 text-gray-600 dark:text-gray-400" />
+        </button>
       )}
 
     </div>
