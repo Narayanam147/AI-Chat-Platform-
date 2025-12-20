@@ -947,13 +947,15 @@ export default function ChatPage() {
       {/* Overlay for mobile when sidebar is open */}
       {showSidebar && (
         <div 
-          className="lg:hidden fixed inset-0 bg-black bg-opacity-60 z-[55]"
+          className="fixed inset-0 bg-black bg-opacity-60 z-40 lg:hidden"
           onClick={() => setShowSidebar(false)}
         />
       )}
 
       {/* Left Sidebar - Collapsible */}
-      <aside className={`${showSidebar ? 'w-72' : 'w-0'} transition-all duration-300 ease-in-out overflow-hidden bg-white dark:bg-gray-900 border-r border-gray-200 dark:border-gray-800 flex flex-col fixed lg:relative h-full z-[60] shadow-lg lg:shadow-none`}>
+      <aside className={`${
+        showSidebar ? 'translate-x-0' : '-translate-x-full'
+      } lg:translate-x-0 fixed lg:relative top-0 left-0 h-full w-72 lg:w-64 bg-white dark:bg-gray-900 border-r border-gray-200 dark:border-gray-800 flex flex-col z-50 lg:z-auto shadow-2xl lg:shadow-none transition-transform duration-300 ease-in-out`}>
         {/* New Chat Button - Prominent */}
         <div className="px-3 pt-4 pb-2">
           <button
@@ -1175,16 +1177,16 @@ export default function ChatPage() {
       {/* Main Chat Area - Right Column */}
       <div className="flex-1 flex flex-col overflow-hidden">
         {/* Header - Persistent Hamburger Menu + Title + User Profile */}
-        <header className="p-4 flex items-center justify-between border-b border-gray-200 dark:border-gray-800">
-          <div className="flex items-center gap-3">
+        <header className="p-3 sm:p-4 flex items-center justify-between border-b border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 z-30">
+          <div className="flex items-center gap-2 sm:gap-3">
             {/* Persistent Hamburger Menu - Always Visible */}
             <button
               onClick={() => setShowSidebar(!showSidebar)}
-              className="p-2 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition-colors"
+              className="p-2 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition-colors flex-shrink-0"
               aria-label="Toggle sidebar"
               title={showSidebar ? "Close sidebar" : "Open sidebar"}
             >
-              <Menu className="w-5 h-5 text-gray-700 dark:text-gray-300" />
+              <Menu className="w-5 h-5 sm:w-6 sm:h-6 text-gray-700 dark:text-gray-300" />
             </button>
 
             {/* Quick Theme Toggle */}
@@ -1195,7 +1197,7 @@ export default function ChatPage() {
                 localStorage.setItem('theme', newTheme);
                 document.documentElement.classList.toggle('dark', newTheme === 'dark');
               }}
-              className="p-2 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition-colors"
+              className="p-2 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition-colors flex-shrink-0"
               aria-label="Toggle theme"
               title={theme === 'light' ? "Switch to dark mode" : "Switch to light mode"}
             >
@@ -1206,9 +1208,13 @@ export default function ChatPage() {
               )}
             </button>
 
-            {/* Title - Show when sidebar is collapsed */}
+            {/* Title - Always show on mobile, show on desktop when sidebar collapsed */}
+            <div className="flex items-center gap-2 lg:hidden">
+              <Sparkles className="w-5 h-5 sm:w-6 sm:h-6 text-blue-600" />
+              <h1 className="text-base sm:text-xl font-semibold text-gray-900 dark:text-white">AI Chat</h1>
+            </div>
             {!showSidebar && (
-              <div className="flex items-center gap-2">
+              <div className="hidden lg:flex items-center gap-2">
                 <Sparkles className="w-6 h-6 text-blue-600" />
                 <h1 className="text-xl font-semibold text-gray-900 dark:text-white">Chat Assistant</h1>
               </div>
@@ -1219,14 +1225,14 @@ export default function ChatPage() {
           <div className="relative" ref={profileMenuRef}>
             {/* For GUEST users - Show Log In / Sign Up buttons */}
             {!session && (
-              <div className="flex items-center gap-3">
+              <div className="flex items-center gap-2">
                 <button
                   onClick={() => {
                     setAuthMode('login');
                     setShowAuthModal(true);
                     setAuthError('');
                   }}
-                  className="px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
+                  className="px-2 sm:px-4 py-1.5 sm:py-2 text-xs sm:text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
                 >
                   Log In
                 </button>
@@ -1236,7 +1242,7 @@ export default function ChatPage() {
                     setShowAuthModal(true);
                     setAuthError('');
                   }}
-                  className="px-4 py-2 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-lg transition-colors"
+                  className="px-2 sm:px-4 py-1.5 sm:py-2 text-xs sm:text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-lg transition-colors"
                 >
                   Sign Up
                 </button>
@@ -1246,12 +1252,12 @@ export default function ChatPage() {
             {/* For LOGGED-IN users - Show Avatar */}
             {session && (
               <>
-                <div onClick={() => setShowProfileMenu(!showProfileMenu)} className="cursor-pointer">
+                <div onClick={() => setShowProfileMenu(!showProfileMenu)} className="cursor-pointer flex-shrink-0">
                   {session?.user?.image ? (
                     <img 
                       src={session.user.image} 
                       alt={session.user.name || 'User'} 
-                      className="w-9 h-9 rounded-full object-cover hover:ring-2 hover:ring-blue-500 transition-all"
+                      className="w-8 h-8 sm:w-9 sm:h-9 rounded-full object-cover hover:ring-2 hover:ring-blue-500 transition-all"
                       title={session.user.name || 'User profile'}
                       onError={(e) => {
                         e.currentTarget.style.display = 'none';
@@ -1259,8 +1265,8 @@ export default function ChatPage() {
                       }}
                     />
                   ) : null}
-                  <div className={`w-9 h-9 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center hover:ring-2 hover:ring-blue-500 transition-all ${session?.user?.image ? 'hidden' : ''}`} title="User profile">
-                    <span className="text-white font-semibold text-sm">
+                  <div className={`w-8 h-8 sm:w-9 sm:h-9 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center hover:ring-2 hover:ring-blue-500 transition-all ${session?.user?.image ? 'hidden' : ''}`} title="User profile">
+                    <span className="text-white font-semibold text-xs sm:text-sm">
                       {getUserInitials()}
                     </span>
                   </div>
