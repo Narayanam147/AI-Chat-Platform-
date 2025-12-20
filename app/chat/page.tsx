@@ -4,6 +4,7 @@ import { useSession, signOut, signIn } from "next-auth/react";
 import { useState, useRef, useEffect } from "react";
 import { Send, Upload, Download, Menu, LogOut, User, Sparkles, FileText, Image as ImageIcon, X, MessageSquare, Clock, Trash2, Plus, Settings, HelpCircle, FolderOpen, Code, Moon, Sun, Mail, KeyRound, Copy, Check, Brain, ToggleLeft, ToggleRight, Search, Lock } from "lucide-react";
 import ReactMarkdown from "react-markdown";
+import chatClient from '@/lib/chatClient';
 
 interface Message {
   id: string;
@@ -484,15 +485,7 @@ export default function ChatPage() {
     const previous = chatHistory;
     setChatHistory(prev => prev.filter(ch => ch.id !== chatId));
     try {
-      const res = await fetch(`/api/history/${encodeURIComponent(chatId)}`, {
-        method: 'DELETE',
-      });
-      if (!res.ok) {
-        const txt = await res.text();
-        console.error('Failed to delete chat:', res.status, txt);
-        setChatHistory(previous); // rollback
-        return;
-      }
+      await chatClient.softDeleteChat(chatId, session?.user?.email ?? null);
       // If deleted chat was selected, clear messages
       if (selectedChatId === chatId) {
         setSelectedChatId(null);
@@ -538,11 +531,15 @@ export default function ChatPage() {
     setSelectedChatId(null);
     
     try {
-      // Delete all chats from backend
+      // Soft-delete all chats via chatClient (ownership enforced)
       for (const chat of previous) {
-        await fetch(`/api/history/${encodeURIComponent(chat.id)}`, {
-          method: 'DELETE',
-        });
+        try {
+          await chatClient.softDeleteChat(chat.id, session?.user?.email ?? null);
+        } catch (e) {
+          // Log and continue; we'll roll back on outer catch
+          console.error('Failed to soft-delete chat', chat.id, e);
+          throw e;
+        }
       }
     } catch (e) {
       console.error('Clear all error', e);
