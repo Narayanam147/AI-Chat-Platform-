@@ -11,14 +11,16 @@ export async function GET(request: NextRequest, { params }: { params: { id: stri
     const chat = await ChatModel.findById(id);
     if (!chat) return NextResponse.json({ error: 'Not found' }, { status: 404 });
 
-    // Public GET: return chat messages but redact sensitive fields
+    // Return chat with messages in expected format
     const safe = {
       id: chat.id,
-      title: chat.title || chat.messages?.[0]?.text?.substring(0, 60) || 'Chat',
-      messages: chat.messages || [],
+      title: chat.title || chat.prompt.substring(0, 60),
+      messages: [
+        { text: chat.prompt, sender: 'user', timestamp: chat.created_at },
+        { text: chat.response, sender: 'ai', timestamp: chat.created_at }
+      ],
       created_at: chat.created_at,
       updated_at: chat.updated_at,
-      owner: chat.user_id ? undefined : undefined, // do not expose owner
     };
 
     return NextResponse.json(safe);
@@ -84,16 +86,13 @@ export async function DELETE(request: NextRequest, { params }: { params: { id: s
     }
 
     // Soft-delete: mark chat as deleted instead of removing from DB
-    const updated = await ChatModel.update(id, {
-      is_deleted: true,
-      deleted_at: new Date().toISOString(),
-    } as any);
+    const success = await ChatModel.softDelete(id);
 
-    if (!updated) {
-      return NextResponse.json({ error: 'Failed to soft-delete chat' }, { status: 500 });
+    if (!success) {
+      return NextResponse.json({ error: 'Failed to delete chat' }, { status: 500 });
     }
 
-    return NextResponse.json({ success: true, data: updated });
+    return NextResponse.json({ success: true, message: 'Chat deleted successfully' });
   } catch (error) {
     console.error('DELETE /api/history/:id error:', error);
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });

@@ -6,14 +6,11 @@ export async function POST(request: NextRequest) {
     const { prompt, userId, personalization, chatId } = await request.json();
 
     if (!prompt) {
-      console.error('❌ No prompt provided');
       return NextResponse.json(
         { error: 'Prompt is required' },
         { status: 400 }
       );
     }
-    
-    console.log('✅ Received prompt:', prompt.substring(0, 100));
 
 
     let searchContext = '';
@@ -235,43 +232,20 @@ export async function POST(request: NextRequest) {
     const data = await response.json();
     const aiResponse = data.choices?.[0]?.message?.content || 'No response generated';
 
-    console.log('✅ AI Response:', aiResponse.substring(0, 100));
-
     let savedChatId = chatId;
 
     // Save to database if userId is provided
     if (userId) {
       try {
-        const userMessage = { text: prompt, sender: 'user', timestamp: new Date().toISOString() };
-        const assistantMessage = { text: aiResponse, sender: 'ai', timestamp: new Date().toISOString() };
-
-        if (chatId) {
-          // Update existing chat - append messages
-          const existingChat = await ChatModel.findById(chatId);
-          if (existingChat) {
-            const updatedMessages = [...(existingChat.messages || []), userMessage, assistantMessage];
-            await ChatModel.update(chatId, { messages: updatedMessages });
-            console.log('✅ Chat updated in Supabase (chatId:', chatId, ')');
-          } else {
-            // Chat not found, create new one
-            const newChat = await ChatModel.create({
-              user_id: userId,
-              messages: [userMessage, assistantMessage],
-              title: prompt.substring(0, 50),
-            });
-            savedChatId = newChat?.id || null;
-            console.log('✅ New chat created (old not found):', savedChatId);
-          }
-        } else {
-          // Create new chat
-          const newChat = await ChatModel.create({
-            user_id: userId,
-            messages: [userMessage, assistantMessage],
-            title: prompt.substring(0, 50),
-          });
-          savedChatId = newChat?.id || null;
-          console.log('✅ New chat created:', savedChatId);
-        }
+        // Always create a new chat_history entry for each prompt/response pair
+        const newChat = await ChatModel.create({
+          user_id: userId,
+          prompt: prompt,
+          response: aiResponse,
+          title: prompt.substring(0, 50) + (prompt.length > 50 ? '...' : ''),
+        });
+        savedChatId = newChat?.id || null;
+        console.log('✅ Chat history saved:', savedChatId);
         
       } catch (dbError) {
         console.error('❌ Supabase save error:', dbError);
@@ -281,7 +255,7 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({ response: aiResponse, chatId: savedChatId });
   } catch (error) {
-    console.error('❌ Chat API error:', error);
+    console.error('Chat API error:', error);
     return NextResponse.json(
       { error: 'Internal server error' },
       { status: 500 }

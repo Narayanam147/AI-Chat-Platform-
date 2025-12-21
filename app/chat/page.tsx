@@ -757,7 +757,7 @@ export default function ChatPage() {
           prompt: promptText,
           userId: session?.user?.email,
           personalization: personalizationContext,
-          chatId: currentChatId // Send current chat ID to append messages
+          // Note: chatId is not used anymore, each interaction creates new entry
         }),
       });
 
@@ -805,9 +805,27 @@ export default function ChatPage() {
         throw new Error(data.error || 'No response from AI');
       }
 
-      // Update currentChatId if a new chat was created
-      if (data.chatId && !currentChatId) {
+      // Update currentChatId with the new chat entry created
+      if (data.chatId) {
         setCurrentChatId(data.chatId);
+        // Refresh history to show the new entry
+        if (session?.user?.email) {
+          const historyRes = await fetch(`/api/history?userId=${encodeURIComponent(session.user.email)}`);
+          if (historyRes.ok) {
+            const historyData = await historyRes.json();
+            const mapped = Array.isArray(historyData) ? historyData : historyData?.data || [];
+            if (mapped.length > 0) {
+              setChatHistory(mapped.map((c: any) => ({
+                id: String(c.id),
+                title: c.title,
+                timestamp: new Date(c.lastMessageAt),
+                preview: c.snippet,
+                messages: c.messages || [],
+                pinned: c.pinned || false,
+              })));
+            }
+          }
+        }
       }
 
       const aiMessage: Message = {
