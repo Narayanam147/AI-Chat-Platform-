@@ -30,7 +30,7 @@ export function LayoutContainer({ children, showSidebar = true, title = 'AI Chat
     checkMobile();
     window.addEventListener('resize', checkMobile);
     return () => window.removeEventListener('resize', checkMobile);
-  }, []);
+  }, [sidebarOpen]);
 
   return (
     <div className="flex flex-col h-screen overflow-hidden">

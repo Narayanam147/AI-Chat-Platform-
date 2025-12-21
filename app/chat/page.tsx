@@ -2,7 +2,7 @@
 
 import { useSession, signOut, signIn } from "next-auth/react";
 import { useState, useRef, useEffect } from "react";
-import { Send, Upload, Download, LogOut, User, Sparkles, FileText, Image as ImageIcon, X, MessageSquare, Clock, Trash2, Plus, Settings, HelpCircle, FolderOpen, Code, Moon, Sun, Copy, Check, Brain, ToggleLeft, ToggleRight, Search } from "lucide-react";
+import { Send, Upload, Download, Menu, LogOut, User, Sparkles, FileText, Image as ImageIcon, X, MessageSquare, Clock, Trash2, Plus, Settings, HelpCircle, FolderOpen, Code, Moon, Sun, Copy, Check, Brain, ToggleLeft, ToggleRight, Search } from "lucide-react";
 import ReactMarkdown from "react-markdown";
 import { LayoutContainer } from "@/components/Layout/LayoutContainer";
 
