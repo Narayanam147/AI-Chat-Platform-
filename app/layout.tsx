@@ -22,9 +22,9 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           }}
         />
       </head>
-      <body className={`overflow-hidden bg-gray-50 ${inter.className}`}>
+      <body className={`bg-gray-50 ${inter.className}`}>
         <AuthProvider>
-          <div className="h-screen w-screen overflow-hidden" id="root">
+          <div className="min-h-screen w-screen" id="root">
             {children}
           </div>
         </AuthProvider>

@@ -168,7 +168,7 @@ export function MainLayout({
     : chatHistory;
 
   return (
-    <div className="flex flex-col h-screen overflow-hidden bg-white dark:bg-gray-900">
+    <div className="flex flex-col min-h-screen bg-white dark:bg-gray-900">
       {/* Top Navbar - Always Visible - Highest z-index */}
       <header className="sticky top-0 z-[100] flex items-center justify-between px-4 py-3 border-b border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 shadow-sm">
         <div className="flex items-center gap-3">
@@ -274,7 +274,7 @@ export function MainLayout({
         </header>
 
       {/* Main Content Area */}
-      <div className="flex-1 flex overflow-hidden relative">
+      <div className="flex-1 flex relative">
         {/* Mobile Overlay - Click to close sidebar - MUST be below sidebar z-index */}
         {isMobile && isSidebarOpen && (
           <div 
@@ -301,7 +301,7 @@ export function MainLayout({
             overflow-hidden
           `}
         >
-          <div className={`h-full flex flex-col ${!isSidebarOpen && !isMobile ? 'invisible w-0' : 'visible'}`}>
+            <div className={`h-full flex flex-col ${!isSidebarOpen && !isMobile ? 'invisible w-0' : 'visible'}`}>
             {/* Sidebar Header */}
             <div className="flex-shrink-0 p-3 border-b border-gray-200 dark:border-gray-800 flex items-center justify-between bg-white dark:bg-gray-900">
               <button
@@ -345,7 +345,7 @@ export function MainLayout({
             </div>
 
             {/* Chat History */}
-            <div className="flex-1 overflow-y-auto overflow-x-hidden px-2 scroll-smooth">
+            <div className="flex-1 px-2 scroll-smooth">
               {filteredHistory.length === 0 ? (
                 <div className="p-4 text-center text-gray-500 text-sm">No chats yet</div>
               ) : (
@@ -409,7 +409,7 @@ export function MainLayout({
         </aside>
 
         {/* Main Content - Expands to 100% when sidebar closes on desktop */}
-        <main className="flex-1 min-w-0 overflow-auto bg-white dark:bg-gray-900 transition-all duration-300">
+        <main className="flex-1 min-w-0 bg-white dark:bg-gray-900 transition-all duration-300">
           {children}
         </main>
       </div>

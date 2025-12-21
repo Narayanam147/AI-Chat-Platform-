@@ -1005,7 +1005,7 @@ export default function ChatPage() {
         )}
 
         {/* Conversation View - Messages */}
-        <div className="flex-1 overflow-y-auto overflow-x-hidden bg-gradient-to-b from-white/50 dark:from-gray-900/30 to-white dark:to-gray-900 transition-all duration-300 scroll-smooth">
+        <div className={messages.length === 0 ? "flex-1 overflow-hidden bg-gradient-to-b from-white/50 dark:from-gray-900/30 to-white dark:to-gray-900 transition-all duration-300" : "flex-1 overflow-y-auto overflow-x-hidden bg-gradient-to-b from-white/50 dark:from-gray-900/30 to-white dark:to-gray-900 transition-all duration-300 scroll-smooth"}>
           {/* Greeting State - ONLY when no messages */}
           {messages.length === 0 && (
             <div className="flex items-center justify-center h-full animate-fadeIn px-4 py-8">
@@ -1016,9 +1016,42 @@ export default function ChatPage() {
                 <p className="text-sm sm:text-lg text-gray-600 dark:text-gray-400 mb-2">
                   Hello, {session?.user?.name?.split(' ')[0] || 'there'}
                 </p>
-                <p className="text-sm sm:text-lg text-gray-600 dark:text-gray-400">
+                <p className="text-sm sm:text-lg text-gray-600 dark:text-gray-400 mb-6">
                   How can I help you today?
                 </p>
+
+                {/* Centered initial input (Gemini-style) */}
+                <div className="mt-6">
+                  <div className="mx-auto w-full max-w-4xl">
+                    <div className="relative bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-3xl p-6 shadow-lg">
+                      <textarea
+                        value={input}
+                        onChange={(e) => setInput(e.target.value)}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter' && !e.shiftKey) {
+                            e.preventDefault();
+                            handleSend();
+                          }
+                        }}
+                        placeholder="Ask Ace"
+                        className="w-full resize-none bg-transparent outline-none text-center text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 text-2xl md:text-3xl leading-tight min-h-[64px] max-h-[220px] px-2"
+                        rows={1}
+                        disabled={isLoading}
+                        style={{ height: 'auto', overflowY: input.split('\n').length > 3 ? 'auto' : 'hidden' }}
+                      />
+                      <div className="absolute right-4 bottom-4">
+                        <button
+                          onClick={handleSend}
+                          disabled={isLoading || !input.trim()}
+                          className="w-11 h-11 flex items-center justify-center bg-blue-600 hover:bg-blue-700 text-white rounded-full disabled:bg-gray-400 disabled:cursor-not-allowed shadow-md"
+                        >
+                          <Send className="w-5 h-5" />
+                        </button>
+                      </div>
+                    </div>
+                    <p className="text-sm text-gray-500 dark:text-gray-400 mt-4">AI can make mistakes. Verify important information.</p>
+                  </div>
+                </div>
               </div>
             </div>
           )}
@@ -1105,8 +1138,9 @@ export default function ChatPage() {
           )}
         </div>
 
-        {/* Chat Input Bar - Multi-functional (Gemini-style) */}
-        <div className="border-t border-gray-200/50 dark:border-gray-800/50 bg-white dark:bg-gray-900 p-2 sm:p-3 -mb-2">
+        {/* Chat Input Bar - Multi-functional (Gemini-style) - show only when messages exist */}
+        {messages.length > 0 && (
+          <div className="sticky bottom-0 z-20 border-t border-gray-200/50 dark:border-gray-800/50 bg-white dark:bg-gray-900 p-2 sm:p-3">
           <div className="max-w-4xl mx-auto px-1 sm:px-0">
             <div className="relative flex items-end gap-2 bg-gray-100/60 dark:bg-gray-800/40 rounded-full border border-gray-300/50 dark:border-gray-700/40 p-2 focus-within:bg-gray-100 dark:focus-within:bg-gray-800/60 focus-within:border-gray-400 dark:focus-within:border-gray-600 transition-all">
               {/* Attachment/Tools Menu */}
@@ -1237,7 +1271,8 @@ export default function ChatPage() {
               </div>
             )}
           </div>
-        </div>
+          </div>
+        )}
       </div>
 
       {/* Settings Modal */}
