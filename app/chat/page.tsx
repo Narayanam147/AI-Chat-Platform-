@@ -2,8 +2,9 @@
 
 import { useSession, signOut, signIn } from "next-auth/react";
 import { useState, useRef, useEffect } from "react";
-import { Send, Upload, Download, Menu, LogOut, User, Sparkles, FileText, Image as ImageIcon, X, MessageSquare, Clock, Trash2, Plus, Settings, HelpCircle, FolderOpen, Code, Moon, Sun, Mail, KeyRound, Copy, Check, Brain, ToggleLeft, ToggleRight, Search, Lock } from "lucide-react";
+import { Send, Upload, Download, LogOut, User, Sparkles, FileText, Image as ImageIcon, X, MessageSquare, Clock, Trash2, Plus, Settings, HelpCircle, FolderOpen, Code, Moon, Sun, Copy, Check, Brain, ToggleLeft, ToggleRight, Search } from "lucide-react";
 import ReactMarkdown from "react-markdown";
+import { LayoutContainer } from "@/components/Layout/LayoutContainer";
 
 interface Message {
   id: string;
@@ -943,19 +944,20 @@ export default function ChatPage() {
   };
 
   return (
-    <div className="flex h-screen bg-white dark:bg-gray-900">
-      {/* Overlay for mobile when sidebar is open */}
-      {showSidebar && (
-        <div 
-          className="fixed inset-0 bg-black bg-opacity-60 z-[45] lg:hidden"
-          onClick={() => setShowSidebar(false)}
-        />
-      )}
+    <LayoutContainer title="Chat Assistant">
+      <div className="flex h-full bg-white dark:bg-gray-900">
+        {/* Overlay for mobile when sidebar is open */}
+        {showSidebar && (
+          <div 
+            className="fixed inset-0 bg-black bg-opacity-60 z-[45] lg:hidden"
+            onClick={() => setShowSidebar(false)}
+          />
+        )}
 
-      {/* Left Sidebar - Collapsible */}
-      <aside className={`${
-        showSidebar ? 'translate-x-0' : '-translate-x-full'
-      } lg:translate-x-0 fixed lg:relative top-0 left-0 h-full w-72 lg:w-64 bg-white dark:bg-gray-900 border-r border-gray-200 dark:border-gray-800 flex flex-col z-[46] lg:z-auto shadow-2xl lg:shadow-none transition-transform duration-300 ease-in-out`}>
+        {/* Left Sidebar - Collapsible */}
+        <aside className={`${
+          showSidebar ? 'translate-x-0' : '-translate-x-full'
+        } lg:translate-x-0 fixed lg:relative top-0 left-0 h-full w-72 lg:w-64 bg-white dark:bg-gray-900 border-r border-gray-200 dark:border-gray-800 flex flex-col z-[46] lg:z-auto shadow-2xl lg:shadow-none transition-transform duration-300 ease-in-out`}>
         {/* New Chat Button - Prominent */}
         <div className="px-3 pt-4 pb-2">
           <button
@@ -2033,6 +2035,7 @@ export default function ChatPage() {
         </div>
       )}
 
-    </div>
+      </div>
+    </LayoutContainer>
   );
 }

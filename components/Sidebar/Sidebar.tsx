@@ -2,16 +2,19 @@
 
 import React, { useEffect, useState, useCallback, useRef } from 'react';
 import { fetchHistoryForUser, softDeleteHistory, HistoryEntry } from '@/lib/history';
+import { X } from 'lucide-react';
 
 interface SidebarProps {
   userId?: string | null;
   onSelectHistory?: (entry: HistoryEntry) => void;
   onCloseMobile?: () => void;
+  onClose?: () => void;
+  isOpen?: boolean;
 }
 
 const ITEMS_PER_PAGE = 30;
 
-export function Sidebar({ userId, onSelectHistory, onCloseMobile }: SidebarProps) {
+export function Sidebar({ userId, onSelectHistory, onCloseMobile, onClose, isOpen = true }: SidebarProps) {
   const [history, setHistory] = useState<HistoryEntry[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -86,9 +89,17 @@ export function Sidebar({ userId, onSelectHistory, onCloseMobile }: SidebarProps
   };
 
   return (
-    <div className="sidebar-container flex flex-col h-full bg-white dark:bg-gray-900">
-      <div className="flex-shrink-0 p-4 border-b border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900">
+    <div className="sidebar-container flex flex-col h-full bg-white dark:bg-gray-900 border-r border-gray-200 dark:border-gray-800">
+      <div className="flex-shrink-0 p-4 border-b border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 flex items-center justify-between">
         <h2 className="text-lg font-semibold text-gray-900 dark:text-white">History</h2>
+        <button 
+          onClick={onClose} 
+          className="p-1.5 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-md transition-colors" 
+          aria-label="Close sidebar"
+          title="Close sidebar"
+        >
+          <X className="w-5 h-5 text-gray-500 dark:text-gray-400" />
+        </button>
       </div>
 
       {error && (

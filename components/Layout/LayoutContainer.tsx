@@ -1,24 +1,30 @@
 'use client';
 
-import React, { ReactNode } from 'react';
+import React, { ReactNode, useState, useEffect } from 'react';
 import { Sidebar } from '@/components/Sidebar/Sidebar';
+import { Navbar } from '@/components/Navbar/Navbar';
 import { useAuth } from '@/hooks/useAuth';
 
 interface LayoutContainerProps {
   children: ReactNode;
   showSidebar?: boolean;
+  title?: string;
 }
 
-export function LayoutContainer({ children, showSidebar = true }: LayoutContainerProps) {
+export function LayoutContainer({ children, showSidebar = true, title = 'AI Chat' }: LayoutContainerProps) {
   const { user } = useAuth();
-  const [sidebarOpen, setSidebarOpen] = React.useState(true);
-  const [isMobile, setIsMobile] = React.useState(false);
+  const [sidebarOpen, setSidebarOpen] = useState(false); // Start closed by default for all screens
+  const [isMobile, setIsMobile] = useState(false);
 
-  React.useEffect(() => {
+  // Check if mobile
+  useEffect(() => {
     const checkMobile = () => {
-      const mobile = window.innerWidth < 768;
+      const mobile = window.innerWidth < 1024; // lg breakpoint
       setIsMobile(mobile);
-      if (mobile) setSidebarOpen(false);
+      // Keep sidebar closed on mobile by default
+      if (mobile && sidebarOpen) {
+        setSidebarOpen(false);
+      }
     };
 
     checkMobile();
@@ -27,33 +33,65 @@ export function LayoutContainer({ children, showSidebar = true }: LayoutContaine
   }, []);
 
   return (
-    <div className="main-container">
-      {showSidebar && (
-        <>
-          {isMobile && sidebarOpen && (
-            <div className="fixed inset-0 bg-black bg-opacity-60 z-[55]" onClick={() => setSidebarOpen(false)} />
-          )}
+    <div className="flex flex-col h-screen overflow-hidden">
+      {/* Global Navbar - Always Visible at Top */}
+      <Navbar 
+        onToggleSidebar={() => setSidebarOpen(!sidebarOpen)}
+        sidebarOpen={sidebarOpen}
+        showSidebarToggle={showSidebar}
+        title={title}
+      />
 
-          <div className={`fixed lg:relative h-full bg-white dark:bg-gray-900 border-r border-gray-200 dark:border-gray-800 z-[60] shadow-lg lg:shadow-none transition-transform duration-300 ease-in-out ${isMobile && !sidebarOpen ? '-translate-x-full' : 'translate-x-0'} ${isMobile ? 'w-72' : 'w-64'}`}>
-            <Sidebar userId={user?.email ?? null} onCloseMobile={() => isMobile && setSidebarOpen(false)} />
-          </div>
-        </>
-      )}
+      {/* Main Content Area with Sidebar */}
+      <div className="flex-1 flex overflow-hidden relative">
+        {showSidebar && (
+          <>
+            {/* Overlay for mobile when sidebar is open */}
+            {isMobile && sidebarOpen && (
+              <div 
+                className="fixed inset-0 bg-black bg-opacity-60 z-40"
+                onClick={() => setSidebarOpen(false)}
+              />
+            )}
 
-      <div className="main-content">
-        {isMobile && (
-          <div className="sidebar-header-mobile">
-            <button onClick={() => setSidebarOpen(!sidebarOpen)} className="p-2 hover:bg-gray-100 rounded-md transition-colors" aria-label="Toggle sidebar">
-              <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
-              </svg>
-            </button>
-            <h1 className="text-lg font-semibold">AI Chat</h1>
-            <div className="w-6" />
-          </div>
+            {/* Sidebar - Works on ALL screen sizes */}
+            <aside
+              className={`
+                ${isMobile ? 'fixed' : 'relative'}
+                ${isMobile ? 'z-50' : 'z-10'}
+                h-full
+                bg-white dark:bg-gray-900
+                transition-all duration-300 ease-in-out
+                ${isMobile 
+                  ? sidebarOpen 
+                    ? 'translate-x-0 w-72' 
+                    : '-translate-x-full w-72'
+                  : sidebarOpen
+                    ? 'w-64'
+                    : 'w-0'
+                }
+                ${isMobile && 'shadow-2xl'}
+              `}
+            >
+              {/* Only render sidebar content when open OR transitioning on desktop */}
+              {(sidebarOpen || (!isMobile)) && (
+                <div className={`h-full ${!sidebarOpen && !isMobile ? 'invisible' : 'visible'}`}>
+                  <Sidebar 
+                    userId={user?.email ?? null} 
+                    onCloseMobile={() => isMobile && setSidebarOpen(false)} 
+                    onClose={() => setSidebarOpen(false)}
+                    isOpen={sidebarOpen}
+                  />
+                </div>
+              )}
+            </aside>
+          </>
         )}
 
-        <div className="chat-area">{children}</div>
+        {/* Main Content - Expands when sidebar is closed */}
+        <main className="flex-1 overflow-auto bg-white dark:bg-gray-900">
+          {children}
+        </main>
       </div>
     </div>
   );
