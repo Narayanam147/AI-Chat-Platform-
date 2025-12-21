@@ -75,6 +75,9 @@ export default function ChatPage() {
   const [headingMenuOpen, setHeadingMenuOpen] = useState(false);
   const [openDropdownId, setOpenDropdownId] = useState<string | null>(null);
   const [guestId, setGuestId] = useState<string | null>(null);
+  const [hideHeaderOnMobile, setHideHeaderOnMobile] = useState(false);
+  const chatContainerRef = useRef<HTMLDivElement>(null);
+  const lastScrollTop = useRef(0);
 
   // Read query params directly from window.location to avoid SSR bailout
   const searchParams = null as unknown as URLSearchParams | null;
@@ -677,6 +680,29 @@ export default function ChatPage() {
     scrollToBottom();
   }, [messages]);
 
+  // Detect scrolling to hide header on mobile
+  useEffect(() => {
+    const container = chatContainerRef.current;
+    if (!container) return;
+
+    const handleScroll = () => {
+      const scrollTop = container.scrollTop;
+      const scrollingDown = scrollTop > lastScrollTop.current;
+      
+      // Only hide header on mobile when there are messages and scrolling down
+      if (messages.length > 0 && scrollTop > 60) {
+        setHideHeaderOnMobile(scrollingDown);
+      } else {
+        setHideHeaderOnMobile(false);
+      }
+      
+      lastScrollTop.current = scrollTop;
+    };
+
+    container.addEventListener('scroll', handleScroll, { passive: true });
+    return () => container.removeEventListener('scroll', handleScroll);
+  }, [messages.length]);
+
   // Close menus when clicking outside
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -958,6 +984,7 @@ export default function ChatPage() {
   return (
     <MainLayout
       title="Chat Assistant"
+      hideHeader={hideHeaderOnMobile && messages.length > 0}
       onNewChat={handleNewChat}
       chatHistory={chatHistory}
       onSelectChat={(chat) => {
@@ -1076,7 +1103,10 @@ export default function ChatPage() {
         )}
 
         {/* Conversation View - Messages */}
-        <div className="flex-1 overflow-y-auto overflow-x-hidden bg-gradient-to-b from-white/50 dark:from-gray-900/30 to-white dark:to-gray-900 transition-all duration-300 scroll-smooth min-h-0">
+        <div 
+          ref={chatContainerRef}
+          className="flex-1 overflow-y-auto overflow-x-hidden bg-gradient-to-b from-white/50 dark:from-gray-900/30 to-white dark:to-gray-900 transition-all duration-300 scroll-smooth min-h-0 overscroll-contain"
+        >
           {/* Greeting State - ONLY when no messages */}
           {messages.length === 0 && (
             <div className="flex items-center justify-center h-full animate-fadeIn px-4 py-8">

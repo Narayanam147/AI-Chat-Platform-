@@ -17,6 +17,7 @@ interface MainLayoutProps {
   onShareChat?: (chatId: string) => void;
   selectedChatId?: string | null;
   onOpenSettings?: () => void;
+  hideHeader?: boolean; // Hide header on mobile when scrolling
 }
 
 export function MainLayout({ 
@@ -31,10 +32,12 @@ export function MainLayout({
   onShareChat,
   selectedChatId,
   onOpenSettings,
+  hideHeader = false,
 }: MainLayoutProps) {
   const { data: session } = useSession();
-  const [isSidebarOpen, setIsSidebarOpen] = useState(true); // Default open on desktop, will adjust for mobile
+  const [isSidebarOpen, setIsSidebarOpen] = useState(false); // Default closed on mobile
   const [theme, setTheme] = useState<'light' | 'dark'>('light');
+  const [isMobile, setIsMobile] = useState(false);
   const [showProfileMenu, setShowProfileMenu] = useState(false);
   const [showAuthModal, setShowAuthModal] = useState(false);
   const [authMode, setAuthMode] = useState<'login' | 'signup'>('login');
@@ -47,6 +50,21 @@ export function MainLayout({
   
   const profileMenuRef = useRef<HTMLDivElement>(null);
   const authModalRef = useRef<HTMLDivElement>(null);
+
+  // Check if mobile and set sidebar default
+  useEffect(() => {
+    const checkMobile = () => {
+      const mobile = window.innerWidth < 1024;
+      setIsMobile(mobile);
+      // On desktop, default sidebar open
+      if (!mobile) {
+        setIsSidebarOpen(true);
+      }
+    };
+    checkMobile();
+    window.addEventListener('resize', checkMobile);
+    return () => window.removeEventListener('resize', checkMobile);
+  }, []);
 
   // Load theme
   useEffect(() => {
@@ -134,8 +152,15 @@ export function MainLayout({
 
   return (
     <div className="flex flex-col h-screen overflow-hidden bg-white dark:bg-gray-900">
-      {/* Top Navbar - Always Visible - Highest z-index */}
-      <header className="sticky top-0 z-[100] flex items-center justify-between px-4 py-3 border-b border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 shadow-sm">
+      {/* Top Navbar - Hidden on mobile when hideHeader is true */}
+      <header 
+        className={`
+          sticky top-0 z-[100] flex items-center justify-between px-4 py-3 
+          border-b border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 shadow-sm
+          transition-transform duration-300 ease-in-out
+          ${hideHeader && isMobile ? '-translate-y-full absolute w-full opacity-0 pointer-events-none' : 'translate-y-0'}
+        `}
+      >
         <div className="flex items-center gap-3">
           {/* Hamburger Toggle - Works on ALL screens - Always accessible */}
           <button
@@ -239,7 +264,7 @@ export function MainLayout({
       </header>
 
       {/* Main Content Area */}
-      <div className="flex-1 flex overflow-hidden relative">
+      <div className={`flex-1 flex overflow-hidden relative ${hideHeader && isMobile ? 'pt-0' : ''}`}>
         {/* Overlay - Click to close sidebar on mobile */}
         {isSidebarOpen && (
           <div 
@@ -249,126 +274,138 @@ export function MainLayout({
           />
         )}
 
-        {/* Sidebar */}
+        {/* Sidebar - Full height on mobile with flex layout for fixed settings */}
         <aside
           className={`
-            fixed lg:relative inset-y-0 left-0 top-[57px] lg:top-0
+            fixed lg:relative inset-y-0 left-0 top-0
             z-[60]
-            w-64
+            w-72 lg:w-64
             bg-white dark:bg-gray-900
             border-r border-gray-200 dark:border-gray-800
-            transition-transform duration-300
+            transition-transform duration-300 ease-in-out
             ${isSidebarOpen ? 'translate-x-0' : '-translate-x-full'}
             ${!isSidebarOpen ? 'lg:-translate-x-full' : 'lg:translate-x-0'}
-            shadow-xl lg:shadow-none
-            h-[calc(100vh-57px)] lg:h-full
+            shadow-2xl lg:shadow-none
+            h-full
+            flex flex-col
           `}
         >
-          <div className="h-full flex flex-col overflow-hidden">
-            {/* Sidebar Header */}
-            <div className="flex-shrink-0 p-4 border-b border-gray-200 dark:border-gray-800 flex items-center justify-between bg-white dark:bg-gray-900">
+          {/* Sidebar Header - Fixed at top */}
+          <div className="flex-shrink-0 p-4 border-b border-gray-200 dark:border-gray-800 flex items-center justify-between bg-white dark:bg-gray-900 safe-area-inset-top">
+            <div className="flex items-center gap-2">
+              <Sparkles className="w-6 h-6 text-blue-600" />
               <h2 className="text-lg font-semibold text-gray-900 dark:text-white">Chats</h2>
-              <button
-                onClick={() => setIsSidebarOpen(false)}
-                className="lg:hidden p-1.5 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-md transition-colors"
-                aria-label="Close sidebar"
-              >
-                <X className="w-5 h-5 text-gray-500 dark:text-gray-400" />
-              </button>
             </div>
+            <button
+              onClick={() => setIsSidebarOpen(false)}
+              className="p-2 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition-colors touch-manipulation"
+              aria-label="Close sidebar"
+            >
+              <X className="w-5 h-5 text-gray-500 dark:text-gray-400" />
+            </button>
+          </div>
 
-            {/* New Chat Button */}
-            <div className="p-3">
-              <button
-                onClick={() => {
-                  onNewChat?.();
-                  setIsSidebarOpen(false);
-                }}
-                className="w-full py-3 px-4 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors font-medium text-sm flex items-center justify-center gap-3 shadow-sm"
-              >
-                <Plus className="w-5 h-5" />
-                New Chat
-              </button>
-            </div>
+          {/* New Chat Button */}
+          <div className="flex-shrink-0 p-3">
+            <button
+              onClick={() => {
+                onNewChat?.();
+                if (isMobile) setIsSidebarOpen(false);
+              }}
+              className="w-full py-3 px-4 bg-blue-600 hover:bg-blue-700 active:bg-blue-800 text-white rounded-xl transition-colors font-medium text-sm flex items-center justify-center gap-3 shadow-sm touch-manipulation"
+            >
+              <Plus className="w-5 h-5" />
+              New Chat
+            </button>
+          </div>
 
-            {/* Search */}
-            <div className="px-3 pb-3">
-              <div className="relative">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
-                <input
-                  type="text"
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  placeholder="Search chats..."
-                  className="w-full pl-9 pr-8 py-2 text-sm bg-gray-100 dark:bg-gray-800 border border-gray-300 dark:border-gray-700 rounded-lg text-gray-900 dark:text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                />
-                {searchQuery && (
-                  <button onClick={() => setSearchQuery('')} className="absolute right-2 top-1/2 transform -translate-y-1/2 p-1 hover:bg-gray-200 dark:hover:bg-gray-700 rounded">
-                    <X className="w-3 h-3 text-gray-500" />
-                  </button>
-                )}
-              </div>
-            </div>
-
-            {/* Chat History - Scrollable Container with Fixed Height */}
-            <div className="flex-1 min-h-0 overflow-y-auto overflow-x-hidden px-2 scroll-smooth">
-              {filteredHistory.length === 0 ? (
-                <div className="p-4 text-center">
-                  <p className="text-gray-500 dark:text-gray-400 text-sm mb-2">No chats yet</p>
-                  {!session && (
-                    <p className="text-xs text-gray-400 dark:text-gray-500">
-                      Your chats will be saved automatically
-                    </p>
-                  )}
-                </div>
-              ) : (
-                <div className="space-y-1 pb-2">
-                  {filteredHistory.map((chat) => (
-                    <div
-                      key={chat.id}
-                      onClick={() => {
-                        onSelectChat?.(chat);
-                        setIsSidebarOpen(false);
-                      }}
-                      className={`group relative px-3 py-2.5 rounded-lg transition-colors cursor-pointer ${
-                        selectedChatId === chat.id ? 'bg-gray-200 dark:bg-gray-800' : 'hover:bg-gray-100 dark:hover:bg-gray-800'
-                      }`}
-                    >
-                      <div className="flex items-start justify-between gap-2">
-                        <div className="flex-1 min-w-0">
-                          <p className="text-sm font-medium text-gray-900 dark:text-gray-100 line-clamp-1">{chat.title}</p>
-                          {chat.preview && <p className="text-xs text-gray-600 dark:text-gray-400 line-clamp-1 mt-1">{chat.preview}</p>}
-                        </div>
-                        <div className="flex-shrink-0" onClick={(e) => e.stopPropagation()}>
-                          <ChatHistoryDropdown
-                            chatId={chat.id}
-                            isPinned={chat.pinned}
-                            onPin={(id) => onPinChat?.(id)}
-                            onRename={(id) => onRenameChat?.(id)}
-                            onShare={(id) => onShareChat?.(id)}
-                            onDelete={(id) => onDeleteChat?.(id)}
-                          />
-                        </div>
-                      </div>
-                    </div>
-                  ))}
-                </div>
+          {/* Search */}
+          <div className="flex-shrink-0 px-3 pb-3">
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
+              <input
+                type="text"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                placeholder="Search chats..."
+                className="w-full pl-9 pr-8 py-2.5 text-sm bg-gray-100 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl text-gray-900 dark:text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500 touch-manipulation"
+              />
+              {searchQuery && (
+                <button 
+                  onClick={() => setSearchQuery('')} 
+                  className="absolute right-2 top-1/2 transform -translate-y-1/2 p-1.5 hover:bg-gray-200 dark:hover:bg-gray-700 rounded-lg touch-manipulation"
+                >
+                  <X className="w-3.5 h-3.5 text-gray-500" />
+                </button>
               )}
             </div>
+          </div>
 
-            {/* Settings Button at Bottom - Always Visible - Never scrolls */}
-            <div className="flex-shrink-0 p-3 border-t border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 sticky bottom-0">
-              <button
-                onClick={() => { 
-                  onOpenSettings?.(); 
-                  setIsSidebarOpen(false); 
-                }}
-                className="w-full px-3 py-2.5 text-left text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition-colors flex items-center gap-3"
-              >
-                <Settings className="w-5 h-5" />
-                <span>Settings</span>
-              </button>
-            </div>
+          {/* Chat History - Scrollable area that takes remaining space */}
+          <div className="flex-1 overflow-y-auto overflow-x-hidden px-2 overscroll-contain">
+            {filteredHistory.length === 0 ? (
+              <div className="p-4 text-center">
+                <MessageSquare className="w-10 h-10 text-gray-300 dark:text-gray-600 mx-auto mb-3" />
+                <p className="text-gray-500 dark:text-gray-400 text-sm mb-2">No chats yet</p>
+                {!session && (
+                  <p className="text-xs text-gray-400 dark:text-gray-500">
+                    Your chats will be saved automatically
+                  </p>
+                )}
+              </div>
+            ) : (
+              <div className="space-y-1 pb-4">
+                {filteredHistory.map((chat) => (
+                  <div
+                    key={chat.id}
+                    onClick={() => {
+                      onSelectChat?.(chat);
+                      if (isMobile) setIsSidebarOpen(false);
+                    }}
+                    className={`group relative px-3 py-3 rounded-xl transition-colors cursor-pointer touch-manipulation active:scale-[0.98] ${
+                      selectedChatId === chat.id 
+                        ? 'bg-blue-50 dark:bg-blue-900/30 border border-blue-200 dark:border-blue-800' 
+                        : 'hover:bg-gray-100 dark:hover:bg-gray-800 active:bg-gray-200 dark:active:bg-gray-700'
+                    }`}
+                  >
+                    <div className="flex items-start justify-between gap-2">
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-medium text-gray-900 dark:text-gray-100 line-clamp-1">{chat.title}</p>
+                        {chat.preview && <p className="text-xs text-gray-500 dark:text-gray-400 line-clamp-1 mt-1">{chat.preview}</p>}
+                      </div>
+                      {/* Always visible on mobile, hover on desktop */}
+                      <div className="flex-shrink-0 opacity-100 lg:opacity-0 lg:group-hover:opacity-100" onClick={(e) => e.stopPropagation()}>
+                        <ChatHistoryDropdown
+                          chatId={chat.id}
+                          isPinned={chat.pinned}
+                          onPin={(id) => onPinChat?.(id)}
+                          onRename={(id) => onRenameChat?.(id)}
+                          onShare={(id) => onShareChat?.(id)}
+                          onDelete={(id) => onDeleteChat?.(id)}
+                        />
+                      </div>
+                    </div>
+                    {chat.pinned && (
+                      <div className="absolute top-2 right-2 w-2 h-2 bg-blue-500 rounded-full" />
+                    )}
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+
+          {/* Settings Button - Fixed at bottom, never scrolls */}
+          <div className="flex-shrink-0 p-3 border-t border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 safe-area-inset-bottom">
+            <button
+              onClick={() => { 
+                onOpenSettings?.(); 
+                if (isMobile) setIsSidebarOpen(false); 
+              }}
+              className="w-full px-4 py-3 text-left text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 active:bg-gray-200 dark:active:bg-gray-700 rounded-xl transition-colors flex items-center gap-3 touch-manipulation"
+            >
+              <Settings className="w-5 h-5" />
+              <span>Settings</span>
+            </button>
           </div>
         </aside>
 
