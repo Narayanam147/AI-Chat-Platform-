@@ -35,7 +35,8 @@ export function MainLayout({
   hideHeader = false,
 }: MainLayoutProps) {
   const { data: session } = useSession();
-  const [isSidebarOpen, setIsSidebarOpen] = useState(false); // Default closed on mobile
+  const [isSidebarOpen, setIsSidebarOpen] = useState(false); // Full sidebar open state
+  const [isSidebarExpanded, setIsSidebarExpanded] = useState(false); // Desktop: expanded vs collapsed (mini)
   const [theme, setTheme] = useState<'light' | 'dark'>('light');
   const [isMobile, setIsMobile] = useState(false);
   const [showProfileMenu, setShowProfileMenu] = useState(false);
@@ -166,7 +167,11 @@ export function MainLayout({
           <button
             onClick={(e) => {
               e.stopPropagation();
-              setIsSidebarOpen(!isSidebarOpen);
+              if (isMobile) {
+                setIsSidebarOpen(!isSidebarOpen);
+              } else {
+                setIsSidebarExpanded(!isSidebarExpanded);
+              }
             }}
             className="relative z-[110] p-2 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition-colors touch-manipulation"
             aria-label="Toggle sidebar"
@@ -266,26 +271,87 @@ export function MainLayout({
       {/* Main Content Area */}
       <div className={`flex-1 flex overflow-hidden relative ${hideHeader && isMobile ? 'pt-0' : ''}`}>
         {/* Overlay - Click to close sidebar on mobile */}
-        {isSidebarOpen && (
+        {(isSidebarOpen || (isSidebarExpanded && !isMobile)) && (
           <div 
-            className="fixed inset-0 bg-black/60 z-[55] lg:hidden" 
-            onClick={() => setIsSidebarOpen(false)}
+            className={`fixed inset-0 bg-black/60 z-[55] ${isMobile ? '' : 'lg:hidden'}`}
+            onClick={() => {
+              setIsSidebarOpen(false);
+              setIsSidebarExpanded(false);
+            }}
             aria-label="Close sidebar overlay"
           />
         )}
 
-        {/* Sidebar - Full height on mobile with flex layout for fixed settings */}
+        {/* Mini Sidebar - Always visible on desktop (Gemini-style) */}
+        {!isMobile && (
+          <aside className="hidden lg:flex flex-col w-16 bg-white dark:bg-gray-900 border-r border-gray-200 dark:border-gray-800 h-full z-[50]">
+            {/* Expand Button */}
+            <div className="p-3">
+              <button
+                onClick={() => setIsSidebarExpanded(!isSidebarExpanded)}
+                className="w-10 h-10 flex items-center justify-center hover:bg-gray-100 dark:hover:bg-gray-800 rounded-xl transition-colors"
+                aria-label="Expand sidebar"
+                title="Expand sidebar"
+              >
+                <Menu className="w-5 h-5 text-gray-600 dark:text-gray-400" />
+              </button>
+            </div>
+
+            {/* New Chat Button */}
+            <div className="p-3">
+              <button
+                onClick={() => onNewChat?.()}
+                className="w-10 h-10 flex items-center justify-center bg-blue-600 hover:bg-blue-700 text-white rounded-xl transition-colors shadow-sm"
+                aria-label="New chat"
+                title="New chat"
+              >
+                <Plus className="w-5 h-5" />
+              </button>
+            </div>
+
+            {/* Recent Chats - Show first 3 as icons */}
+            <div className="flex-1 p-2 space-y-2 overflow-hidden">
+              {chatHistory.slice(0, 5).map((chat) => (
+                <button
+                  key={chat.id}
+                  onClick={() => onSelectChat?.(chat)}
+                  className={`w-10 h-10 flex items-center justify-center rounded-xl transition-colors ${
+                    selectedChatId === chat.id
+                      ? 'bg-blue-100 dark:bg-blue-900/40 text-blue-600'
+                      : 'hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-600 dark:text-gray-400'
+                  }`}
+                  title={chat.title}
+                >
+                  <MessageSquare className="w-5 h-5" />
+                </button>
+              ))}
+            </div>
+
+            {/* Settings Button */}
+            <div className="p-3 border-t border-gray-200 dark:border-gray-800">
+              <button
+                onClick={() => onOpenSettings?.()}
+                className="w-10 h-10 flex items-center justify-center hover:bg-gray-100 dark:hover:bg-gray-800 rounded-xl transition-colors text-gray-600 dark:text-gray-400"
+                aria-label="Settings"
+                title="Settings"
+              >
+                <Settings className="w-5 h-5" />
+              </button>
+            </div>
+          </aside>
+        )}
+
+        {/* Expanded Sidebar - Opens on top of mini sidebar or as overlay on mobile */}
         <aside
           className={`
-            fixed lg:relative inset-y-0 left-0 top-0
+            fixed lg:fixed inset-y-0 left-0 top-0
             z-[60]
-            w-72 lg:w-64
+            w-72 lg:w-72
             bg-white dark:bg-gray-900
             border-r border-gray-200 dark:border-gray-800
             transition-transform duration-300 ease-in-out
-            ${isSidebarOpen ? 'translate-x-0' : '-translate-x-full'}
-            ${!isSidebarOpen ? 'lg:-translate-x-full' : 'lg:translate-x-0'}
-            shadow-2xl lg:shadow-none
+            ${isMobile ? (isSidebarOpen ? 'translate-x-0' : '-translate-x-full') : (isSidebarExpanded ? 'translate-x-0' : '-translate-x-full')}
+            shadow-2xl
             h-full
             flex flex-col
           `}
@@ -297,7 +363,13 @@ export function MainLayout({
               <h2 className="text-lg font-semibold text-gray-900 dark:text-white">Chats</h2>
             </div>
             <button
-              onClick={() => setIsSidebarOpen(false)}
+              onClick={() => {
+                if (isMobile) {
+                  setIsSidebarOpen(false);
+                } else {
+                  setIsSidebarExpanded(false);
+                }
+              }}
               className="p-2 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition-colors touch-manipulation"
               aria-label="Close sidebar"
             >
@@ -311,6 +383,7 @@ export function MainLayout({
               onClick={() => {
                 onNewChat?.();
                 if (isMobile) setIsSidebarOpen(false);
+                else setIsSidebarExpanded(false);
               }}
               className="w-full py-3 px-4 bg-blue-600 hover:bg-blue-700 active:bg-blue-800 text-white rounded-xl transition-colors font-medium text-sm flex items-center justify-center gap-3 shadow-sm touch-manipulation"
             >
@@ -361,6 +434,7 @@ export function MainLayout({
                     onClick={() => {
                       onSelectChat?.(chat);
                       if (isMobile) setIsSidebarOpen(false);
+                      else setIsSidebarExpanded(false);
                     }}
                     className={`group relative px-3 py-3 rounded-xl transition-colors cursor-pointer touch-manipulation active:scale-[0.98] ${
                       selectedChatId === chat.id 
@@ -399,7 +473,8 @@ export function MainLayout({
             <button
               onClick={() => { 
                 onOpenSettings?.(); 
-                if (isMobile) setIsSidebarOpen(false); 
+                if (isMobile) setIsSidebarOpen(false);
+                else setIsSidebarExpanded(false);
               }}
               className="w-full px-4 py-3 text-left text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 active:bg-gray-200 dark:active:bg-gray-700 rounded-xl transition-colors flex items-center gap-3 touch-manipulation"
             >
@@ -409,7 +484,7 @@ export function MainLayout({
           </div>
         </aside>
 
-        {/* Main Content - Expands to 100% when sidebar closes on desktop */}
+        {/* Main Content - Accounts for mini sidebar on desktop */}
         <main className="flex-1 min-w-0 overflow-hidden bg-white dark:bg-gray-900 transition-all duration-300 relative z-[10]">
           {children}
         </main>
