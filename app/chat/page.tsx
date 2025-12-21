@@ -393,7 +393,7 @@ export default function ChatPage() {
     if (!chatId) return;
     
     // Show confirmation
-    if (!confirm('Delete this chat? It will be hidden from your history.')) {
+    if (!confirm('Delete this chat? It will be permanently removed from your history.')) {
       return;
     }
     
@@ -406,6 +406,12 @@ export default function ChatPage() {
       setSelectedChatId(null);
       setCurrentChatId(null);
       setMessages([]);
+    }
+    
+    // For temporary local chats or unauthenticated users, just remove from UI (no API call needed)
+    if (chatId.startsWith('temp-') || !session?.user?.email) {
+      console.log('Chat deleted locally:', chatId);
+      return;
     }
     
     try {
