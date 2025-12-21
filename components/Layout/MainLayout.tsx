@@ -64,8 +64,22 @@ export function MainLayout({
     };
     checkMobile();
     window.addEventListener('resize', checkMobile);
-    return () => window.removeEventListener('resize', checkMobile);
-  }, []);
+    
+    // Listen for toggleSidebar events from chat page
+    const handleToggleSidebar = () => {
+      if (isMobile) {
+        setIsSidebarOpen(prev => !prev);
+      } else {
+        setIsSidebarExpanded(prev => !prev);
+      }
+    };
+    window.addEventListener('toggleSidebar', handleToggleSidebar);
+    
+    return () => {
+      window.removeEventListener('resize', checkMobile);
+      window.removeEventListener('toggleSidebar', handleToggleSidebar);
+    };
+  }, [isMobile]);
 
   // Load theme
   useEffect(() => {
@@ -152,18 +166,17 @@ export function MainLayout({
     : chatHistory;
 
   return (
-    <div className="flex flex-col h-screen overflow-hidden bg-white dark:bg-gray-900">
-      {/* Top Navbar - Hidden on mobile when hideHeader is true */}
-      <header 
-        className={`
-          sticky top-0 z-[100] flex items-center justify-between px-4 py-3 
-          border-b border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 shadow-sm
-          transition-transform duration-300 ease-in-out
-          ${hideHeader && isMobile ? '-translate-y-full absolute w-full opacity-0 pointer-events-none' : 'translate-y-0'}
-        `}
-      >
-        <div className="flex items-center gap-3">
-          {/* Hamburger Toggle - Works on ALL screens - Always accessible */}
+    <div className="flex flex-col h-screen overflow-hidden bg-white dark:bg-slate-900">
+      {/* Top Navbar - Hidden when hideHeader is true */}
+      {!hideHeader && (
+        <header
+          className={`sticky top-0 z-[100] flex items-center px-4 py-3 border-b border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-sm transition-transform duration-300 ease-in-out ${
+            hideHeader ? 'hidden' : ''
+          }`}
+        >
+        {/* Left Section - Hamburger + Logo */}
+        <div className="flex items-center gap-3 flex-shrink-0">
+          {/* Hamburger Menu - Mobile opens sidebar, Desktop expands sidebar */}
           <button
             onClick={(e) => {
               e.stopPropagation();
@@ -173,100 +186,111 @@ export function MainLayout({
                 setIsSidebarExpanded(!isSidebarExpanded);
               }
             }}
-            className="relative z-[110] p-2 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition-colors touch-manipulation"
+            className="relative z-[110] p-2 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg transition-colors touch-manipulation"
             aria-label="Toggle sidebar"
           >
-            <Menu className="w-6 h-6 text-gray-700 dark:text-gray-300" />
+            <Menu className="w-6 h-6 text-slate-700 dark:text-slate-300" />
           </button>
 
-          {/* Theme Toggle */}
+          {/* Logo */}
+          <div className="flex items-center gap-2">
+            <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center shadow-sm">
+              <Sparkles className="w-4 h-4 text-white" />
+            </div>
+            <span className="text-lg font-semibold text-slate-900 dark:text-white hidden sm:block">Chat Assistant</span>
+          </div>
+        </div>
+
+        {/* Center Section - Chat Heading (shown when title is provided) */}
+        <div className="flex-1 flex justify-center px-4">
+          <h1 className="text-sm font-medium text-slate-600 dark:text-slate-400 truncate max-w-xs sm:max-w-md">
+            {title !== 'AI Chat' ? title : ''}
+          </h1>
+        </div>
+
+        {/* Right Section - Theme Toggle + Auth */}
+        <div className="flex items-center gap-2 flex-shrink-0">
           <button
             onClick={(e) => {
               e.stopPropagation();
               handleThemeToggle();
             }}
-            className="p-2 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition-colors touch-manipulation"
+            className="p-2 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg transition-colors touch-manipulation"
             aria-label="Toggle theme"
           >
-            {theme === 'light' ? <Moon className="w-5 h-5" /> : <Sun className="w-5 h-5" />}
+            {theme === 'light' ? <Moon className="w-5 h-5 text-slate-600" /> : <Sun className="w-5 h-5 text-slate-400" />}
           </button>
 
-          {/* App Title */}
-          <div className="flex items-center gap-2">
-            <Sparkles className="w-6 h-6 text-blue-600" />
-            <h1 className="text-xl font-semibold text-gray-900 dark:text-white hidden sm:block">{title}</h1>
-          </div>
-        </div>
+          <div className="relative" ref={profileMenuRef}>
+            {!session ? (
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setAuthMode('login');
+                    setShowAuthModal(true);
+                    setAuthError('');
+                  }}
+                  className="px-3 py-2 text-sm font-medium text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-lg transition-colors touch-manipulation hidden sm:block"
+                >
+                  Log In
+                </button>
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setAuthMode('signup');
+                    setShowAuthModal(true);
+                    setAuthError('');
+                  }}
+                  className="px-3 py-2 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-lg transition-colors touch-manipulation shadow-sm"
+                >
+                  Sign Up
+                </button>
+              </div>
+            ) : (
+              <>
+                <div
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setShowProfileMenu(!showProfileMenu);
+                  }}
+                  className="cursor-pointer touch-manipulation"
+                >
+                  {session?.user?.image ? (
+                    <img src={session.user.image} alt="User" className="w-9 h-9 rounded-full object-cover hover:ring-2 hover:ring-blue-500 transition-all" />
+                  ) : (
+                    <div className="w-9 h-9 rounded-full bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center hover:ring-2 hover:ring-blue-500 transition-all shadow-sm">
+                      <span className="text-white font-semibold text-sm">{getUserInitials()}</span>
+                    </div>
+                  )}
+                </div>
 
-        {/* Auth Buttons / User Profile */}
-        <div className="relative" ref={profileMenuRef}>
-          {!session ? (
-            <div className="flex items-center gap-2">
-              <button
-                onClick={(e) => {
-                  e.stopPropagation();
-                  setAuthMode('login');
-                  setShowAuthModal(true);
-                  setAuthError('');
-                }}
-                className="px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors touch-manipulation"
-              >
-                Log In
-              </button>
-              <button
-                onClick={(e) => {
-                  e.stopPropagation();
-                  setAuthMode('signup');
-                  setShowAuthModal(true);
-                  setAuthError('');
-                }}
-                className="px-4 py-2 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-lg transition-colors touch-manipulation"
-              >
-                Sign Up
-              </button>
-            </div>
-          ) : (
-            <>
-              <div
-                onClick={(e) => {
-                  e.stopPropagation();
-                  setShowProfileMenu(!showProfileMenu);
-                }}
-                className="cursor-pointer touch-manipulation"
-              >
-                {session?.user?.image ? (
-                  <img src={session.user.image} alt="User" className="w-9 h-9 rounded-full object-cover hover:ring-2 hover:ring-blue-500 transition-all" />
-                ) : (
-                  <div className="w-9 h-9 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center hover:ring-2 hover:ring-blue-500 transition-all">
-                    <span className="text-white font-semibold text-sm">{getUserInitials()}</span>
+                {showProfileMenu && (
+                  <div className="absolute right-0 top-full mt-2 w-64 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl shadow-xl z-[100] overflow-hidden pointer-events-auto">
+                    <div className="p-4 border-b border-slate-200 dark:border-slate-700">
+                      <p className="text-sm text-slate-700 dark:text-slate-300 font-medium truncate">{session?.user?.name || 'User'}</p>
+                      <p className="text-xs text-slate-500 dark:text-slate-400 truncate mt-1">{session?.user?.email}</p>
+                    </div>
+                    <div className="p-2">
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          signOut({ callbackUrl: '/' });
+                        }}
+                        className="w-full px-4 py-2.5 text-left text-sm text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-lg transition-colors flex items-center gap-3 touch-manipulation"
+                      >
+                        <LogOut className="w-4 h-4" />
+                        Sign out
+                      </button>
+                    </div>
                   </div>
                 )}
-              </div>
-
-              {showProfileMenu && (
-                <div className="absolute right-0 top-full mt-2 w-64 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-xl z-[100] overflow-hidden pointer-events-auto">
-                  <div className="p-4 border-b border-gray-200 dark:border-gray-700">
-                    <p className="text-sm text-gray-700 dark:text-gray-300 font-medium truncate">{session?.user?.name || 'User'}</p>
-                    <p className="text-xs text-gray-500 dark:text-gray-400 truncate mt-1">{session?.user?.email}</p>
-                  </div>
-                  <div className="p-2">
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        signOut({ callbackUrl: '/' });
-                      }}
-                      className="w-full px-4 py-2.5 text-left text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors flex items-center gap-3 touch-manipulation"
-                    >
-                      <LogOut className="w-4 h-4" />
-                      Sign out
-                    </button>
-                  </div>
-                </div>
-              )}
-            </>
-          )}
+              </>
+            )}
+          </div>
         </div>
-      </header>
+        </header>
+      )}
 
       {/* Main Content Area */}
       <div className={`flex-1 flex overflow-hidden relative ${hideHeader && isMobile ? 'pt-0' : ''}`}>
@@ -284,54 +308,60 @@ export function MainLayout({
 
         {/* Mini Sidebar - Always visible on desktop (Gemini-style) */}
         {!isMobile && (
-          <aside className="hidden lg:flex flex-col w-16 bg-white dark:bg-gray-900 border-r border-gray-200 dark:border-gray-800 h-full z-[50]">
-            {/* Expand Button */}
-            <div className="p-3">
-              <button
-                onClick={() => setIsSidebarExpanded(!isSidebarExpanded)}
-                className="w-10 h-10 flex items-center justify-center hover:bg-gray-100 dark:hover:bg-gray-800 rounded-xl transition-colors"
-                aria-label="Expand sidebar"
+          <aside className="hidden lg:flex flex-col w-[72px] bg-slate-50 dark:bg-slate-900 border-r border-slate-200 dark:border-slate-800 h-full z-[50]">
+            {/* AI Assistant Name - Vertical text at top */}
+            <div className="py-5 px-2 border-b border-slate-200 dark:border-slate-800">
+              <div 
+                className="flex flex-col items-center cursor-pointer group"
+                onClick={() => setIsSidebarExpanded(true)}
                 title="Expand sidebar"
               >
-                <Menu className="w-5 h-5 text-gray-600 dark:text-gray-400" />
-              </button>
+                <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center shadow-md group-hover:shadow-lg transition-shadow">
+                  <Sparkles className="w-5 h-5 text-white" />
+                </div>
+                <span className="mt-2 text-[10px] font-semibold text-slate-600 dark:text-slate-400 tracking-wide uppercase">AI</span>
+              </div>
             </div>
 
             {/* New Chat Button */}
             <div className="p-3">
               <button
                 onClick={() => onNewChat?.()}
-                className="w-10 h-10 flex items-center justify-center bg-blue-600 hover:bg-blue-700 text-white rounded-xl transition-colors shadow-sm"
+                className="w-11 h-11 flex items-center justify-center bg-white dark:bg-slate-800 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-xl transition-all shadow-sm hover:shadow-md border border-slate-200 dark:border-slate-700"
                 aria-label="New chat"
                 title="New chat"
               >
-                <Plus className="w-5 h-5" />
+                <Plus className="w-5 h-5 text-slate-700 dark:text-slate-300" />
               </button>
             </div>
 
-            {/* Recent Chats - Show first 3 as icons */}
-            <div className="flex-1 p-2 space-y-2 overflow-hidden">
+            {/* Recent Chats - Click any to expand sidebar */}
+            <div 
+              className="flex-1 px-3 py-2 space-y-2 overflow-hidden cursor-pointer"
+              onClick={() => setIsSidebarExpanded(true)}
+            >
               {chatHistory.slice(0, 5).map((chat) => (
-                <button
+                <div
                   key={chat.id}
-                  onClick={() => onSelectChat?.(chat)}
-                  className={`w-10 h-10 flex items-center justify-center rounded-xl transition-colors ${
+                  className={`w-11 h-11 flex items-center justify-center rounded-xl transition-all ${
                     selectedChatId === chat.id
-                      ? 'bg-blue-100 dark:bg-blue-900/40 text-blue-600'
-                      : 'hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-600 dark:text-gray-400'
+                      ? 'bg-blue-100 dark:bg-blue-900/40 shadow-sm'
+                      : 'hover:bg-white dark:hover:bg-slate-800 hover:shadow-sm bg-slate-100 dark:bg-slate-800/50'
                   }`}
                   title={chat.title}
                 >
-                  <MessageSquare className="w-5 h-5" />
-                </button>
+                  <span className="text-[10px] font-semibold text-slate-600 dark:text-slate-400 uppercase tracking-wider">
+                    {chat.title.substring(0, 2)}
+                  </span>
+                </div>
               ))}
             </div>
 
             {/* Settings Button */}
-            <div className="p-3 border-t border-gray-200 dark:border-gray-800">
+            <div className="p-3 border-t border-slate-200 dark:border-slate-800">
               <button
                 onClick={() => onOpenSettings?.()}
-                className="w-10 h-10 flex items-center justify-center hover:bg-gray-100 dark:hover:bg-gray-800 rounded-xl transition-colors text-gray-600 dark:text-gray-400"
+                className="w-11 h-11 flex items-center justify-center hover:bg-white dark:hover:bg-slate-800 rounded-xl transition-all text-slate-500 dark:text-slate-400 hover:shadow-sm"
                 aria-label="Settings"
                 title="Settings"
               >
@@ -347,8 +377,8 @@ export function MainLayout({
             fixed lg:fixed inset-y-0 left-0 top-0
             z-[60]
             w-72 lg:w-72
-            bg-white dark:bg-gray-900
-            border-r border-gray-200 dark:border-gray-800
+            bg-white dark:bg-slate-900
+            border-r border-slate-200 dark:border-slate-800
             transition-transform duration-300 ease-in-out
             ${isMobile ? (isSidebarOpen ? 'translate-x-0' : '-translate-x-full') : (isSidebarExpanded ? 'translate-x-0' : '-translate-x-full')}
             shadow-2xl
@@ -357,10 +387,12 @@ export function MainLayout({
           `}
         >
           {/* Sidebar Header - Fixed at top */}
-          <div className="flex-shrink-0 p-4 border-b border-gray-200 dark:border-gray-800 flex items-center justify-between bg-white dark:bg-gray-900 safe-area-inset-top">
-            <div className="flex items-center gap-2">
-              <Sparkles className="w-6 h-6 text-blue-600" />
-              <h2 className="text-lg font-semibold text-gray-900 dark:text-white">Chats</h2>
+          <div className="flex-shrink-0 p-4 border-b border-slate-200 dark:border-slate-800 flex items-center justify-between bg-white dark:bg-slate-900 safe-area-inset-top">
+            <div className="flex items-center gap-3">
+              <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center shadow-sm">
+                <Sparkles className="w-5 h-5 text-white" />
+              </div>
+              <h2 className="text-lg font-semibold text-slate-900 dark:text-white">Chat Assistant</h2>
             </div>
             <button
               onClick={() => {
@@ -370,10 +402,10 @@ export function MainLayout({
                   setIsSidebarExpanded(false);
                 }
               }}
-              className="p-2 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition-colors touch-manipulation"
+              className="p-2 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg transition-colors touch-manipulation"
               aria-label="Close sidebar"
             >
-              <X className="w-5 h-5 text-gray-500 dark:text-gray-400" />
+              <X className="w-5 h-5 text-slate-500 dark:text-slate-400" />
             </button>
           </div>
 
@@ -385,7 +417,7 @@ export function MainLayout({
                 if (isMobile) setIsSidebarOpen(false);
                 else setIsSidebarExpanded(false);
               }}
-              className="w-full py-3 px-4 bg-blue-600 hover:bg-blue-700 active:bg-blue-800 text-white rounded-xl transition-colors font-medium text-sm flex items-center justify-center gap-3 shadow-sm touch-manipulation"
+              className="w-full py-3 px-4 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 active:from-blue-800 active:to-indigo-800 text-white rounded-xl transition-all font-medium text-sm flex items-center justify-center gap-3 shadow-md hover:shadow-lg touch-manipulation"
             >
               <Plus className="w-5 h-5" />
               New Chat
@@ -395,20 +427,20 @@ export function MainLayout({
           {/* Search */}
           <div className="flex-shrink-0 px-3 pb-3">
             <div className="relative">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-slate-400" />
               <input
                 type="text"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 placeholder="Search chats..."
-                className="w-full pl-9 pr-8 py-2.5 text-sm bg-gray-100 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl text-gray-900 dark:text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500 touch-manipulation"
+                className="w-full pl-9 pr-8 py-2.5 text-sm bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-slate-900 dark:text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent touch-manipulation"
               />
               {searchQuery && (
                 <button 
                   onClick={() => setSearchQuery('')} 
-                  className="absolute right-2 top-1/2 transform -translate-y-1/2 p-1.5 hover:bg-gray-200 dark:hover:bg-gray-700 rounded-lg touch-manipulation"
+                  className="absolute right-2 top-1/2 transform -translate-y-1/2 p-1.5 hover:bg-slate-200 dark:hover:bg-slate-700 rounded-lg touch-manipulation"
                 >
-                  <X className="w-3.5 h-3.5 text-gray-500" />
+                  <X className="w-3.5 h-3.5 text-slate-500" />
                 </button>
               )}
             </div>
@@ -418,10 +450,10 @@ export function MainLayout({
           <div className="flex-1 overflow-y-auto overflow-x-hidden px-2 overscroll-contain">
             {filteredHistory.length === 0 ? (
               <div className="p-4 text-center">
-                <MessageSquare className="w-10 h-10 text-gray-300 dark:text-gray-600 mx-auto mb-3" />
-                <p className="text-gray-500 dark:text-gray-400 text-sm mb-2">No chats yet</p>
+                <MessageSquare className="w-10 h-10 text-slate-300 dark:text-slate-600 mx-auto mb-3" />
+                <p className="text-slate-500 dark:text-slate-400 text-sm mb-2">No chats yet</p>
                 {!session && (
-                  <p className="text-xs text-gray-400 dark:text-gray-500">
+                  <p className="text-xs text-slate-400 dark:text-slate-500">
                     Your chats will be saved automatically
                   </p>
                 )}
@@ -436,16 +468,16 @@ export function MainLayout({
                       if (isMobile) setIsSidebarOpen(false);
                       else setIsSidebarExpanded(false);
                     }}
-                    className={`group relative px-3 py-3 rounded-xl transition-colors cursor-pointer touch-manipulation active:scale-[0.98] ${
+                    className={`group relative px-3 py-3 rounded-xl transition-all cursor-pointer touch-manipulation active:scale-[0.98] ${
                       selectedChatId === chat.id 
-                        ? 'bg-blue-50 dark:bg-blue-900/30 border border-blue-200 dark:border-blue-800' 
-                        : 'hover:bg-gray-100 dark:hover:bg-gray-800 active:bg-gray-200 dark:active:bg-gray-700'
+                        ? 'bg-blue-50 dark:bg-blue-900/30 border border-blue-200 dark:border-blue-800 shadow-sm' 
+                        : 'hover:bg-slate-50 dark:hover:bg-slate-800 active:bg-slate-100 dark:active:bg-slate-700'
                     }`}
                   >
                     <div className="flex items-start justify-between gap-2">
                       <div className="flex-1 min-w-0">
-                        <p className="text-sm font-medium text-gray-900 dark:text-gray-100 line-clamp-1">{chat.title}</p>
-                        {chat.preview && <p className="text-xs text-gray-500 dark:text-gray-400 line-clamp-1 mt-1">{chat.preview}</p>}
+                        <p className="text-sm font-medium text-slate-900 dark:text-slate-100 line-clamp-1">{chat.title}</p>
+                        {chat.preview && <p className="text-xs text-slate-500 dark:text-slate-400 line-clamp-1 mt-1">{chat.preview}</p>}
                       </div>
                       {/* Always visible on mobile, hover on desktop */}
                       <div className="flex-shrink-0 opacity-100 lg:opacity-0 lg:group-hover:opacity-100" onClick={(e) => e.stopPropagation()}>
@@ -469,14 +501,14 @@ export function MainLayout({
           </div>
 
           {/* Settings Button - Fixed at bottom, never scrolls */}
-          <div className="flex-shrink-0 p-3 border-t border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 safe-area-inset-bottom">
+          <div className="flex-shrink-0 p-3 border-t border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 safe-area-inset-bottom">
             <button
               onClick={() => { 
                 onOpenSettings?.(); 
                 if (isMobile) setIsSidebarOpen(false);
                 else setIsSidebarExpanded(false);
               }}
-              className="w-full px-4 py-3 text-left text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 active:bg-gray-200 dark:active:bg-gray-700 rounded-xl transition-colors flex items-center gap-3 touch-manipulation"
+              className="w-full px-4 py-3 text-left text-sm font-medium text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 active:bg-slate-200 dark:active:bg-slate-700 rounded-xl transition-colors flex items-center gap-3 touch-manipulation"
             >
               <Settings className="w-5 h-5" />
               <span>Settings</span>
@@ -485,24 +517,24 @@ export function MainLayout({
         </aside>
 
         {/* Main Content - Accounts for mini sidebar on desktop */}
-        <main className="flex-1 min-w-0 overflow-hidden bg-white dark:bg-gray-900 transition-all duration-300 relative z-[10]">
+        <main className="flex-1 min-w-0 overflow-hidden bg-white dark:bg-slate-900 transition-all duration-300 relative z-[10]">
           {children}
         </main>
       </div>
 
       {/* Auth Modal */}
       {showAuthModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[300] p-4">
-          <div ref={authModalRef} className="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl w-full max-w-md overflow-hidden">
-            <div className="p-6 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between">
-              <h2 className="text-xl font-semibold text-gray-900 dark:text-white">{authMode === 'login' ? 'Log In' : 'Sign Up'}</h2>
-              <button onClick={() => { setShowAuthModal(false); setAuthError(''); }} className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-full transition-colors">
-                <X className="w-5 h-5" />
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-[300] p-4">
+          <div ref={authModalRef} className="bg-white dark:bg-slate-800 rounded-2xl shadow-2xl w-full max-w-md overflow-hidden border border-slate-200 dark:border-slate-700">
+            <div className="p-6 border-b border-slate-200 dark:border-slate-700 flex items-center justify-between">
+              <h2 className="text-xl font-semibold text-slate-900 dark:text-white">{authMode === 'login' ? 'Log In' : 'Sign Up'}</h2>
+              <button onClick={() => { setShowAuthModal(false); setAuthError(''); }} className="p-2 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-full transition-colors">
+                <X className="w-5 h-5 text-slate-500" />
               </button>
             </div>
             <form onSubmit={handleAuthSubmit} className="p-6 space-y-4">
               {authError && (
-                <div className="p-3 bg-red-100 dark:bg-red-900/30 border border-red-300 dark:border-red-700 rounded-lg">
+                <div className="p-3 bg-red-50 dark:bg-red-900/30 border border-red-200 dark:border-red-700 rounded-xl">
                   <p className="text-sm text-red-700 dark:text-red-400">{authError}</p>
                 </div>
               )}
@@ -512,7 +544,7 @@ export function MainLayout({
                 <button
                   type="button"
                   onClick={() => signIn('google', { callbackUrl: '/chat' })}
-                  className="w-full px-4 py-2.5 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-600 transition-colors font-medium flex items-center justify-center gap-3 text-gray-700 dark:text-gray-300"
+                  className="w-full px-4 py-2.5 bg-white dark:bg-slate-700 border border-slate-300 dark:border-slate-600 rounded-xl hover:bg-slate-50 dark:hover:bg-slate-600 transition-colors font-medium flex items-center justify-center gap-3 text-slate-700 dark:text-slate-300 shadow-sm"
                 >
                   <svg className="w-5 h-5" viewBox="0 0 24 24">
                     <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
@@ -525,7 +557,7 @@ export function MainLayout({
                 <button
                   type="button"
                   onClick={() => signIn('facebook', { callbackUrl: '/chat' })}
-                  className="w-full px-4 py-2.5 bg-[#1877F2] hover:bg-[#166FE5] text-white rounded-lg transition-colors font-medium flex items-center justify-center gap-3"
+                  className="w-full px-4 py-2.5 bg-[#1877F2] hover:bg-[#166FE5] text-white rounded-xl transition-colors font-medium flex items-center justify-center gap-3 shadow-sm"
                 >
                   <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
                     <path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/>
@@ -536,28 +568,28 @@ export function MainLayout({
               
               <div className="relative">
                 <div className="absolute inset-0 flex items-center">
-                  <div className="w-full border-t border-gray-300 dark:border-gray-600"></div>
+                  <div className="w-full border-t border-slate-300 dark:border-slate-600"></div>
                 </div>
                 <div className="relative flex justify-center text-sm">
-                  <span className="px-2 bg-white dark:bg-gray-800 text-gray-500 dark:text-gray-400">Or continue with email</span>
+                  <span className="px-2 bg-white dark:bg-slate-800 text-slate-500 dark:text-slate-400">Or continue with email</span>
                 </div>
               </div>
               
               {authMode === 'signup' && (
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Full Name</label>
-                  <input type="text" value={authName} onChange={(e) => setAuthName(e.target.value)} placeholder="Your name" className="w-full px-4 py-2 bg-gray-100 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-900 dark:text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500" required />
+                  <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">Full Name</label>
+                  <input type="text" value={authName} onChange={(e) => setAuthName(e.target.value)} placeholder="Your name" className="w-full px-4 py-2.5 bg-slate-50 dark:bg-slate-700 border border-slate-300 dark:border-slate-600 rounded-xl text-slate-900 dark:text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent" required />
                 </div>
               )}
               <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Email</label>
-                <input type="email" value={authEmail} onChange={(e) => setAuthEmail(e.target.value)} placeholder="your.email@example.com" className="w-full px-4 py-2 bg-gray-100 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-900 dark:text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500" required />
+                <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">Email</label>
+                <input type="email" value={authEmail} onChange={(e) => setAuthEmail(e.target.value)} placeholder="your.email@example.com" className="w-full px-4 py-2.5 bg-slate-50 dark:bg-slate-700 border border-slate-300 dark:border-slate-600 rounded-xl text-slate-900 dark:text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent" required />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Password</label>
-                <input type="password" value={authPassword} onChange={(e) => setAuthPassword(e.target.value)} placeholder="••••••••" className="w-full px-4 py-2 bg-gray-100 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-900 dark:text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500" required minLength={6} />
+                <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">Password</label>
+                <input type="password" value={authPassword} onChange={(e) => setAuthPassword(e.target.value)} placeholder="••••••••" className="w-full px-4 py-2.5 bg-slate-50 dark:bg-slate-700 border border-slate-300 dark:border-slate-600 rounded-xl text-slate-900 dark:text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent" required minLength={6} />
               </div>
-              <button type="submit" disabled={authLoading} className="w-full px-4 py-2.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors font-medium">
+              <button type="submit" disabled={authLoading} className="w-full px-4 py-2.5 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-xl hover:from-blue-700 hover:to-indigo-700 disabled:from-slate-400 disabled:to-slate-400 disabled:cursor-not-allowed transition-all font-medium shadow-md">
                 {authLoading ? 'Processing...' : (authMode === 'login' ? 'Log In' : 'Sign Up')}
               </button>
               <div className="text-center pt-2">
