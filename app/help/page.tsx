@@ -223,7 +223,7 @@ export default function HelpCenter() {
         {/* Contact Support */}
         <div className="mt-12 p-6 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg">
           <h3 className="font-semibold text-gray-900 dark:text-white mb-2">Still need help?</h3>
-          <p className="text-gray-700 dark:text-gray-300 mb-4">Can't find what you're looking for? Contact our support team.</p>
+          <p className="text-gray-700 dark:text-gray-300 mb-4">Can&apos;t find what you&apos;re looking for? Contact our support team.</p>
           <a href="mailto:support@ai-chat.engineer" className="inline-block px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors">
             Contact Support
           </a>

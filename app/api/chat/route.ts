@@ -240,11 +240,13 @@ export async function POST(request: NextRequest) {
       const guestId = request.headers.get('x-guest-id') || `guest-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
       const effectiveUserId = userId || guestId;
       
-      // Create a new chat_history entry for each prompt/response pair
+      // Create a new chat entry with messages array for each prompt/response pair
       const newChat = await ChatModel.create({
         user_id: effectiveUserId,
-        prompt: prompt,
-        response: aiResponse,
+        messages: [
+          { text: prompt, sender: 'user', timestamp: new Date().toISOString() },
+          { text: aiResponse, sender: 'ai', timestamp: new Date().toISOString() }
+        ],
         title: prompt.substring(0, 50) + (prompt.length > 50 ? '...' : ''),
       });
       savedChatId = newChat?.id || null;

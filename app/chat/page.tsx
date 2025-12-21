@@ -2,7 +2,6 @@
 
 import { useSession, signOut, signIn } from "next-auth/react";
 import { useState, useRef, useEffect } from "react";
-import { useSearchParams } from 'next/navigation';
 import { Send, Upload, Sparkles, FileText, Image as ImageIcon, X, Trash2, Plus, Settings, HelpCircle, FolderOpen, Code, Copy, Check, Brain, ToggleLeft, ToggleRight, Moon, Sun, MessageSquare, LogOut } from "lucide-react";
 import ReactMarkdown from "react-markdown";
 import { MainLayout } from "@/components/Layout/MainLayout";
@@ -77,7 +76,8 @@ export default function ChatPage() {
   const [openDropdownId, setOpenDropdownId] = useState<string | null>(null);
   const [guestId, setGuestId] = useState<string | null>(null);
 
-  const searchParams = useSearchParams();
+  // Read query params directly from window.location to avoid SSR bailout
+  const searchParams = null as unknown as URLSearchParams | null;
 
   // Format timestamp to local time
   const formatTimestamp = (timestamp: Date | string) => {
@@ -106,13 +106,14 @@ export default function ChatPage() {
   // Open settings modal when ?openSettings=true is present in URL
   useEffect(() => {
     try {
-      if (searchParams?.get('openSettings') === 'true') {
+      const params = typeof window !== 'undefined' ? new URLSearchParams(window.location.search) : null;
+      if (params?.get('openSettings') === 'true') {
         setShowSettingsModal(true);
       }
     } catch (e) {
       // ignore
     }
-  }, [searchParams]);
+  }, []);
 
   // Shorthand commands mapping
   const shorthands: { [key: string]: string } = {
