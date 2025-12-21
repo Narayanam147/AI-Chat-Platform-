@@ -3,6 +3,7 @@
 import React, { ReactNode, useState, useEffect, useRef } from 'react';
 import { useSession, signOut, signIn } from 'next-auth/react';
 import { Menu, Moon, Sun, Sparkles, LogOut, Settings, Plus, MessageSquare, Search, X, Trash2 } from 'lucide-react';
+import { ChatHistoryDropdown } from '@/components/ChatHistoryDropdown';
 
 interface MainLayoutProps {
   children: ReactNode;
@@ -11,6 +12,9 @@ interface MainLayoutProps {
   chatHistory?: any[];
   onSelectChat?: (chat: any) => void;
   onDeleteChat?: (chatId: string) => void;
+  onPinChat?: (chatId: string) => void;
+  onRenameChat?: (chatId: string) => void;
+  onShareChat?: (chatId: string) => void;
   selectedChatId?: string | null;
   onOpenSettings?: () => void;
   isMobile?: boolean;
@@ -23,6 +27,9 @@ export function MainLayout({
   chatHistory = [],
   onSelectChat,
   onDeleteChat,
+  onPinChat,
+  onRenameChat,
+  onShareChat,
   selectedChatId,
   onOpenSettings,
   isMobile: isMobileProp
@@ -345,15 +352,31 @@ export function MainLayout({
                         selectedChatId === chat.id ? 'bg-gray-200 dark:bg-gray-800' : 'hover:bg-gray-100 dark:hover:bg-gray-800'
                       }`}
                     >
-                      <p className="text-sm font-medium text-gray-900 dark:text-gray-100 line-clamp-1">{chat.title}</p>
-                      {chat.preview && <p className="text-xs text-gray-600 dark:text-gray-400 line-clamp-1 mt-1">{chat.preview}</p>}
-                      <button
-                        onClick={(e) => { e.stopPropagation(); onDeleteChat?.(chat.id); }}
-                        className="absolute right-2 top-1/2 -translate-y-1/2 p-1.5 opacity-0 group-hover:opacity-100 hover:bg-red-100 dark:hover:bg-red-900/30 rounded transition-all"
-                        title="Delete chat"
-                      >
-                        <Trash2 className="w-4 h-4 text-red-600" />
-                      </button>
+                      <div className="flex items-start justify-between gap-2">
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm font-medium text-gray-900 dark:text-gray-100 line-clamp-1">{chat.title}</p>
+                          {chat.preview && <p className="text-xs text-gray-600 dark:text-gray-400 line-clamp-1 mt-1">{chat.preview}</p>}
+                        </div>
+                        <div className="flex-shrink-0" onClick={(e) => e.stopPropagation()}>
+                          <ChatHistoryDropdown
+                            chatId={chat.id}
+                            isPinned={chat.pinned}
+                            onPin={(id) => {
+                              onPinChat?.(id);
+                              if (isMobile) setIsSidebarOpen(false);
+                            }}
+                            onRename={(id) => {
+                              onRenameChat?.(id);
+                            }}
+                            onShare={(id) => {
+                              onShareChat?.(id);
+                            }}
+                            onDelete={(id) => {
+                              onDeleteChat?.(id);
+                            }}
+                          />
+                        </div>
+                      </div>
                     </div>
                   ))}
                 </div>

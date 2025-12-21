@@ -891,6 +891,9 @@ export default function ChatPage() {
         setCurrentChatId(chat.id);
       }}
       onDeleteChat={handleDeleteChat}
+      onPinChat={togglePin}
+      onRenameChat={startRename}
+      onShareChat={handleShare}
       selectedChatId={selectedChatId || currentChatId}
       onOpenSettings={() => setShowSettingsModal(true)}
       isMobile={typeof window !== 'undefined' && window.innerWidth < 1024}
