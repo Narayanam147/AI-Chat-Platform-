@@ -253,7 +253,7 @@ export function MainLayout({
         {/* Sidebar - Single Source of Truth */}
         <aside
           className={`
-            ${isMobile ? 'fixed' : 'relative'}
+            ${isMobile ? 'fixed inset-y-0 left-0' : 'relative'}
             ${isMobile ? 'z-[60]' : 'z-10'}
             h-full
             bg-white dark:bg-gray-900
@@ -264,6 +264,7 @@ export function MainLayout({
               : isSidebarOpen ? 'w-64' : 'w-0 border-r-0'
             }
             ${isMobile && 'shadow-2xl'}
+            overflow-hidden
           `}
         >
           <div className={`h-full flex flex-col ${!isSidebarOpen && !isMobile ? 'invisible' : 'visible'}`}>
@@ -310,7 +311,7 @@ export function MainLayout({
             </div>
 
             {/* Chat History */}
-            <div className="flex-1 overflow-y-auto px-2">
+            <div className="flex-1 overflow-y-auto overflow-x-hidden px-2 scroll-smooth">
               {filteredHistory.length === 0 ? (
                 <div className="p-4 text-center text-gray-500 text-sm">No chats yet</div>
               ) : (
