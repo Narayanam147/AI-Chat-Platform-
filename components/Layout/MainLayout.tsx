@@ -261,20 +261,20 @@ export function MainLayout({
 
       {/* Main Content Area */}
       <div className="flex-1 flex overflow-hidden relative">
-        {/* Mobile Overlay - Click to close sidebar */}
+        {/* Mobile Overlay - Click to close sidebar - MUST be below sidebar z-index */}
         {isMobile && isSidebarOpen && (
           <div 
-            className="fixed inset-0 bg-black/60 z-[80] transition-opacity duration-300" 
+            className="fixed inset-0 bg-black/60 z-[70] transition-opacity duration-300" 
             onClick={() => setIsSidebarOpen(false)}
             aria-label="Close sidebar overlay"
           />
         )}
 
-        {/* Sidebar - Highest z-index to stay above all content */}
+        {/* Sidebar - Above overlay (z-80) but below top navbar (z-100) */}
         <aside
           className={`
             ${isMobile ? 'fixed inset-y-0 left-0 top-[57px]' : 'relative flex-shrink-0'}
-            z-[90]
+            z-[80]
             h-full
             bg-white dark:bg-gray-900
             border-r border-gray-200 dark:border-gray-800
@@ -383,14 +383,17 @@ export function MainLayout({
               )}
             </div>
 
-            {/* Settings Button at Bottom */}
-            <div className="mt-auto p-3 border-t border-gray-200 dark:border-gray-800">
+            {/* Settings Button at Bottom - Always Visible */}
+            <div className="flex-shrink-0 mt-auto p-3 border-t border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900">
               <button
-                onClick={() => { onOpenSettings?.(); if (isMobile) setIsSidebarOpen(false); }}
-                className="w-full px-3 py-2.5 text-left text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition-colors flex items-center gap-3"
+                onClick={() => { 
+                  onOpenSettings?.(); 
+                  if (isMobile) setIsSidebarOpen(false); 
+                }}
+                className="w-full px-3 py-2.5 text-left text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition-colors flex items-center gap-3 touch-manipulation active:bg-gray-200 dark:active:bg-gray-700"
               >
-                <Settings className="w-4 h-4" />
-                Settings
+                <Settings className="w-5 h-5" />
+                <span>Settings</span>
               </button>
             </div>
           </div>

@@ -12,9 +12,6 @@ export interface Chat {
   user_id: string;
   messages: Message[];
   title?: string;
-  pinned?: boolean;
-  is_deleted?: boolean;
-  deleted_at?: string;
   created_at?: string;
   updated_at?: string;
 }
@@ -26,7 +23,6 @@ export const ChatModel = {
       .select('*')
       .eq('user_id', userId)
       .eq('is_deleted', false)
-      .order('pinned', { ascending: false, nullsFirst: false })
       .order('updated_at', { ascending: false });
     
     if (error) {

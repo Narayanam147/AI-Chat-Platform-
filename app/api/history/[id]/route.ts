@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { supabase } from '@/lib/supabase';
+import { ChatModel } from '@/models/Chat';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 
@@ -8,22 +8,17 @@ export async function GET(request: NextRequest, { params }: { params: { id: stri
     const id = params.id;
     if (!id) return NextResponse.json({ error: 'Missing id' }, { status: 400 });
 
-    const { data: chat, error } = await supabase
-      .from('chat_history')
-      .select('*')
-      .eq('id', id)
-      .single();
+    const chat = await ChatModel.findById(id);
+    if (!chat) return NextResponse.json({ error: 'Not found' }, { status: 404 });
 
-    if (error || !chat) return NextResponse.json({ error: 'Not found' }, { status: 404 });
-
+    // Public GET: return chat messages but redact sensitive fields
     const safe = {
       id: chat.id,
-      title: chat.title || chat.prompt?.substring(0, 60) || 'Chat',
-      messages: [
-        { text: chat.prompt, sender: 'user', timestamp: chat.created_at },
-        { text: chat.response, sender: 'ai', timestamp: chat.created_at },
-      ],
+      title: chat.title || chat.messages?.[0]?.text?.substring(0, 60) || 'Chat',
+      messages: chat.messages || [],
       created_at: chat.created_at,
+      updated_at: chat.updated_at,
+      owner: chat.user_id ? undefined : undefined, // do not expose owner
     };
 
     return NextResponse.json(safe);
@@ -44,48 +39,24 @@ export async function PATCH(request: NextRequest, { params }: { params: { id: st
     const id = params.id;
     if (!id) return NextResponse.json({ error: 'Missing id' }, { status: 400 });
 
-    // Import supabase here to update chat_history
-    const { supabase } = await import('@/lib/supabase');
-
     // Verify chat belongs to user
-    const { data: chat, error: fetchError } = await supabase
-      .from('chat_history')
-      .select('*')
-      .eq('id', id)
-      .single();
-      
-    if (fetchError || !chat) {
-      console.error('Chat not found:', fetchError);
-      return NextResponse.json({ error: 'Chat not found' }, { status: 404 });
-    }
-    
+    const chat = await ChatModel.findById(id);
+    if (!chat) return NextResponse.json({ error: 'Not found' }, { status: 404 });
     if (chat.user_id !== userId) {
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     }
 
     const body = await request.json();
     const updates: any = {};
-    
-    // Only update allowed fields
     if (typeof body.title === 'string') updates.title = body.title;
-    if (typeof body.pinned !== 'undefined') updates.pinned = Boolean(body.pinned);
+    if (typeof body.pinned !== 'undefined') updates.pinned = body.pinned;
     if (typeof body.is_deleted !== 'undefined') {
       updates.is_deleted = Boolean(body.is_deleted);
       updates.deleted_at = body.is_deleted ? new Date().toISOString() : null;
     }
 
-    // Update chat_history
-    const { data: updated, error: updateError } = await supabase
-      .from('chat_history')
-      .update(updates)
-      .eq('id', id)
-      .select()
-      .single();
-      
-    if (updateError) {
-      console.error('Update failed:', updateError);
-      return NextResponse.json({ error: updateError.message || 'Failed to update' }, { status: 500 });
-    }
+    const updated = await ChatModel.update(id, updates);
+    if (!updated) return NextResponse.json({ error: 'Failed to update' }, { status: 500 });
 
     return NextResponse.json({ success: true, data: updated });
   } catch (error) {
@@ -105,27 +76,21 @@ export async function DELETE(request: NextRequest, { params }: { params: { id: s
     const id = params.id;
     if (!id) return NextResponse.json({ error: 'Missing id' }, { status: 400 });
 
-    const { data: chat, error: fetchError } = await supabase
-      .from('chat_history')
-      .select('*')
-      .eq('id', id)
-      .single();
-
-    if (fetchError || !chat) return NextResponse.json({ error: 'Not found' }, { status: 404 });
+    // Verify chat belongs to user
+    const chat = await ChatModel.findById(id);
+    if (!chat) return NextResponse.json({ error: 'Not found' }, { status: 404 });
     if (chat.user_id !== userId) {
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     }
 
-    const { data: updated, error: updateError } = await supabase
-      .from('chat_history')
-      .update({ is_deleted: true })
-      .eq('id', id)
-      .select()
-      .single();
+    // Soft-delete: mark chat as deleted instead of removing from DB
+    const updated = await ChatModel.update(id, {
+      is_deleted: true,
+      deleted_at: new Date().toISOString(),
+    } as any);
 
-    if (updateError) {
-      console.error('Delete error:', updateError);
-      return NextResponse.json({ error: 'Failed to delete' }, { status: 500 });
+    if (!updated) {
+      return NextResponse.json({ error: 'Failed to soft-delete chat' }, { status: 500 });
     }
 
     return NextResponse.json({ success: true, data: updated });
