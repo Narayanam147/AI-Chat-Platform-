@@ -2,7 +2,6 @@ import type { Metadata } from 'next';
 import { Inter } from 'next/font/google';
 import './globals.css';
 import { AuthProvider } from '@/components/providers/AuthProvider';
-import GlobalNavbar from '@/components/GlobalNavbar';
 
 const inter = Inter({ subsets: ['latin'] });
 
@@ -26,8 +25,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       <body className={`overflow-hidden bg-gray-50 ${inter.className}`}>
         <AuthProvider>
           <div className="h-screen w-screen overflow-hidden" id="root">
-            <GlobalNavbar />
-            <div className="pt-16 h-full w-full">{children}</div>
+            {children}
           </div>
         </AuthProvider>
       </body>

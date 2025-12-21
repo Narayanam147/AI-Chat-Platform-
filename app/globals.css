@@ -125,10 +125,3 @@ button {
   touch-action: manipulation;
 }
 
-/* Ensure root doesn't scroll so single scrollbar is on chat content */
-html, body, #root {
-  height: 100%;
-  overflow: hidden;
-}
-
-
