@@ -13,6 +13,7 @@ interface MainLayoutProps {
   onDeleteChat?: (chatId: string) => void;
   selectedChatId?: string | null;
   onOpenSettings?: () => void;
+  isMobile?: boolean;
 }
 
 export function MainLayout({ 
@@ -23,7 +24,8 @@ export function MainLayout({
   onSelectChat,
   onDeleteChat,
   selectedChatId,
-  onOpenSettings
+  onOpenSettings,
+  isMobile: isMobileProp
 }: MainLayoutProps) {
   const { data: session } = useSession();
   const [isSidebarOpen, setIsSidebarOpen] = useState(false); // Start closed for cleaner look
@@ -37,16 +39,19 @@ export function MainLayout({
   const [authLoading, setAuthLoading] = useState(false);
   const [authError, setAuthError] = useState('');
   const [searchQuery, setSearchQuery] = useState('');
-  const [isMobile, setIsMobile] = useState(false);
+  const [isMobileState, setIsMobileState] = useState(false);
   
   const profileMenuRef = useRef<HTMLDivElement>(null);
   const authModalRef = useRef<HTMLDivElement>(null);
+
+  // Use prop if provided, otherwise use state
+  const isMobile = isMobileProp !== undefined ? isMobileProp : isMobileState;
 
   // Detect mobile
   useEffect(() => {
     const checkMobile = () => {
       const mobile = window.innerWidth < 1024;
-      setIsMobile(mobile);
+      setIsMobileState(mobile);
     };
     checkMobile();
     window.addEventListener('resize', checkMobile);
@@ -269,22 +274,27 @@ export function MainLayout({
         >
           <div className={`h-full flex flex-col ${!isSidebarOpen && !isMobile ? 'invisible' : 'visible'}`}>
             {/* Sidebar Header */}
-            <div className="flex-shrink-0 p-4 border-b border-gray-200 dark:border-gray-800 flex items-center justify-between">
+            <div className="flex-shrink-0 p-4 border-b border-gray-200 dark:border-gray-800 flex items-center justify-between bg-white dark:bg-gray-900">
               <h2 className="text-lg font-semibold text-gray-900 dark:text-white">Chats</h2>
-              <button
-                onClick={() => setIsSidebarOpen(false)}
-                className="p-1.5 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-md transition-colors"
-                aria-label="Close sidebar"
-              >
-                <X className="w-5 h-5 text-gray-500 dark:text-gray-400" />
-              </button>
+              {isMobile && (
+                <button
+                  onClick={() => setIsSidebarOpen(false)}
+                  className="p-1.5 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-md transition-colors touch-manipulation"
+                  aria-label="Close sidebar"
+                >
+                  <X className="w-5 h-5 text-gray-500 dark:text-gray-400" />
+                </button>
+              )}
             </div>
 
             {/* New Chat Button */}
             <div className="p-3">
               <button
-                onClick={() => { onNewChat?.(); if (isMobile) setIsSidebarOpen(false); }}
-                className="w-full py-3 px-4 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors font-medium text-sm flex items-center justify-center gap-3 shadow-sm"
+                onClick={() => {
+                  onNewChat?.();
+                  if (isMobile) setIsSidebarOpen(false);
+                }}
+                className="w-full py-3 px-4 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors font-medium text-sm flex items-center justify-center gap-3 shadow-sm touch-manipulation"
               >
                 <Plus className="w-5 h-5" />
                 New Chat
@@ -319,7 +329,10 @@ export function MainLayout({
                   {filteredHistory.map((chat) => (
                     <div
                       key={chat.id}
-                      onClick={() => { onSelectChat?.(chat); if (isMobile) setIsSidebarOpen(false); }}
+                      onClick={() => {
+                        onSelectChat?.(chat);
+                        if (isMobile) setIsSidebarOpen(false);
+                      }}
                       className={`group relative px-3 py-2.5 rounded-lg transition-colors cursor-pointer ${
                         selectedChatId === chat.id ? 'bg-gray-200 dark:bg-gray-800' : 'hover:bg-gray-100 dark:hover:bg-gray-800'
                       }`}

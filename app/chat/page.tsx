@@ -390,27 +390,45 @@ export default function ChatPage() {
   };
 
   const handleDeleteChat = async (chatId: string) => {
-    // Optimistic UI update
-    const previous = chatHistory;
+    if (!chatId) return;
+    
+    // Show confirmation
+    if (!confirm('Delete this chat? It will be hidden from your history.')) {
+      return;
+    }
+    
+    // Optimistic UI update - remove from list immediately
+    const previousHistory = chatHistory;
     setChatHistory(prev => prev.filter(ch => ch.id !== chatId));
+    
+    // If deleted chat was selected, clear messages
+    if (selectedChatId === chatId || currentChatId === chatId) {
+      setSelectedChatId(null);
+      setCurrentChatId(null);
+      setMessages([]);
+    }
+    
     try {
+      // Soft delete via API (marks as deleted in DB)
       const res = await fetch(`/api/history/${encodeURIComponent(chatId)}`, {
         method: 'DELETE',
       });
+      
       if (!res.ok) {
         const txt = await res.text();
         console.error('Failed to delete chat:', res.status, txt);
-        setChatHistory(previous); // rollback
+        // Rollback on error
+        setChatHistory(previousHistory);
+        alert('Failed to delete chat. Please try again.');
         return;
       }
-      // If deleted chat was selected, clear messages
-      if (selectedChatId === chatId) {
-        setSelectedChatId(null);
-        setMessages([]);
-      }
+      
+      console.log('Chat soft-deleted successfully:', chatId);
     } catch (e) {
       console.error('Delete error', e);
-      setChatHistory(previous); // rollback
+      // Rollback on error
+      setChatHistory(previousHistory);
+      alert('Failed to delete chat. Please try again.');
     }
   };
 
@@ -869,6 +887,7 @@ export default function ChatPage() {
       onDeleteChat={handleDeleteChat}
       selectedChatId={selectedChatId || currentChatId}
       onOpenSettings={() => setShowSettingsModal(true)}
+      isMobile={typeof window !== 'undefined' && window.innerWidth < 1024}
     >
       <div className="flex flex-col h-full bg-white dark:bg-gray-900 relative">
         {/* Chat Heading with Options (Gemini-style) - Shows only when messages exist */}
@@ -950,9 +969,8 @@ export default function ChatPage() {
                       e.stopPropagation();
                       const id = selectedChatId || currentChatId;
                       if (!id) return;
-                      if (!confirm('Delete this chat? This cannot be undone.')) return;
-                      handleDeleteChat(id);
                       setHeadingMenuOpen(false);
+                      handleDeleteChat(id);
                     }}
                     className="w-full text-left px-4 py-3 text-red-600 dark:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/40 transition-colors touch-manipulation active:bg-red-100 dark:active:bg-red-900/60"
                   >
