@@ -873,16 +873,16 @@ export default function ChatPage() {
       <div className="flex flex-col h-full bg-white dark:bg-gray-900">
         {/* Chat Heading with Options (Gemini-style) - Shows only when messages exist */}
         {(selectedChatId || currentChatId) && messages.length > 0 && (
-          <div className="flex items-center justify-between px-8 py-3 border-b border-gray-200 dark:border-gray-800 bg-white/50 dark:bg-gray-900/50 backdrop-blur-sm transition-all duration-300">
-            <div className="flex items-center gap-3">
+          <div className="relative flex items-center justify-between px-4 sm:px-8 py-3 border-b border-gray-200 dark:border-gray-800 bg-white/50 dark:bg-gray-900/50 backdrop-blur-sm transition-all duration-300 z-10">
+            <div className="flex items-center gap-3 flex-1 min-w-0">
               {!renameMode ? (
-                <h2 className="text-sm font-medium text-gray-700 dark:text-gray-200 max-w-2xl truncate">
+                <h2 className="text-sm font-medium text-gray-700 dark:text-gray-200 max-w-xs sm:max-w-2xl truncate">
                   {chatHistory.find((c) => c.id === (selectedChatId || currentChatId))?.title || 'New chat'}
                 </h2>
               ) : (
                 <input
                   ref={renameInputRef}
-                  className="text-sm font-medium bg-transparent outline-none border-b border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-200 max-w-2xl"
+                  className="text-sm font-medium bg-transparent outline-none border-b border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-200 max-w-xs sm:max-w-2xl"
                   value={renameValue}
                   onChange={(e) => setRenameValue(e.target.value)}
                   onBlur={saveRename}
@@ -894,13 +894,16 @@ export default function ChatPage() {
                 />
               )}
             </div>
-            <div className="relative">
+            <div className="relative flex-shrink-0">
               <button
-                onClick={() => setHeadingMenuOpen(v => !v)}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setHeadingMenuOpen(v => !v);
+                }}
                 aria-haspopup="true"
                 aria-expanded={headingMenuOpen}
                 ref={headingMenuRef}
-                className="p-2 rounded hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors"
+                className="p-2 rounded hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors touch-manipulation"
                 title="Open actions"
               >
                 <svg className="w-5 h-5 text-gray-600 dark:text-gray-400" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24" aria-hidden>
@@ -909,39 +912,49 @@ export default function ChatPage() {
               </button>
 
               {headingMenuOpen && (
-                <div className="absolute right-0 top-full mt-2 w-44 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-xl z-[60] overflow-hidden">
+                <div className="absolute right-0 top-full mt-2 w-48 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-2xl z-[200] overflow-hidden pointer-events-auto">
                   <button
-                    onClick={() => {
+                    onClick={(e) => {
+                      e.stopPropagation();
                       const id = selectedChatId || currentChatId;
                       if (!id) return;
                       togglePin(id);
                       setHeadingMenuOpen(false);
                     }}
-                    className="w-full text-left px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-700"
+                    className="w-full text-left px-4 py-3 text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors touch-manipulation active:bg-gray-200 dark:active:bg-gray-600"
                   >
                     {chatHistory.find(c => c.id === (selectedChatId || currentChatId))?.pinned ? 'Unpin' : 'Pin'}
                   </button>
                   <button
-                    onClick={() => { startRename(); setHeadingMenuOpen(false); }}
-                    className="w-full text-left px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-700"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      startRename();
+                      setHeadingMenuOpen(false);
+                    }}
+                    className="w-full text-left px-4 py-3 text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors touch-manipulation active:bg-gray-200 dark:active:bg-gray-600"
                   >
                     Rename
                   </button>
                   <button
-                    onClick={() => { handleShare(selectedChatId || currentChatId || undefined); setHeadingMenuOpen(false); }}
-                    className="w-full text-left px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-700"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleShare(selectedChatId || currentChatId || undefined);
+                      setHeadingMenuOpen(false);
+                    }}
+                    className="w-full text-left px-4 py-3 text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors touch-manipulation active:bg-gray-200 dark:active:bg-gray-600"
                   >
                     Share
                   </button>
                   <button
-                    onClick={() => {
+                    onClick={(e) => {
+                      e.stopPropagation();
                       const id = selectedChatId || currentChatId;
                       if (!id) return;
                       if (!confirm('Delete this chat? This cannot be undone.')) return;
                       handleDeleteChat(id);
                       setHeadingMenuOpen(false);
                     }}
-                    className="w-full text-left px-4 py-2 text-red-600 hover:bg-red-50 dark:hover:bg-red-900/40"
+                    className="w-full text-left px-4 py-3 text-red-600 dark:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/40 transition-colors touch-manipulation active:bg-red-100 dark:active:bg-red-900/60"
                   >
                     Delete
                   </button>
@@ -955,15 +968,15 @@ export default function ChatPage() {
         <div className="flex-1 overflow-y-auto bg-gradient-to-b from-white/50 dark:from-gray-900/30 to-white dark:to-gray-900 transition-all duration-300">
           {/* Greeting State - ONLY when no messages */}
           {messages.length === 0 && (
-            <div className="flex items-center justify-center h-full animate-fadeIn px-4">
+            <div className="flex items-center justify-center h-full animate-fadeIn px-4 py-8">
               <div className="text-center max-w-2xl">
-                <h2 className="text-3xl sm:text-4xl font-semibold text-gray-900 dark:text-white mb-4">
+                <h2 className="text-2xl sm:text-4xl font-semibold text-gray-900 dark:text-white mb-4">
                   Chat Assistant
                 </h2>
-                <p className="text-base sm:text-lg text-gray-600 dark:text-gray-400 mb-2">
+                <p className="text-sm sm:text-lg text-gray-600 dark:text-gray-400 mb-2">
                   Hello, {session?.user?.name?.split(' ')[0] || 'there'}
                 </p>
-                <p className="text-base sm:text-lg text-gray-600 dark:text-gray-400">
+                <p className="text-sm sm:text-lg text-gray-600 dark:text-gray-400">
                   How can I help you today?
                 </p>
               </div>
@@ -976,13 +989,13 @@ export default function ChatPage() {
               {messages.map((message) => (
                 <div
                   key={message.id}
-                  className={`w-full py-6 px-4 sm:px-6 lg:px-8 ${
+                  className={`w-full py-4 sm:py-6 px-4 sm:px-6 lg:px-8 ${
                     message.sender === 'user' 
                       ? 'bg-transparent' 
                       : 'bg-gray-50/50 dark:bg-gray-800/20'
                   } border-b border-gray-100/50 dark:border-gray-800/50`}
                 >
-                  <div className="max-w-4xl mx-auto flex gap-3 sm:gap-4">
+                  <div className="max-w-4xl mx-auto flex gap-2 sm:gap-4">
                     {/* Avatar */}
                     <div className="flex-shrink-0">
                       {message.sender === 'user' ? (
@@ -1067,7 +1080,7 @@ export default function ChatPage() {
                 </button>
 
                 {showAttachMenu && (
-                  <div className="absolute bottom-full left-0 mb-2 w-56 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl shadow-xl py-2 z-[70]">
+                  <div className="absolute bottom-full left-0 mb-2 w-56 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl shadow-xl py-2 z-[150]">
                     <button
                       onClick={() => {
                         fileInputRef.current?.click();
@@ -1189,7 +1202,7 @@ export default function ChatPage() {
 
       {/* Settings Modal */}
       {showSettingsModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[100] p-4">
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[300] p-4">
           <div 
             ref={settingsModalRef}
             className="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl w-full max-w-md overflow-hidden"
@@ -1424,7 +1437,7 @@ export default function ChatPage() {
 
       {/* Feedback Modal */}
       {showFeedbackModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[100] p-4">
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[300] p-4">
           <div 
             ref={feedbackModalRef}
             className="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl w-full max-w-md overflow-hidden"
