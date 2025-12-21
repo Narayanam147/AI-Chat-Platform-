@@ -42,6 +42,22 @@ CREATE TABLE IF NOT EXISTS public.chats (
 );
 
 -- ============================================
+-- CREATE CHAT_HISTORY TABLE
+-- ============================================
+CREATE TABLE IF NOT EXISTS public.chat_history (
+  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  user_id TEXT,
+  prompt TEXT NOT NULL,
+  response TEXT NOT NULL,
+  title TEXT,
+  pinned BOOLEAN DEFAULT FALSE,
+  is_deleted BOOLEAN DEFAULT FALSE,
+  deleted_at TIMESTAMPTZ DEFAULT NULL,
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- ============================================
 -- CREATE FEEDBACK TABLE
 -- ============================================
 CREATE TABLE IF NOT EXISTS public.feedback (
@@ -61,6 +77,9 @@ CREATE INDEX IF NOT EXISTS idx_chats_user_id ON public.chats(user_id);
 CREATE INDEX IF NOT EXISTS idx_chats_updated_at ON public.chats(updated_at DESC);
 CREATE INDEX IF NOT EXISTS idx_feedback_user_email ON public.feedback(user_email);
 CREATE INDEX IF NOT EXISTS idx_feedback_created_at ON public.feedback(created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_chat_history_user_id ON public.chat_history(user_id);
+CREATE INDEX IF NOT EXISTS idx_chat_history_created_at ON public.chat_history(created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_chat_history_is_deleted ON public.chat_history(is_deleted);
 
 -- ============================================
 -- AUTO-UPDATE TIMESTAMP FUNCTION
@@ -91,6 +110,7 @@ ALTER TABLE public.chats ADD COLUMN IF NOT EXISTS deleted_at TIMESTAMPTZ DEFAULT
 -- ============================================
 ALTER TABLE public.users ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.chats ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.chat_history ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.feedback ENABLE ROW LEVEL SECURITY;
 
 -- ============================================
@@ -98,6 +118,7 @@ ALTER TABLE public.feedback ENABLE ROW LEVEL SECURITY;
 -- ============================================
 DROP POLICY IF EXISTS "Allow all for users" ON public.users;
 DROP POLICY IF EXISTS "Allow all for chats" ON public.chats;
+DROP POLICY IF EXISTS "Allow all for chat_history" ON public.chat_history;
 DROP POLICY IF EXISTS "Allow all for feedback" ON public.feedback;
 
 -- ============================================
@@ -117,6 +138,13 @@ CREATE POLICY "Allow all for chats"
   USING (true)
   WITH CHECK (true);
 
+-- Chat_history table - allow all operations
+CREATE POLICY "Allow all for chat_history"
+  ON public.chat_history
+  FOR ALL
+  USING (true)
+  WITH CHECK (true);
+
 -- Feedback table - allow all operations
 CREATE POLICY "Allow all for feedback"
   ON public.feedback
@@ -132,7 +160,7 @@ SELECT
   (SELECT COUNT(*) FROM information_schema.columns WHERE table_name = t.table_name) as column_count
 FROM information_schema.tables t
 WHERE table_schema = 'public' 
-  AND table_name IN ('users', 'chats', 'feedback')
+  AND table_name IN ('users', 'chats', 'chat_history', 'feedback')
 ORDER BY table_name;
 
 -- ============================================

@@ -2,10 +2,9 @@
 
 import { useSession, signOut, signIn } from "next-auth/react";
 import { useState, useRef, useEffect } from "react";
-import { Send, Upload, Sparkles, FileText, Image as ImageIcon, X, Trash2, Plus, Settings, HelpCircle, FolderOpen, Code, Copy, Check, Brain, ToggleLeft, ToggleRight, Moon, Sun, MessageSquare, LogOut, Menu } from "lucide-react";
+import { Send, Upload, Sparkles, FileText, Image as ImageIcon, X, Trash2, Plus, Settings, HelpCircle, FolderOpen, Code, Copy, Check, Brain, ToggleLeft, ToggleRight, Moon, Sun, MessageSquare, LogOut } from "lucide-react";
 import ReactMarkdown from "react-markdown";
 import { MainLayout } from "@/components/Layout/MainLayout";
-import { Navbar } from "@/components/Navbar";
 
 interface Message {
   id: string;
@@ -75,70 +74,8 @@ export default function ChatPage() {
   const headingMenuRef = useRef<HTMLButtonElement | null>(null);
   const [headingMenuOpen, setHeadingMenuOpen] = useState(false);
   const [openDropdownId, setOpenDropdownId] = useState<string | null>(null);
-  const [guestId, setGuestId] = useState<string | null>(null);
-  const [hideHeaderOnMobile, setHideHeaderOnMobile] = useState(false);
-  const chatContainerRef = useRef<HTMLDivElement>(null);
-  const lastScrollTop = useRef(0);
-  const [isChatActive, setIsChatActive] = useState(false);
-  const [isSidebarOpen, setIsSidebarOpen] = useState(true); // Default open on desktop
+  const [mounted, setMounted] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
-
-  // Detect mobile screen size and manage sidebar state
-  useEffect(() => {
-    const checkMobile = () => {
-      const mobile = window.innerWidth < 1024;
-      setIsMobile(mobile);
-      // On mobile, sidebar should be closed by default
-      if (mobile) {
-        setIsSidebarOpen(false);
-      } else {
-        // On desktop, sidebar should be open by default
-        setIsSidebarOpen(true);
-      }
-    };
-    checkMobile();
-    window.addEventListener('resize', checkMobile);
-    return () => window.removeEventListener('resize', checkMobile);
-  }, []);
-
-  // Read query params directly from window.location to avoid SSR bailout
-  const searchParams = null as unknown as URLSearchParams | null;
-
-  // Format timestamp to local time
-  const formatTimestamp = (timestamp: Date | string) => {
-    const date = typeof timestamp === 'string' ? new Date(timestamp) : timestamp;
-    return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-  };
-
-  // Format date for chat history
-  const formatChatDate = (timestamp: Date | string) => {
-    const date = typeof timestamp === 'string' ? new Date(timestamp) : timestamp;
-    const now = new Date();
-    const diffInMs = now.getTime() - date.getTime();
-    const diffInHours = diffInMs / (1000 * 60 * 60);
-    
-    if (diffInHours < 24) {
-      return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-    } else if (diffInHours < 48) {
-      return 'Yesterday';
-    } else if (diffInHours < 168) {
-      return date.toLocaleDateString([], { weekday: 'short' });
-    } else {
-      return date.toLocaleDateString([], { month: 'short', day: 'numeric' });
-    }
-  };
-
-  // Open settings modal when ?openSettings=true is present in URL
-  useEffect(() => {
-    try {
-      const params = typeof window !== 'undefined' ? new URLSearchParams(window.location.search) : null;
-      if (params?.get('openSettings') === 'true') {
-        setShowSettingsModal(true);
-      }
-    } catch (e) {
-      // ignore
-    }
-  }, []);
 
   // Shorthand commands mapping
   const shorthands: { [key: string]: string } = {
@@ -218,14 +155,6 @@ export default function ChatPage() {
 
   // Load theme from localStorage on mount
   useEffect(() => {
-    // Initialize guest ID for non-logged-in users
-    let storedGuestId = localStorage.getItem('guestId');
-    if (!storedGuestId) {
-      storedGuestId = `guest-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
-      localStorage.setItem('guestId', storedGuestId);
-    }
-    setGuestId(storedGuestId);
-
     const savedTheme = localStorage.getItem('theme') as 'light' | 'dark' | null;
     const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
     const initialTheme = savedTheme || (prefersDark ? 'dark' : 'light');
@@ -252,6 +181,15 @@ export default function ChatPage() {
         console.error('Error loading user activity:', e);
       }
     }
+  }, []);
+
+  // Prevent hydration mismatch by only rendering interactive UI after mount
+  useEffect(() => {
+    setMounted(true);
+    const update = () => setIsMobile(window.innerWidth < 1024);
+    update();
+    window.addEventListener('resize', update);
+    return () => window.removeEventListener('resize', update);
   }, []);
 
   // Extract topics from user message
@@ -460,7 +398,6 @@ export default function ChatPage() {
     setInput("");
     setSelectedChatId(null);
     setCurrentChatId(null); // Clear current chat ID to start fresh conversation
-    setIsChatActive(false); // Reset to new chat state
   };
 
   const handleDeleteChat = async (chatId: string) => {
@@ -596,8 +533,8 @@ export default function ChatPage() {
       // Prefer Web Share API on mobile
       if (navigator.share) {
         await navigator.share({
-          title: 'Chat from Chat Assistant',
-          text: 'Open this chat in Chat Assistant',
+          title: 'Chat from Ace',
+            text: 'Open this chat in Ace',
           url,
         });
         return;
@@ -701,32 +638,7 @@ export default function ChatPage() {
 
   useEffect(() => {
     scrollToBottom();
-    // Update chat active state based on messages
-    setIsChatActive(messages.length > 0);
   }, [messages]);
-
-  // Detect scrolling to hide header on mobile
-  useEffect(() => {
-    const container = chatContainerRef.current;
-    if (!container) return;
-
-    const handleScroll = () => {
-      const scrollTop = container.scrollTop;
-      const scrollingDown = scrollTop > lastScrollTop.current;
-      
-      // Only hide header on mobile when there are messages and scrolling down
-      if (messages.length > 0 && scrollTop > 60) {
-        setHideHeaderOnMobile(scrollingDown);
-      } else {
-        setHideHeaderOnMobile(false);
-      }
-      
-      lastScrollTop.current = scrollTop;
-    };
-
-    container.addEventListener('scroll', handleScroll, { passive: true });
-    return () => container.removeEventListener('scroll', handleScroll);
-  }, [messages.length]);
 
   // Close menus when clicking outside
   useEffect(() => {
@@ -751,34 +663,19 @@ export default function ChatPage() {
     }
   }, [showAttachMenu, showSettingsModal, showFeedbackModal, openDropdownId, headingMenuOpen]);
 
-  // Load history from backend for signed-in user or guest
+  // Load history from backend for signed-in user
   useEffect(() => {
     const load = async () => {
-      const effectiveUserId = session?.user?.email || guestId;
-      if (!effectiveUserId) {
-        console.log('⚠️ No user session or guest ID yet, skipping history load');
-        return;
-      }
-      
-      const userType = session?.user?.email ? 'logged-in user' : 'guest';
-      console.log(`🔄 Loading chat history for ${userType}:`, effectiveUserId);
-      
+      if (!session?.user?.email) return;
       try {
-        const url = session?.user?.email 
-          ? `/api/history?userId=${encodeURIComponent(session.user.email)}`
-          : `/api/history?guestId=${encodeURIComponent(guestId || '')}`;
-        
-        console.log('📡 Fetching from:', url);
-        const res = await fetch(url);
+        const res = await fetch(`/api/history?userId=${encodeURIComponent(session.user.email)}`);
         if (!res.ok) {
           console.error('Failed to fetch history', await res.text());
           return;
         }
         const json = await res.json();
-        console.log('Received history response:', json);
         // Handle both array response and {data: array} response
         const data = Array.isArray(json) ? json : json?.data;
-        console.log('Processed data:', data);
         if (data && data.length > 0) {
           // Map API shape to ChatHistory expected shape
           const mapped = data.map((c: any) => ({
@@ -789,11 +686,7 @@ export default function ChatPage() {
             messages: c.messages || [],
             pinned: c.pinned || false,
           }));
-          console.log('Setting chat history with', mapped.length, 'chats');
           setChatHistory(mapped);
-        } else {
-          console.log('No chat history data received');
-          setChatHistory([]);
         }
       } catch (e) {
         console.error('Error loading history', e);
@@ -801,7 +694,7 @@ export default function ChatPage() {
     };
 
     load();
-  }, [session?.user?.email, guestId]);
+  }, [session?.user?.email]);
 
   const handleSend = async () => {
     if ((!input.trim() && attachedFiles.length === 0) || isLoading) return;
@@ -875,7 +768,7 @@ export default function ChatPage() {
           prompt: promptText,
           userId: session?.user?.email,
           personalization: personalizationContext,
-          // Note: chatId is not used anymore, each interaction creates new entry
+          chatId: currentChatId // Send current chat ID to append messages
         }),
       });
 
@@ -923,27 +816,9 @@ export default function ChatPage() {
         throw new Error(data.error || 'No response from AI');
       }
 
-      // Update currentChatId with the new chat entry created
-      if (data.chatId) {
+      // Update currentChatId if a new chat was created
+      if (data.chatId && !currentChatId) {
         setCurrentChatId(data.chatId);
-        // Refresh history to show the new entry
-        if (session?.user?.email) {
-          const historyRes = await fetch(`/api/history?userId=${encodeURIComponent(session.user.email)}`);
-          if (historyRes.ok) {
-            const historyData = await historyRes.json();
-            const mapped = Array.isArray(historyData) ? historyData : historyData?.data || [];
-            if (mapped.length > 0) {
-              setChatHistory(mapped.map((c: any) => ({
-                id: String(c.id),
-                title: c.title,
-                timestamp: new Date(c.lastMessageAt),
-                preview: c.snippet,
-                messages: c.messages || [],
-                pinned: c.pinned || false,
-              })));
-            }
-          }
-        }
       }
 
       const aiMessage: Message = {
@@ -1006,188 +881,49 @@ export default function ChatPage() {
     }
   };
 
-  return (
-    <>
-      {/* Persistent Global Navbar */}
-      <Navbar 
-        onToggleSidebar={() => setIsSidebarOpen(!isSidebarOpen)}
-        showSidebarToggle={isChatActive}
-      />
+    if (!mounted) return null;
 
-      {/* Main Layout Container with dynamic margin */}
-      <div className="flex h-screen pt-[57px] bg-white dark:bg-slate-900 overflow-hidden">
-        {/* Mobile Overlay Backdrop - Only on mobile */}
-        {isSidebarOpen && isMobile && (
-          <div 
-            className="fixed inset-0 bg-black/60 z-[100] backdrop-blur-sm"
-            onClick={() => setIsSidebarOpen(false)}
-            aria-label="Close sidebar"
-          />
-        )}
-
-        {/* Single Unified Sidebar - Gemini Style */}
-        <aside
-          className={`
-            fixed lg:sticky inset-y-0 left-0 top-[57px] lg:top-[57px]
-            z-[150] lg:z-[50]
-            w-72
-            bg-white dark:bg-slate-900
-            border-r border-slate-200 dark:border-slate-800
-            transition-transform duration-300 ease-in-out
-            ${
-              isMobile 
-                ? (isSidebarOpen ? 'translate-x-0' : '-translate-x-full')
-                : (isSidebarOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0')
-            }
-            shadow-2xl lg:shadow-none
-            h-[calc(100vh-57px)]
-            flex flex-col
-            flex-shrink-0
-          `}
-        >
-          {/* Sidebar Header */}
-          <div className="flex-shrink-0 p-4 border-b border-slate-200 dark:border-slate-800 flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center shadow-sm">
-                <Sparkles className="w-5 h-5 text-white" />
-              </div>
-              <h2 className="text-lg font-semibold text-slate-900 dark:text-white">Chat Assistant</h2>
-            </div>
-            {isMobile && (
-              <button
-                onClick={() => setIsSidebarOpen(false)}
-                className="p-2 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg transition-colors"
-                aria-label="Close sidebar"
-              >
-                <X className="w-5 h-5 text-slate-500" />
-              </button>
-            )}
-          </div>
-
-          {/* New Chat Button */}
-          <div className="flex-shrink-0 p-3">
-            <button
-              onClick={() => {
-                handleNewChat();
-                if (isMobile) setIsSidebarOpen(false);
-              }}
-              className="w-full py-3 px-4 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white rounded-xl transition-all font-medium text-sm flex items-center justify-center gap-3 shadow-md hover:shadow-lg"
-            >
-              <Plus className="w-5 h-5" />
-              New Chat
-            </button>
-          </div>
-
-          {/* Search - Scrollable within sidebar */}
-          <div className="flex-shrink-0 px-3 pb-3">
-            <div className="relative">
-              <svg className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-              </svg>
-              <input
-                type="text"
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                placeholder="Search chats..."
-                className="w-full pl-9 pr-8 py-2.5 text-sm bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-slate-900 dark:text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-blue-500"
-              />
-            </div>
-          </div>
-
-          {/* Chat History - Scrollable */}
-          <div className="flex-1 overflow-y-auto px-2 overscroll-contain">
-            {chatHistory.length === 0 ? (
-              <div className="p-4 text-center">
-                <MessageSquare className="w-10 h-10 text-slate-300 dark:text-slate-600 mx-auto mb-3" />
-                <p className="text-slate-500 dark:text-slate-400 text-sm">No chats yet</p>
-              </div>
-            ) : (
-              <div className="space-y-1 pb-4">
-                {chatHistory.map((chat) => (
-                  <div
-                    key={chat.id}
-                    onClick={() => {
-                      if (chat.messages && chat.messages.length) {
-                        const mapped = chat.messages.map((m: any, i: number) => ({
-                          id: `${chat.id}-${i}`,
-                          text: m.text,
-                          sender: (m.sender === 'ai' ? 'ai' : 'user') as 'ai' | 'user',
-                          timestamp: new Date(m.timestamp || new Date()),
-                        }));
-                        setMessages(mapped);
-                      } else {
-                        setMessages([]);
-                      }
-                      setSelectedChatId(chat.id);
-                      setCurrentChatId(chat.id);
-                      if (isMobile) setIsSidebarOpen(false);
-                    }}
-                    className={`group relative px-3 py-3 rounded-xl transition-all cursor-pointer ${
-                      (selectedChatId || currentChatId) === chat.id
-                        ? 'bg-blue-50 dark:bg-blue-900/30 border border-blue-200 dark:border-blue-800 shadow-sm'
-                        : 'hover:bg-slate-50 dark:hover:bg-slate-800'
-                    }`}
-                  >
-                    <div className="flex items-start justify-between gap-2">
-                      <div className="flex-1 min-w-0">
-                        <p className="text-sm font-medium text-slate-900 dark:text-slate-100 line-clamp-1">{chat.title}</p>
-                        {chat.preview && <p className="text-xs text-slate-500 dark:text-slate-400 line-clamp-1 mt-1">{chat.preview}</p>}
-                      </div>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
-
-          {/* Settings Button */}
-          <div className="flex-shrink-0 p-3 border-t border-slate-200 dark:border-slate-800">
-            <button
-              onClick={() => {
-                setShowSettingsModal(true);
-                if (isMobile) setIsSidebarOpen(false);
-              }}
-              className="w-full px-4 py-3 text-left text-sm font-medium text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-xl transition-colors flex items-center gap-3"
-            >
-              <Settings className="w-5 h-5" />
-              <span>Settings</span>
-            </button>
-          </div>
-        </aside>
-
-        {/* Main Chat Area - Dynamic width based on sidebar state */}
-        <div className={`
-          flex-1 flex flex-col h-full bg-white dark:bg-gray-900 relative overflow-hidden min-w-0
-          transition-all duration-300 ease-in-out
-          ${
-            !isMobile && isSidebarOpen ? 'lg:ml-0' : 'lg:ml-0'
-          }
-        `}>
-        {/* NEW CHAT HEADER - Simple state when no messages */}
-        {!isChatActive && (
-          <div className="flex-shrink-0 flex items-center justify-center px-4 py-4 border-b border-gray-200/50 dark:border-gray-800/50 bg-white dark:bg-gray-900 backdrop-blur-sm transition-all duration-300 z-[30] sticky top-0">
-            <div className="flex items-center gap-2">
-              <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center shadow-sm">
-                <Sparkles className="w-5 h-5 text-white" />
-              </div>
-              <h1 className="text-xl font-semibold text-gray-900 dark:text-white">Chat Assistant</h1>
-            </div>
-          </div>
-        )}
-
-        {/* ACTIVE CHAT HEADER - Chat title replaces Chat Assistant block */}
-        {isChatActive && (
-          <div className="flex-shrink-0 flex items-center justify-center px-4 sm:px-6 py-3 border-b border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 backdrop-blur-sm transition-all duration-300 z-[30] shadow-sm sticky top-0 relative">
-            {/* Center Section: Chat Title */}
-            <div className="flex items-center gap-3 flex-1 justify-center">
+    return (
+    <MainLayout
+      title="Ace"
+      onNewChat={handleNewChat}
+      chatHistory={chatHistory}
+      onSelectChat={(chat) => {
+        if (chat.messages && chat.messages.length) {
+          const mapped = chat.messages.map((m: any, i: number) => ({
+            id: `${chat.id}-${i}`,
+            text: m.text,
+            sender: (m.sender === 'ai' ? 'ai' : 'user') as 'ai' | 'user',
+            timestamp: new Date(m.timestamp || new Date()),
+          }));
+          setMessages(mapped);
+        } else {
+          setMessages([]);
+        }
+        setSelectedChatId(chat.id);
+        setCurrentChatId(chat.id);
+      }}
+      onDeleteChat={handleDeleteChat}
+      onPinChat={togglePin}
+      onRenameChat={startRename}
+      onShareChat={handleShare}
+        selectedChatId={selectedChatId || currentChatId}
+      onOpenSettings={() => setShowSettingsModal(true)}
+        isMobile={isMobile}
+    >
+      <div className="flex flex-col h-full bg-white dark:bg-gray-900 relative">
+        {/* Chat Heading with Options (Gemini-style) - Shows only when messages exist */}
+        {(selectedChatId || currentChatId) && messages.length > 0 && (
+          <div className="sticky top-0 flex items-center justify-between px-4 sm:px-8 py-3 border-b border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 backdrop-blur-sm transition-all duration-300 z-[30] shadow-sm">
+            <div className="flex items-center gap-3 flex-1 min-w-0">
               {!renameMode ? (
-                <h2 className="text-sm font-medium text-gray-700 dark:text-gray-200 truncate max-w-[200px] sm:max-w-md">
+                <h2 className="text-sm font-medium text-gray-700 dark:text-gray-200 max-w-xs sm:max-w-2xl truncate">
                   {chatHistory.find((c) => c.id === (selectedChatId || currentChatId))?.title || 'New chat'}
                 </h2>
               ) : (
                 <input
                   ref={renameInputRef}
-                  className="text-sm font-medium bg-transparent outline-none border-b border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-200 max-w-[200px] sm:max-w-md text-center"
+                  className="text-sm font-medium bg-transparent outline-none border-b border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-200 max-w-xs sm:max-w-2xl"
                   value={renameValue}
                   onChange={(e) => setRenameValue(e.target.value)}
                   onBlur={saveRename}
@@ -1199,9 +935,7 @@ export default function ChatPage() {
                 />
               )}
             </div>
-            
-            {/* Right Section: Vertical Three-Dot Menu - Absolute positioned */}
-            <div className="absolute right-4 sm:right-6 top-1/2 transform -translate-y-1/2">
+            <div className="relative flex-shrink-0">
               <button
                 onClick={(e) => {
                   e.stopPropagation();
@@ -1210,18 +944,16 @@ export default function ChatPage() {
                 aria-haspopup="true"
                 aria-expanded={headingMenuOpen}
                 ref={headingMenuRef}
-                className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors touch-manipulation"
-                title="Chat actions"
+                className="p-2 rounded hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors touch-manipulation"
+                title="Open actions"
               >
-                <svg className="w-5 h-5 text-gray-600 dark:text-gray-400" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
-                  <circle cx="12" cy="5" r="1.5" fill="currentColor" />
-                  <circle cx="12" cy="12" r="1.5" fill="currentColor" />
-                  <circle cx="12" cy="19" r="1.5" fill="currentColor" />
+                <svg className="w-5 h-5 text-gray-600 dark:text-gray-400" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24" aria-hidden>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M12 5v.01M12 12v.01M12 19v.01" />
                 </svg>
               </button>
 
               {headingMenuOpen && (
-                <div className="absolute right-0 top-full mt-2 w-48 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl shadow-2xl z-[40] overflow-hidden pointer-events-auto">
+                <div className="absolute right-0 top-full mt-2 w-48 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-2xl z-[40] overflow-hidden pointer-events-auto">
                   <button
                     onClick={(e) => {
                       e.stopPropagation();
@@ -1230,11 +962,8 @@ export default function ChatPage() {
                       togglePin(id);
                       setHeadingMenuOpen(false);
                     }}
-                    className="w-full text-left px-4 py-3 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors touch-manipulation active:bg-gray-200 dark:active:bg-gray-600 flex items-center gap-3"
+                    className="w-full text-left px-4 py-3 text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors touch-manipulation active:bg-gray-200 dark:active:bg-gray-600"
                   >
-                    <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z" />
-                    </svg>
                     {chatHistory.find(c => c.id === (selectedChatId || currentChatId))?.pinned ? 'Unpin' : 'Pin'}
                   </button>
                   <button
@@ -1243,11 +972,8 @@ export default function ChatPage() {
                       startRename();
                       setHeadingMenuOpen(false);
                     }}
-                    className="w-full text-left px-4 py-3 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors touch-manipulation active:bg-gray-200 dark:active:bg-gray-600 flex items-center gap-3"
+                    className="w-full text-left px-4 py-3 text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors touch-manipulation active:bg-gray-200 dark:active:bg-gray-600"
                   >
-                    <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-                    </svg>
                     Rename
                   </button>
                   <button
@@ -1256,14 +982,10 @@ export default function ChatPage() {
                       handleShare(selectedChatId || currentChatId || undefined);
                       setHeadingMenuOpen(false);
                     }}
-                    className="w-full text-left px-4 py-3 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors touch-manipulation active:bg-gray-200 dark:active:bg-gray-600 flex items-center gap-3"
+                    className="w-full text-left px-4 py-3 text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors touch-manipulation active:bg-gray-200 dark:active:bg-gray-600"
                   >
-                    <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z" />
-                    </svg>
                     Share
                   </button>
-                  <div className="h-px bg-gray-200 dark:bg-gray-700 my-1" />
                   <button
                     onClick={(e) => {
                       e.stopPropagation();
@@ -1272,11 +994,8 @@ export default function ChatPage() {
                       setHeadingMenuOpen(false);
                       handleDeleteChat(id);
                     }}
-                    className="w-full text-left px-4 py-3 text-sm text-red-600 dark:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/40 transition-colors touch-manipulation active:bg-red-100 dark:active:bg-red-900/60 flex items-center gap-3"
+                    className="w-full text-left px-4 py-3 text-red-600 dark:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/40 transition-colors touch-manipulation active:bg-red-100 dark:active:bg-red-900/60"
                   >
-                    <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                    </svg>
                     Delete
                   </button>
                 </div>
@@ -1286,15 +1005,15 @@ export default function ChatPage() {
         )}
 
         {/* Conversation View - Messages */}
-        <div 
-          ref={chatContainerRef}
-          className="flex-1 overflow-y-auto overflow-x-hidden bg-gradient-to-b from-white/50 dark:from-gray-900/30 to-white dark:to-gray-900 transition-all duration-300 scroll-smooth min-h-0 overscroll-contain"
-        >
+        <div className="flex-1 overflow-y-auto overflow-x-hidden bg-gradient-to-b from-white/50 dark:from-gray-900/30 to-white dark:to-gray-900 transition-all duration-300 scroll-smooth">
           {/* Greeting State - ONLY when no messages */}
           {messages.length === 0 && (
             <div className="flex items-center justify-center h-full animate-fadeIn px-4 py-8">
               <div className="text-center max-w-2xl">
-                <p className="text-lg sm:text-2xl text-gray-600 dark:text-gray-400 mb-2">
+                <h2 className="text-2xl sm:text-4xl font-semibold text-gray-900 dark:text-white mb-4">
+                  Ace
+                </h2>
+                <p className="text-sm sm:text-lg text-gray-600 dark:text-gray-400 mb-2">
                   Hello, {session?.user?.name?.split(' ')[0] || 'there'}
                 </p>
                 <p className="text-sm sm:text-lg text-gray-600 dark:text-gray-400">
@@ -1357,7 +1076,7 @@ export default function ChatPage() {
                           )}
                         </button>
                         <p className="text-xs text-gray-400 dark:text-gray-500 mt-2">
-                          {formatTimestamp(message.timestamp)}
+                          {message.timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                         </p>
                       </div>
                     </div>
@@ -1387,17 +1106,42 @@ export default function ChatPage() {
         </div>
 
         {/* Chat Input Bar - Multi-functional (Gemini-style) */}
-        <div className="flex-shrink-0 border-t border-gray-200/50 dark:border-gray-800/50 bg-white dark:bg-gray-900 p-3 sm:p-4 z-[20]">
+        <div className="border-t border-gray-200/50 dark:border-gray-800/50 bg-white dark:bg-gray-900 p-2 sm:p-3 -mb-2">
           <div className="max-w-4xl mx-auto px-1 sm:px-0">
             <div className="relative flex items-end gap-2 bg-gray-100/60 dark:bg-gray-800/40 rounded-full border border-gray-300/50 dark:border-gray-700/40 p-2 focus-within:bg-gray-100 dark:focus-within:bg-gray-800/60 focus-within:border-gray-400 dark:focus-within:border-gray-600 transition-all">
-              {/* Attachment Button - Simplified */}
-              <button
-                onClick={() => fileInputRef.current?.click()}
-                className="p-2.5 hover:bg-gray-200/60 dark:hover:bg-gray-700/40 rounded-full transition-colors"
-                title="Upload files"
-              >
-                <Upload className="w-5 h-5 text-gray-600 dark:text-gray-400" />
-              </button>
+              {/* Attachment/Tools Menu */}
+              <div className="relative" ref={attachMenuRef}>
+                <button
+                  onClick={() => setShowAttachMenu(!showAttachMenu)}
+                  className="p-2.5 hover:bg-gray-200/60 dark:hover:bg-gray-700/40 rounded-full transition-colors"
+                  title="Add attachments"
+                >
+                  <Plus className="w-5 h-5 text-gray-600 dark:text-gray-400" />
+                </button>
+
+                {showAttachMenu && (
+                  <div className="absolute bottom-full left-0 mb-2 w-56 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl shadow-xl py-2 z-[50]">
+                    <button
+                      onClick={() => {
+                        fileInputRef.current?.click();
+                        setShowAttachMenu(false);
+                      }}
+                      className="w-full px-4 py-3 text-left text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors flex items-center gap-3"
+                    >
+                      <Upload className="w-4 h-4" />
+                      Upload files
+                    </button>
+                    <button className="w-full px-4 py-3 text-left text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors flex items-center gap-3">
+                      <FolderOpen className="w-4 h-4" />
+                      Add from Drive
+                    </button>
+                    <button className="w-full px-4 py-3 text-left text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors flex items-center gap-3">
+                      <Code className="w-4 h-4" />
+                      Import code
+                    </button>
+                  </div>
+                )}
+              </div>
 
               {/* Hidden file input */}
               <input
@@ -1443,7 +1187,7 @@ export default function ChatPage() {
                     handleSend();
                   }
                 }}
-                placeholder="Ask AI Assistant"
+                placeholder="Ask Ace"
                 className="flex-1 px-3 py-2.5 bg-transparent border-none focus:outline-none resize-none text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 text-[15px] min-h-[40px] max-h-[200px]"
                 rows={1}
                 disabled={isLoading}
@@ -1494,11 +1238,7 @@ export default function ChatPage() {
             )}
           </div>
         </div>
-        {/* End of Chat Input Bar */}
       </div>
-      {/* End of Main Chat Area */}
-      </div>
-      {/* End of Main Layout Container */}
 
       {/* Settings Modal */}
       {showSettingsModal && (
@@ -1759,8 +1499,8 @@ export default function ChatPage() {
 
             {/* Modal Content */}
             <div className="p-6">
-              <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">
-                Help us improve Chat Assistant by sharing your thoughts, suggestions, or reporting issues.
+                <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">
+                Help us improve Ace by sharing your thoughts, suggestions, or reporting issues.
               </p>
               <textarea
                 value={feedbackText}
@@ -1791,6 +1531,7 @@ export default function ChatPage() {
         </div>
       )}
 
-    </>
+      {/* Auth Modal */}
+    </MainLayout>
   );
 }

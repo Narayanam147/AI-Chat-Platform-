@@ -234,27 +234,44 @@ export async function POST(request: NextRequest) {
 
     let savedChatId = chatId;
 
-    // Save to database for all users (logged in or guest)
-    try {
-      // Use email for logged-in users, or generate guest ID from request
-      const guestId = request.headers.get('x-guest-id') || `guest-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
-      const effectiveUserId = userId || guestId;
-      
-      // Create a new chat entry with messages array for each prompt/response pair
-      const newChat = await ChatModel.create({
-        user_id: effectiveUserId,
-        messages: [
-          { text: prompt, sender: 'user', timestamp: new Date().toISOString() },
-          { text: aiResponse, sender: 'ai', timestamp: new Date().toISOString() }
-        ],
-        title: prompt.substring(0, 50) + (prompt.length > 50 ? '...' : ''),
-      });
-      savedChatId = newChat?.id || null;
-      console.log('✅ Chat history saved:', savedChatId, 'for user:', effectiveUserId);
+    // Save to database if userId is provided
+    if (userId) {
+      try {
+        const userMessage = { text: prompt, sender: 'user', timestamp: new Date().toISOString() };
+        const assistantMessage = { text: aiResponse, sender: 'ai', timestamp: new Date().toISOString() };
+
+        if (chatId) {
+          // Update existing chat - append messages
+          const existingChat = await ChatModel.findById(chatId);
+          if (existingChat) {
+            const updatedMessages = [...(existingChat.messages || []), userMessage, assistantMessage];
+            await ChatModel.update(chatId, { messages: updatedMessages });
+            console.log('✅ Chat updated in Supabase (chatId:', chatId, ')');
+          } else {
+            // Chat not found, create new one
+            const newChat = await ChatModel.create({
+              user_id: userId,
+              messages: [userMessage, assistantMessage],
+              title: prompt.substring(0, 50),
+            });
+            savedChatId = newChat?.id || null;
+            console.log('✅ New chat created (old not found):', savedChatId);
+          }
+        } else {
+          // Create new chat
+          const newChat = await ChatModel.create({
+            user_id: userId,
+            messages: [userMessage, assistantMessage],
+            title: prompt.substring(0, 50),
+          });
+          savedChatId = newChat?.id || null;
+          console.log('✅ New chat created:', savedChatId);
+        }
         
-    } catch (dbError) {
-      console.error('❌ Supabase save error:', dbError);
-      console.log('💡 To enable chat history: Configure Supabase connection');
+      } catch (dbError) {
+        console.error('❌ Supabase save error:', dbError);
+        console.log('💡 To enable chat history: Configure Supabase connection');
+      }
     }
 
     return NextResponse.json({ response: aiResponse, chatId: savedChatId });
