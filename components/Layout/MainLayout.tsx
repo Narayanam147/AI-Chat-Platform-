@@ -240,10 +240,10 @@ export function MainLayout({
 
       {/* Main Content Area */}
       <div className="flex-1 flex overflow-hidden relative">
-        {/* Overlay - Click to close sidebar */}
+        {/* Overlay - Click to close sidebar on mobile */}
         {isSidebarOpen && (
           <div 
-            className="fixed inset-0 bg-black/60 z-50 lg:hidden" 
+            className="fixed inset-0 bg-black/60 z-[55] lg:hidden" 
             onClick={() => setIsSidebarOpen(false)}
             aria-label="Close sidebar overlay"
           />
@@ -259,12 +259,12 @@ export function MainLayout({
             border-r border-gray-200 dark:border-gray-800
             transition-transform duration-300
             ${isSidebarOpen ? 'translate-x-0' : '-translate-x-full'}
-            lg:translate-x-0
+            ${!isSidebarOpen ? 'lg:-translate-x-full' : 'lg:translate-x-0'}
             shadow-xl lg:shadow-none
-            overflow-hidden
+            h-[calc(100vh-57px)] lg:h-full
           `}
         >
-          <div className="h-full flex flex-col">
+          <div className="h-full flex flex-col overflow-hidden">
             {/* Sidebar Header */}
             <div className="flex-shrink-0 p-4 border-b border-gray-200 dark:border-gray-800 flex items-center justify-between bg-white dark:bg-gray-900">
               <h2 className="text-lg font-semibold text-gray-900 dark:text-white">Chats</h2>
@@ -310,8 +310,8 @@ export function MainLayout({
               </div>
             </div>
 
-            {/* Chat History */}
-            <div className="flex-1 overflow-y-auto overflow-x-hidden px-2 scroll-smooth">
+            {/* Chat History - Scrollable Container with Fixed Height */}
+            <div className="flex-1 min-h-0 overflow-y-auto overflow-x-hidden px-2 scroll-smooth">
               {filteredHistory.length === 0 ? (
                 <div className="p-4 text-center">
                   <p className="text-gray-500 dark:text-gray-400 text-sm mb-2">No chats yet</p>
@@ -322,7 +322,7 @@ export function MainLayout({
                   )}
                 </div>
               ) : (
-                <div className="space-y-1">
+                <div className="space-y-1 pb-2">
                   {filteredHistory.map((chat) => (
                     <div
                       key={chat.id}
@@ -356,8 +356,8 @@ export function MainLayout({
               )}
             </div>
 
-            {/* Settings Button at Bottom - Always Visible */}
-            <div className="flex-shrink-0 mt-auto p-3 border-t border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900">
+            {/* Settings Button at Bottom - Always Visible - Never scrolls */}
+            <div className="flex-shrink-0 p-3 border-t border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 sticky bottom-0">
               <button
                 onClick={() => { 
                   onOpenSettings?.(); 
@@ -373,7 +373,7 @@ export function MainLayout({
         </aside>
 
         {/* Main Content - Expands to 100% when sidebar closes on desktop */}
-        <main className="flex-1 min-w-0 overflow-auto bg-white dark:bg-gray-900 transition-all duration-300">
+        <main className="flex-1 min-w-0 overflow-hidden bg-white dark:bg-gray-900 transition-all duration-300 relative z-[10]">
           {children}
         </main>
       </div>

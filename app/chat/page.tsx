@@ -981,10 +981,10 @@ export default function ChatPage() {
       selectedChatId={selectedChatId || currentChatId}
       onOpenSettings={() => setShowSettingsModal(true)}
     >
-      <div className="flex flex-col h-full bg-white dark:bg-gray-900 relative">
+      <div className="flex flex-col h-full bg-white dark:bg-gray-900 relative overflow-hidden">
         {/* Chat Heading with Options (Gemini-style) - Shows only when messages exist */}
         {(selectedChatId || currentChatId) && messages.length > 0 && (
-          <div className="sticky top-0 flex items-center justify-between px-4 sm:px-8 py-3 border-b border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 backdrop-blur-sm transition-all duration-300 z-[30] shadow-sm">
+          <div className="flex-shrink-0 flex items-center justify-between px-4 sm:px-8 py-3 border-b border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 backdrop-blur-sm transition-all duration-300 z-[20] shadow-sm">
             <div className="flex items-center gap-3 flex-1 min-w-0">
               {!renameMode ? (
                 <h2 className="text-sm font-medium text-gray-700 dark:text-gray-200 max-w-xs sm:max-w-2xl truncate">
@@ -1075,7 +1075,7 @@ export default function ChatPage() {
         )}
 
         {/* Conversation View - Messages */}
-        <div className="flex-1 overflow-y-auto overflow-x-hidden bg-gradient-to-b from-white/50 dark:from-gray-900/30 to-white dark:to-gray-900 transition-all duration-300 scroll-smooth">
+        <div className="flex-1 overflow-y-auto overflow-x-hidden bg-gradient-to-b from-white/50 dark:from-gray-900/30 to-white dark:to-gray-900 transition-all duration-300 scroll-smooth min-h-0">
           {/* Greeting State - ONLY when no messages */}
           {messages.length === 0 && (
             <div className="flex items-center justify-center h-full animate-fadeIn px-4 py-8">
@@ -1176,7 +1176,7 @@ export default function ChatPage() {
         </div>
 
         {/* Chat Input Bar - Multi-functional (Gemini-style) */}
-        <div className="border-t border-gray-200/50 dark:border-gray-800/50 bg-white dark:bg-gray-900 p-3 sm:p-4">
+        <div className="flex-shrink-0 border-t border-gray-200/50 dark:border-gray-800/50 bg-white dark:bg-gray-900 p-3 sm:p-4 z-[20]">
           <div className="max-w-4xl mx-auto px-1 sm:px-0">
             <div className="relative flex items-end gap-2 bg-gray-100/60 dark:bg-gray-800/40 rounded-full border border-gray-300/50 dark:border-gray-700/40 p-2 focus-within:bg-gray-100 dark:focus-within:bg-gray-800/60 focus-within:border-gray-400 dark:focus-within:border-gray-600 transition-all">
               {/* Attachment/Tools Menu */}

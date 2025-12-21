@@ -1,5 +1,4 @@
-"use client";
-/* eslint-disable react/no-unescaped-entities */
+'use client';
 
 import Link from 'next/link';
 import { useState } from 'react';
@@ -155,9 +154,9 @@ export default function HelpCenter() {
   })).filter(category => category.articles.length > 0 || searchQuery === '');
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-white to-gray-50 dark:from-gray-900 dark:to-gray-800">
+    <div className="h-screen flex flex-col bg-gradient-to-b from-white to-gray-50 dark:from-gray-900 dark:to-gray-800">
       {/* Header */}
-      <div className="sticky top-0 z-40 bg-white/80 dark:bg-gray-900/80 backdrop-blur-md border-b border-gray-200 dark:border-gray-700">
+      <div className="flex-shrink-0 bg-white/80 dark:bg-gray-900/80 backdrop-blur-md border-b border-gray-200 dark:border-gray-700">
         <div className="max-w-4xl mx-auto px-4 py-4 flex items-center gap-4">
           <Link href="/chat" className="p-2 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition-colors">
             <ArrowLeft className="w-5 h-5 text-gray-600 dark:text-gray-400" />
@@ -166,7 +165,8 @@ export default function HelpCenter() {
         </div>
       </div>
 
-      <div className="max-w-4xl mx-auto px-4 py-8">
+      <div className="flex-1 overflow-y-auto">
+        <div className="max-w-4xl mx-auto px-4 py-8">
         {/* Search Bar */}
         <div className="mb-8">
           <div className="relative">
@@ -248,6 +248,7 @@ export default function HelpCenter() {
           <p className="text-gray-700 dark:text-gray-300 text-sm">Owner: Narayanam Dubey</p>
           <p className="text-gray-700 dark:text-gray-300 text-sm">Email: <a href="mailto:support@ai-chat.engineer" className="text-blue-600 dark:text-blue-400 hover:underline">support@ai-chat.engineer</a></p>
           <p className="text-gray-700 dark:text-gray-300 text-sm">Website: <a href="https://www.ai-chat.engineer" target="_blank" rel="noopener noreferrer" className="text-blue-600 dark:text-blue-400 hover:underline">www.ai-chat.engineer</a></p>
+        </div>
         </div>
       </div>
     </div>

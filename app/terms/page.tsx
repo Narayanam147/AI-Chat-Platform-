@@ -193,6 +193,7 @@ export default function TermsAndConditions() {
             </div>
           </section>
         </div>
+        </div>
       </div>
     </div>
   );
