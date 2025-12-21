@@ -892,7 +892,7 @@ export default function ChatPage() {
       <div className="flex flex-col h-full bg-white dark:bg-gray-900 relative">
         {/* Chat Heading with Options (Gemini-style) - Shows only when messages exist */}
         {(selectedChatId || currentChatId) && messages.length > 0 && (
-          <div className="sticky top-0 flex items-center justify-between px-4 sm:px-8 py-3 border-b border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 backdrop-blur-sm transition-all duration-300 z-[50] shadow-sm">
+          <div className="sticky top-0 flex items-center justify-between px-4 sm:px-8 py-3 border-b border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 backdrop-blur-sm transition-all duration-300 z-[30] shadow-sm">
             <div className="flex items-center gap-3 flex-1 min-w-0">
               {!renameMode ? (
                 <h2 className="text-sm font-medium text-gray-700 dark:text-gray-200 max-w-xs sm:max-w-2xl truncate">
@@ -931,7 +931,7 @@ export default function ChatPage() {
               </button>
 
               {headingMenuOpen && (
-                <div className="absolute right-0 top-full mt-2 w-48 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-2xl z-[200] overflow-hidden pointer-events-auto">
+                <div className="absolute right-0 top-full mt-2 w-48 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-2xl z-[40] overflow-hidden pointer-events-auto">
                   <button
                     onClick={(e) => {
                       e.stopPropagation();
@@ -1098,7 +1098,7 @@ export default function ChatPage() {
                 </button>
 
                 {showAttachMenu && (
-                  <div className="absolute bottom-full left-0 mb-2 w-56 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl shadow-xl py-2 z-[150]">
+                  <div className="absolute bottom-full left-0 mb-2 w-56 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl shadow-xl py-2 z-[50]">
                     <button
                       onClick={() => {
                         fileInputRef.current?.click();

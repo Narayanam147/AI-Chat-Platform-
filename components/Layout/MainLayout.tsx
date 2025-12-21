@@ -28,7 +28,7 @@ export function MainLayout({
   isMobile: isMobileProp
 }: MainLayoutProps) {
   const { data: session } = useSession();
-  const [isSidebarOpen, setIsSidebarOpen] = useState(false); // Start closed for cleaner look
+  const [isSidebarOpen, setIsSidebarOpen] = useState(true); // Default open on desktop, will adjust for mobile
   const [theme, setTheme] = useState<'light' | 'dark'>('light');
   const [showProfileMenu, setShowProfileMenu] = useState(false);
   const [showAuthModal, setShowAuthModal] = useState(false);
@@ -47,11 +47,15 @@ export function MainLayout({
   // Use prop if provided, otherwise use state
   const isMobile = isMobileProp !== undefined ? isMobileProp : isMobileState;
 
-  // Detect mobile
+  // Detect mobile and set initial sidebar state
   useEffect(() => {
     const checkMobile = () => {
       const mobile = window.innerWidth < 1024;
       setIsMobileState(mobile);
+      // On mobile, sidebar should start closed
+      if (mobile) {
+        setIsSidebarOpen(false);
+      }
     };
     checkMobile();
     window.addEventListener('resize', checkMobile);
@@ -144,16 +148,16 @@ export function MainLayout({
 
   return (
     <div className="flex flex-col h-screen overflow-hidden bg-white dark:bg-gray-900">
-      {/* Top Navbar - Always Visible */}
-      <header className="sticky top-0 z-[70] flex items-center justify-between px-4 py-3 border-b border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 shadow-sm">
+      {/* Top Navbar - Always Visible - Highest z-index */}
+      <header className="sticky top-0 z-[100] flex items-center justify-between px-4 py-3 border-b border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 shadow-sm">
         <div className="flex items-center gap-3">
-          {/* Hamburger Toggle - Works on ALL screens */}
+          {/* Hamburger Toggle - Works on ALL screens - Always accessible */}
           <button
             onClick={(e) => {
               e.stopPropagation();
               setIsSidebarOpen(!isSidebarOpen);
             }}
-            className="p-2 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition-colors touch-manipulation"
+            className="relative z-[110] p-2 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition-colors touch-manipulation"
             aria-label="Toggle sidebar"
           >
             <Menu className="w-6 h-6 text-gray-700 dark:text-gray-300" />
@@ -250,29 +254,33 @@ export function MainLayout({
 
       {/* Main Content Area */}
       <div className="flex-1 flex overflow-hidden relative">
-        {/* Mobile Overlay */}
+        {/* Mobile Overlay - Click to close sidebar */}
         {isMobile && isSidebarOpen && (
-          <div className="fixed inset-0 bg-black bg-opacity-60 z-[45]" onClick={() => setIsSidebarOpen(false)} />
+          <div 
+            className="fixed inset-0 bg-black/60 z-[80] transition-opacity duration-300" 
+            onClick={() => setIsSidebarOpen(false)}
+            aria-label="Close sidebar overlay"
+          />
         )}
 
-        {/* Sidebar - Single Source of Truth */}
+        {/* Sidebar - Highest z-index to stay above all content */}
         <aside
           className={`
-            ${isMobile ? 'fixed inset-y-0 left-0' : 'relative'}
-            ${isMobile ? 'z-[60]' : 'z-10'}
+            ${isMobile ? 'fixed inset-y-0 left-0 top-[57px]' : 'relative flex-shrink-0'}
+            z-[90]
             h-full
             bg-white dark:bg-gray-900
             border-r border-gray-200 dark:border-gray-800
             transition-all duration-300 ease-in-out
             ${isMobile 
               ? isSidebarOpen ? 'translate-x-0 w-72' : '-translate-x-full w-72'
-              : isSidebarOpen ? 'w-64' : 'w-0 border-r-0'
+              : isSidebarOpen ? 'w-64' : 'w-0'
             }
-            ${isMobile && 'shadow-2xl'}
+            ${isMobile && isSidebarOpen && 'shadow-2xl'}
             overflow-hidden
           `}
         >
-          <div className={`h-full flex flex-col ${!isSidebarOpen && !isMobile ? 'invisible' : 'visible'}`}>
+          <div className={`h-full flex flex-col ${!isSidebarOpen && !isMobile ? 'invisible w-0' : 'visible'}`}>
             {/* Sidebar Header */}
             <div className="flex-shrink-0 p-4 border-b border-gray-200 dark:border-gray-800 flex items-center justify-between bg-white dark:bg-gray-900">
               <h2 className="text-lg font-semibold text-gray-900 dark:text-white">Chats</h2>
@@ -365,8 +373,8 @@ export function MainLayout({
           </div>
         </aside>
 
-        {/* Main Content - Expands to 100% when sidebar closes */}
-        <main className="flex-1 overflow-hidden bg-white dark:bg-gray-900">
+        {/* Main Content - Expands to 100% when sidebar closes on desktop */}
+        <main className="flex-1 min-w-0 overflow-hidden bg-white dark:bg-gray-900 transition-all duration-300">
           {children}
         </main>
       </div>
