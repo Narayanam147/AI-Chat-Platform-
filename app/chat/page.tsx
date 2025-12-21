@@ -2,9 +2,9 @@
 
 import { useSession, signOut, signIn } from "next-auth/react";
 import { useState, useRef, useEffect } from "react";
-import { Send, Upload, Download, Menu, LogOut, User, Sparkles, FileText, Image as ImageIcon, X, MessageSquare, Clock, Trash2, Plus, Settings, HelpCircle, FolderOpen, Code, Moon, Sun, Copy, Check, Brain, ToggleLeft, ToggleRight, Search } from "lucide-react";
+import { Send, Upload, Sparkles, FileText, Image as ImageIcon, X, Trash2, Plus, Settings, HelpCircle, FolderOpen, Code, Copy, Check, Brain, ToggleLeft, ToggleRight, Moon, Sun, MessageSquare, LogOut } from "lucide-react";
 import ReactMarkdown from "react-markdown";
-import { LayoutContainer } from "@/components/Layout/LayoutContainer";
+import { MainLayout } from "@/components/Layout/MainLayout";
 
 interface Message {
   id: string;
@@ -31,11 +31,9 @@ export default function ChatPage() {
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState("");
   const [isLoading, setIsLoading] = useState(false);
-  const [showSidebar, setShowSidebar] = useState(true);
   const [chatHistory, setChatHistory] = useState<ChatHistory[]>([]);
   const [selectedChatId, setSelectedChatId] = useState<string | null>(null);
   const [showAttachMenu, setShowAttachMenu] = useState(false);
-  const [showProfileMenu, setShowProfileMenu] = useState(false);
   const [showSettingsModal, setShowSettingsModal] = useState(false);
   const [showFeedbackModal, setShowFeedbackModal] = useState(false);
   const [feedbackText, setFeedbackText] = useState("");
@@ -71,21 +69,11 @@ export default function ChatPage() {
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const attachMenuRef = useRef<HTMLDivElement>(null);
-  const profileMenuRef = useRef<HTMLDivElement>(null);
   const settingsModalRef = useRef<HTMLDivElement>(null);
   const feedbackModalRef = useRef<HTMLDivElement>(null);
   const headingMenuRef = useRef<HTMLButtonElement | null>(null);
   const [headingMenuOpen, setHeadingMenuOpen] = useState(false);
   const [openDropdownId, setOpenDropdownId] = useState<string | null>(null);
-  const [chatFilter, setChatFilter] = useState<'all' | 'today' | 'pinned'>('all');
-  const [showAuthModal, setShowAuthModal] = useState(false);
-  const [authMode, setAuthMode] = useState<'login' | 'signup'>('login');
-  const [authEmail, setAuthEmail] = useState('');
-  const [authPassword, setAuthPassword] = useState('');
-  const [authName, setAuthName] = useState('');
-  const [authLoading, setAuthLoading] = useState(false);
-  const [authError, setAuthError] = useState('');
-  const authModalRef = useRef<HTMLDivElement>(null);
 
   // Shorthand commands mapping
   const shorthands: { [key: string]: string } = {
@@ -161,68 +149,6 @@ export default function ChatPage() {
       return session.user.email[0].toUpperCase();
     }
     return 'U';
-  };
-
-  // Handle email/password authentication
-  const handleAuthSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setAuthError('');
-    setAuthLoading(true);
-
-    try {
-      if (authMode === 'signup') {
-        // Sign up - create user via register API
-        const registerRes = await fetch('/api/register', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            email: authEmail,
-            password: authPassword,
-            name: authName,
-          }),
-        });
-
-        if (!registerRes.ok) {
-          const error = await registerRes.json();
-          throw new Error(error.error || 'Registration failed');
-        }
-
-        // Auto sign in after registration
-        const result = await signIn('credentials', {
-          email: authEmail,
-          password: authPassword,
-          redirect: false,
-        });
-
-        if (result?.error) {
-          throw new Error(result.error);
-        }
-
-        setShowAuthModal(false);
-        setAuthEmail('');
-        setAuthPassword('');
-        setAuthName('');
-      } else {
-        // Login
-        const result = await signIn('credentials', {
-          email: authEmail,
-          password: authPassword,
-          redirect: false,
-        });
-
-        if (result?.error) {
-          throw new Error(result.error);
-        }
-
-        setShowAuthModal(false);
-        setAuthEmail('');
-        setAuthPassword('');
-      }
-    } catch (error) {
-      setAuthError(error instanceof Error ? error.message : 'Authentication failed');
-    } finally {
-      setAuthLoading(false);
-    }
   };
 
   // Load theme from localStorage on mount
@@ -421,25 +347,8 @@ export default function ChatPage() {
   }, [messages]);
 
   // Filter chat history based on search query and filter type
-  let filteredChatHistory = searchQuery.trim() 
-    ? chatHistory.filter(chat => 
-        chat.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        chat.preview.toLowerCase().includes(searchQuery.toLowerCase())
-      )
-    : chatHistory;
-
-  // Apply additional filters
-  if (chatFilter === 'today') {
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-    filteredChatHistory = filteredChatHistory.filter(chat => {
-      const chatDate = new Date(chat.timestamp);
-      chatDate.setHours(0, 0, 0, 0);
-      return chatDate.getTime() === today.getTime();
-    });
-  } else if (chatFilter === 'pinned') {
-    filteredChatHistory = filteredChatHistory.filter(chat => chat.pinned === true);
-  }
+  // Filter chat history based on search (if needed in the future)
+  const filteredChatHistory = chatHistory;
 
   // Group chat history by time
   const groupChatHistory = () => {
@@ -702,28 +611,22 @@ export default function ChatPage() {
       if (attachMenuRef.current && !attachMenuRef.current.contains(event.target as Node)) {
         setShowAttachMenu(false);
       }
-      if (profileMenuRef.current && !profileMenuRef.current.contains(event.target as Node)) {
-        setShowProfileMenu(false);
-      }
       if (settingsModalRef.current && !settingsModalRef.current.contains(event.target as Node)) {
         setShowSettingsModal(false);
       }
       if (feedbackModalRef.current && !feedbackModalRef.current.contains(event.target as Node)) {
         setShowFeedbackModal(false);
       }
-      if (authModalRef.current && !authModalRef.current.contains(event.target as Node)) {
-        setShowAuthModal(false);
-      }
       // Close dropdown menus when clicking outside
       setOpenDropdownId(null);
       setHeadingMenuOpen(false);
     };
 
-    if (showAttachMenu || showProfileMenu || showSettingsModal || showFeedbackModal || showAuthModal || openDropdownId || headingMenuOpen) {
+    if (showAttachMenu || showSettingsModal || showFeedbackModal || openDropdownId || headingMenuOpen) {
       document.addEventListener('mousedown', handleClickOutside);
       return () => document.removeEventListener('mousedown', handleClickOutside);
     }
-  }, [showAttachMenu, showProfileMenu, showSettingsModal, showFeedbackModal, showAuthModal, openDropdownId, headingMenuOpen]);
+  }, [showAttachMenu, showSettingsModal, showFeedbackModal, openDropdownId, headingMenuOpen]);
 
   // Load history from backend for signed-in user
   useEffect(() => {
@@ -944,365 +847,30 @@ export default function ChatPage() {
   };
 
   return (
-    <LayoutContainer title="Chat Assistant">
-      <div className="flex h-full bg-white dark:bg-gray-900">
-        {/* Overlay for mobile when sidebar is open */}
-        {showSidebar && (
-          <div 
-            className="fixed inset-0 bg-black bg-opacity-60 z-[45] lg:hidden"
-            onClick={() => setShowSidebar(false)}
-          />
-        )}
-
-        {/* Left Sidebar - Collapsible */}
-        <aside className={`${
-          showSidebar ? 'translate-x-0' : '-translate-x-full'
-        } lg:translate-x-0 fixed lg:relative top-0 left-0 h-full w-72 lg:w-64 bg-white dark:bg-gray-900 border-r border-gray-200 dark:border-gray-800 flex flex-col z-[46] lg:z-auto shadow-2xl lg:shadow-none transition-transform duration-300 ease-in-out`}>
-        {/* New Chat Button - Prominent */}
-        <div className="px-3 pt-4 pb-2">
-          <button
-            onClick={handleNewChat}
-            className="w-full py-3 px-4 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-700 text-gray-900 dark:text-white rounded-full hover:bg-gray-50 dark:hover:bg-gray-750 transition-all shadow-sm hover:shadow-md font-medium text-sm flex items-center gap-3"
-          >
-            <Plus className="w-5 h-5" />
-            <p className="flex-1 text-left">New chat</p>
-            <MessageSquare className="w-4 h-4 text-gray-500 dark:text-gray-300" />
-          </button>
-        </div>
-
-        {/* Search Bar */}
-        <div className="px-3 pb-3">
-          <div className="relative">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
-            <input
-              type="text"
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="Search chats..."
-              className="w-full pl-9 pr-8 py-2 text-sm bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-700 rounded-lg text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
-            />
-            {searchQuery && (
-              <button
-                onClick={() => setSearchQuery("")}
-                className="absolute right-2 top-1/2 transform -translate-y-1/2 p-1 hover:bg-gray-200 dark:hover:bg-gray-700 rounded"
-              >
-                <X className="w-3 h-3 text-gray-500" />
-              </button>
-            )}
-          </div>
-        </div>
-
-        {/* Filter Buttons */}
-        <div className="px-3 pb-3 flex gap-2">
-          <button
-            onClick={() => setChatFilter('all')}
-            className={`flex-1 px-3 py-1.5 text-xs font-medium rounded-lg transition-colors ${
-              chatFilter === 'all'
-                ? 'bg-blue-600 text-white'
-                : 'bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-300 dark:hover:bg-gray-600'
-            }`}
-          >
-            All
-          </button>
-          <button
-            onClick={() => setChatFilter('today')}
-            className={`flex-1 px-3 py-1.5 text-xs font-medium rounded-lg transition-colors ${
-              chatFilter === 'today'
-                ? 'bg-blue-600 text-white'
-                : 'bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-300 dark:hover:bg-gray-600'
-            }`}
-          >
-            Today
-          </button>
-          <button
-            onClick={() => setChatFilter('pinned')}
-            className={`flex-1 px-3 py-1.5 text-xs font-medium rounded-lg transition-colors ${
-              chatFilter === 'pinned'
-                ? 'bg-blue-600 text-white'
-                : 'bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-300 dark:hover:bg-gray-600'
-            }`}
-          >
-            Pinned
-          </button>
-        </div>
-
-        {/* Small header for chat list */}
-        <div className="px-3 pb-2">
-          <h3 className="text-xs font-semibold text-gray-500 dark:text-gray-500 uppercase tracking-wide">Chats</h3>
-        </div>
-
-        {/* Navigation List - Chat History */}
-        <div className="flex-1 overflow-y-auto px-2">
-          {/* No results message */}
-          {searchQuery && filteredChatHistory.length === 0 && (
-            <div className="px-3 py-4 text-center text-sm text-gray-500 dark:text-gray-400">
-              No chats found for &ldquo;{searchQuery}&rdquo;
-            </div>
-          )}
-          <div className="space-y-1">
-            {Object.entries(groupChatHistory()).map(([group, chats]) => (
-              chats.length > 0 && (
-                <div key={group} className="mb-3">
-                  {/* Time Group Header */}
-                  <div className="px-3 py-2">
-                    <h3 className="text-xs font-semibold text-gray-500 dark:text-gray-500 uppercase tracking-wide">
-                      {group}
-                    </h3>
-                  </div>
-                  
-                  {/* Chat Items */}
-                  <div className="space-y-0.5">
-                    {chats.map((chat) => (
-                      <div
-                        key={chat.id}
-                        onClick={() => {
-                          if (chat.messages && chat.messages.length) {
-                            const mapped = chat.messages.map((m: any, i: number) => ({
-                              id: `${chat.id}-${i}`,
-                              text: m.text,
-                              sender: (m.sender === 'ai' ? 'ai' : 'user') as 'ai' | 'user',
-                              timestamp: new Date(m.timestamp || new Date()),
-                            }));
-                            setMessages(mapped);
-                          } else {
-                            setMessages([]);
-                          }
-                          setSelectedChatId(chat.id);
-                          setCurrentChatId(chat.id); // Set current chat ID for continuing conversation
-                          setSearchQuery(""); // Clear search when selecting a chat
-                        }}
-                        className={`group relative px-3 py-2.5 mx-1 rounded-lg transition-colors cursor-pointer ${
-                          (selectedChatId === chat.id || currentChatId === chat.id)
-                            ? 'bg-gray-200 dark:bg-gray-800' 
-                            : 'hover:bg-gray-100 dark:hover:bg-gray-800'
-                        }`}
-                      >
-                        <div className="flex items-center gap-2">
-                          <p className="text-sm text-gray-900 dark:text-gray-100 line-clamp-1 flex-1 min-w-0">
-                            {chat.title}
-                          </p>
-                          {/* Dropdown Menu Button */}
-                          <div className="relative flex-shrink-0">
-                            <button
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                setOpenDropdownId(openDropdownId === chat.id ? null : chat.id);
-                              }}
-                              className="p-1.5 hover:bg-gray-300 dark:hover:bg-gray-700 rounded transition-all opacity-0 group-hover:opacity-100"
-                              title="More options"
-                              aria-haspopup="true"
-                              aria-expanded={openDropdownId === chat.id}
-                            >
-                              <svg className="w-4 h-4 text-gray-600 dark:text-gray-400" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" d="M12 5v.01M12 12v.01M12 19v.01" />
-                              </svg>
-                            </button>
-
-                            {/* Dropdown Menu */}
-                            {openDropdownId === chat.id && (
-                              <div className="absolute right-0 top-full mt-1 w-40 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-xl z-[60] overflow-hidden" onClick={(e) => e.stopPropagation()}>
-                                <button
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    togglePin(chat.id);
-                                    setOpenDropdownId(null);
-                                  }}
-                                  className="w-full text-left px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-700 text-sm text-gray-700 dark:text-gray-300 transition-colors flex items-center gap-2"
-                                >
-                                  <svg className={`w-4 h-4 ${chat.pinned ? 'text-yellow-500' : 'text-gray-600 dark:text-gray-400'}`} fill="currentColor" viewBox="0 0 20 20"><path d="M7.05 2.29a1 1 0 011.41 0L10 3.83l1.54-1.54a1 1 0 011.41 1.41L11.41 5.24l1.54 1.54a1 1 0 01-1.41 1.41L10 6.66l-1.54 1.54a1 1 0 01-1.41-1.41l1.54-1.54L6.05 3.7a1 1 0 010-1.41z"/></svg>
-                                  {chat.pinned ? 'Unpin' : 'Pin'}
-                                </button>
-                                <button
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    setSelectedChatId(chat.id);
-                                    setCurrentChatId(chat.id);
-                                    startRename();
-                                    setOpenDropdownId(null);
-                                  }}
-                                  className="w-full text-left px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-700 text-sm text-gray-700 dark:text-gray-300 transition-colors flex items-center gap-2"
-                                >
-                                  <svg className="w-4 h-4 text-gray-600 dark:text-gray-400" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M15.232 5.232l3.536 3.536M9 11l6-6 3 3-6 6H9v-3z"/></svg>
-                                  Rename
-                                </button>
-                                <button
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    handleShare(chat.id);
-                                    setOpenDropdownId(null);
-                                  }}
-                                  className="w-full text-left px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-700 text-sm text-gray-700 dark:text-gray-300 transition-colors flex items-center gap-2"
-                                >
-                                  <svg className="w-4 h-4 text-gray-600 dark:text-gray-400" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg>
-                                  Share
-                                </button>
-                                <button
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    if (!confirm('Delete this chat? This cannot be undone.')) return;
-                                    handleDeleteChat(chat.id);
-                                    setOpenDropdownId(null);
-                                  }}
-                                  className="w-full text-left px-4 py-2 hover:bg-red-50 dark:hover:bg-red-900/40 text-sm text-red-600 dark:text-red-400 transition-colors flex items-center gap-2"
-                                >
-                                  <Trash2 className="w-4 h-4" />
-                                  Delete
-                                </button>
-                              </div>
-                            )}
-                          </div>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )
-            ))}
-          </div>
-        </div>
-
-        {/* Sidebar Footer - Settings (Sticky at bottom) */}
-        <div className="mt-auto sticky bottom-0 bg-white dark:bg-gray-900 border-t border-gray-200 dark:border-gray-800 p-3">
-          <button 
-            onClick={() => {
-              setShowSidebar(false); // Close sidebar first
-              setShowSettingsModal(true);
-            }}
-            className="w-full px-3 py-2.5 text-left text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-800 rounded-lg transition-colors flex items-center gap-3"
-          >
-            <Settings className="w-4 h-4" />
-            Settings
-          </button>
-        </div>
-      </aside>
-
-      {/* Main Chat Area - Right Column */}
-      <div className="flex-1 flex flex-col overflow-hidden">
-        {/* Header - Persistent Hamburger Menu + Title + User Profile */}
-        <header className="p-3 sm:p-4 flex items-center justify-between border-b border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 z-30">
-          <div className="flex items-center gap-2 sm:gap-3">
-            {/* Persistent Hamburger Menu - Always Visible */}
-            <button
-              onClick={() => setShowSidebar(!showSidebar)}
-              className="p-2 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition-colors flex-shrink-0"
-              aria-label="Toggle sidebar"
-              title={showSidebar ? "Close sidebar" : "Open sidebar"}
-            >
-              <Menu className="w-5 h-5 sm:w-6 sm:h-6 text-gray-700 dark:text-gray-300" />
-            </button>
-
-            {/* Quick Theme Toggle */}
-            <button
-              onClick={() => {
-                const newTheme = theme === 'light' ? 'dark' : 'light';
-                setTheme(newTheme);
-                localStorage.setItem('theme', newTheme);
-                document.documentElement.classList.toggle('dark', newTheme === 'dark');
-              }}
-              className="p-2 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition-colors flex-shrink-0"
-              aria-label="Toggle theme"
-              title={theme === 'light' ? "Switch to dark mode" : "Switch to light mode"}
-            >
-              {theme === 'light' ? (
-                <Moon className="w-5 h-5 text-gray-700 dark:text-gray-300" />
-              ) : (
-                <Sun className="w-5 h-5 text-gray-700 dark:text-gray-300" />
-              )}
-            </button>
-
-            {/* Title - Always show on mobile, show on desktop when sidebar collapsed */}
-            <div className="flex items-center gap-2 lg:hidden">
-              <Sparkles className="w-5 h-5 sm:w-6 sm:h-6 text-blue-600" />
-              <h1 className="text-base sm:text-xl font-semibold text-gray-900 dark:text-white">AI Chat</h1>
-            </div>
-            {!showSidebar && (
-              <div className="hidden lg:flex items-center gap-2">
-                <Sparkles className="w-6 h-6 text-blue-600" />
-                <h1 className="text-xl font-semibold text-gray-900 dark:text-white">Chat Assistant</h1>
-              </div>
-            )}
-          </div>
-
-          {/* Simple User Profile Menu */}
-          <div className="relative" ref={profileMenuRef}>
-            {/* For GUEST users - Show Log In / Sign Up buttons */}
-            {!session && (
-              <div className="flex items-center gap-2">
-                <button
-                  onClick={() => {
-                    setAuthMode('login');
-                    setShowSidebar(false);
-                    setShowAuthModal(true);
-                    setAuthError('');
-                  }}
-                  className="px-2 sm:px-4 py-1.5 sm:py-2 text-xs sm:text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
-                >
-                  Log In
-                </button>
-                <button
-                  onClick={() => {
-                    setAuthMode('signup');
-                    setShowSidebar(false);
-                    setShowAuthModal(true);
-                    setAuthError('');
-                  }}
-                  className="px-2 sm:px-4 py-1.5 sm:py-2 text-xs sm:text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-lg transition-colors"
-                >
-                  Sign Up
-                </button>
-              </div>
-            )}
-
-            {/* For LOGGED-IN users - Show Avatar */}
-            {session && (
-              <>
-                <div onClick={() => setShowProfileMenu(!showProfileMenu)} className="cursor-pointer flex-shrink-0">
-                  {session?.user?.image ? (
-                    <img 
-                      src={session.user.image} 
-                      alt={session.user.name || 'User'} 
-                      className="w-8 h-8 sm:w-9 sm:h-9 rounded-full object-cover hover:ring-2 hover:ring-blue-500 transition-all"
-                      title={session.user.name || 'User profile'}
-                      onError={(e) => {
-                        e.currentTarget.style.display = 'none';
-                        e.currentTarget.nextElementSibling?.classList.remove('hidden');
-                      }}
-                    />
-                  ) : null}
-                  <div className={`w-8 h-8 sm:w-9 sm:h-9 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center hover:ring-2 hover:ring-blue-500 transition-all ${session?.user?.image ? 'hidden' : ''}`} title="User profile">
-                    <span className="text-white font-semibold text-xs sm:text-sm">
-                      {getUserInitials()}
-                    </span>
-                  </div>
-                </div>
-
-                {/* Simple Profile Dropdown */}
-                {showProfileMenu && (
-                  <div className="absolute right-0 top-full mt-2 w-64 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-xl z-[70] overflow-hidden">
-                    {/* User Email */}
-                    <div className="p-4 border-b border-gray-200 dark:border-gray-700">
-                      <p className="text-sm text-gray-700 dark:text-gray-300 font-medium truncate">
-                        {session?.user?.email || 'user@example.com'}
-                      </p>
-                    </div>
-
-                    {/* Sign Out Button */}
-                    <div className="p-2">
-                      <button
-                        onClick={() => signOut({ callbackUrl: '/' })}
-                        className="w-full px-4 py-2.5 text-left text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors flex items-center gap-3"
-                      >
-                        <LogOut className="w-4 h-4" />
-                        Sign out
-                      </button>
-                    </div>
-                  </div>
-                )}
-              </>
-            )}
-          </div>
-        </header>
-
+    <MainLayout
+      title="Chat Assistant"
+      onNewChat={handleNewChat}
+      chatHistory={chatHistory}
+      onSelectChat={(chat) => {
+        if (chat.messages && chat.messages.length) {
+          const mapped = chat.messages.map((m: any, i: number) => ({
+            id: `${chat.id}-${i}`,
+            text: m.text,
+            sender: (m.sender === 'ai' ? 'ai' : 'user') as 'ai' | 'user',
+            timestamp: new Date(m.timestamp || new Date()),
+          }));
+          setMessages(mapped);
+        } else {
+          setMessages([]);
+        }
+        setSelectedChatId(chat.id);
+        setCurrentChatId(chat.id);
+      }}
+      onDeleteChat={handleDeleteChat}
+      selectedChatId={selectedChatId || currentChatId}
+      onOpenSettings={() => setShowSettingsModal(true)}
+    >
+      <div className="flex flex-col h-full bg-white dark:bg-gray-900">
         {/* Chat Heading with Options (Gemini-style) - Shows only when messages exist */}
         {(selectedChatId || currentChatId) && messages.length > 0 && (
           <div className="flex items-center justify-between px-8 py-3 border-b border-gray-200 dark:border-gray-800 bg-white/50 dark:bg-gray-900/50 backdrop-blur-sm transition-all duration-300">
@@ -1384,18 +952,18 @@ export default function ChatPage() {
         )}
 
         {/* Conversation View - Messages */}
-        <div className="flex-1 overflow-y-auto p-6 bg-gradient-to-b from-white/50 dark:from-gray-900/30 to-white dark:to-gray-900 transition-all duration-300">
+        <div className="flex-1 overflow-y-auto bg-gradient-to-b from-white/50 dark:from-gray-900/30 to-white dark:to-gray-900 transition-all duration-300">
           {/* Greeting State - ONLY when no messages */}
           {messages.length === 0 && (
-            <div className="flex items-center justify-center h-full animate-fadeIn">
+            <div className="flex items-center justify-center h-full animate-fadeIn px-4">
               <div className="text-center max-w-2xl">
-                <h2 className="text-4xl font-semibold text-gray-900 dark:text-white mb-4">
+                <h2 className="text-3xl sm:text-4xl font-semibold text-gray-900 dark:text-white mb-4">
                   Chat Assistant
                 </h2>
-                <p className="text-lg text-gray-600 dark:text-gray-400 mb-2">
+                <p className="text-base sm:text-lg text-gray-600 dark:text-gray-400 mb-2">
                   Hello, {session?.user?.name?.split(' ')[0] || 'there'}
                 </p>
-                <p className="text-lg text-gray-600 dark:text-gray-400">
+                <p className="text-base sm:text-lg text-gray-600 dark:text-gray-400">
                   How can I help you today?
                 </p>
               </div>
@@ -1404,73 +972,77 @@ export default function ChatPage() {
 
           {/* Conversation State - ONLY when messages exist */}
           {messages.length > 0 && (
-            <div className="max-w-4xl mx-auto space-y-6">
+            <div className="w-full space-y-0">
               {messages.map((message) => (
                 <div
                   key={message.id}
-                  className={`flex gap-4 ${message.sender === 'user' ? 'flex-row-reverse' : 'flex-row'}`}
+                  className={`w-full py-6 px-4 sm:px-6 lg:px-8 ${
+                    message.sender === 'user' 
+                      ? 'bg-transparent' 
+                      : 'bg-gray-50/50 dark:bg-gray-800/20'
+                  } border-b border-gray-100/50 dark:border-gray-800/50`}
                 >
-                  {/* Avatar */}
-                  <div className="flex-shrink-0">
-                    {message.sender === 'user' ? (
-                      session?.user?.image ? (
-                        <img src={session.user.image} alt="User" className="w-10 h-10 rounded-full" />
-                      ) : (
-                        <div className="w-10 h-10 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center">
-                          <span className="text-white font-semibold text-sm">{getUserInitials()}</span>
-                        </div>
-                      )
-                    ) : (
-                      <div className="w-10 h-10 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center">
-                        <Sparkles className="w-5 h-5 text-white" />
-                      </div>
-                    )}
-                  </div>
-
-                  {/* Message Content */}
-                  <div className="flex-1 max-w-3xl group">
-                    <div className={`relative rounded-lg px-4 py-2.5 ${
-                      message.sender === 'user'
-                        ? 'bg-blue-50 dark:bg-gray-800/60 text-gray-900 dark:text-gray-100'
-                        : 'bg-transparent text-gray-900 dark:text-white'
-                    }`}>
-                      {message.sender === 'ai' ? (
-                        <ReactMarkdown className="prose dark:prose-invert max-w-none">
-                          {message.text}
-                        </ReactMarkdown>
-                      ) : (
-                        <p className="whitespace-pre-wrap text-[15px] leading-relaxed">{message.text}</p>
-                      )}
-                      {/* Copy Button */}
-                      <button
-                        onClick={() => handleCopyMessage(message.id, message.text)}
-                        className={`absolute ${message.sender === 'user' ? 'left-2' : 'right-2'} top-1.5 p-1.5 rounded-md opacity-0 group-hover:opacity-100 transition-opacity bg-gray-200/70 dark:bg-gray-700/50 hover:bg-gray-300 dark:hover:bg-gray-600`}
-                        title="Copy message"
-                      >
-                        {copiedMessageId === message.id ? (
-                          <Check className="w-4 h-4 text-green-500" />
+                  <div className="max-w-4xl mx-auto flex gap-3 sm:gap-4">
+                    {/* Avatar */}
+                    <div className="flex-shrink-0">
+                      {message.sender === 'user' ? (
+                        session?.user?.image ? (
+                          <img src={session.user.image} alt="User" className="w-8 h-8 sm:w-10 sm:h-10 rounded-full" />
                         ) : (
-                          <Copy className="w-4 h-4 text-gray-600 dark:text-gray-400" />
-                        )}
-                      </button>
+                          <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center">
+                            <span className="text-white font-semibold text-xs sm:text-sm">{getUserInitials()}</span>
+                          </div>
+                        )
+                      ) : (
+                        <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center">
+                          <Sparkles className="w-4 h-4 sm:w-5 sm:h-5 text-white" />
+                        </div>
+                      )}
                     </div>
-                    <p className="text-xs text-gray-400 dark:text-gray-600 mt-2 px-2">
-                      {message.timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                    </p>
+
+                    {/* Message Content */}
+                    <div className="flex-1 min-w-0 group">
+                      <div className="relative">
+                        {message.sender === 'ai' ? (
+                          <div className="prose prose-sm sm:prose dark:prose-invert max-w-none prose-p:leading-relaxed prose-pre:bg-gray-900 prose-pre:text-gray-100">
+                            <ReactMarkdown>{message.text}</ReactMarkdown>
+                          </div>
+                        ) : (
+                          <p className="whitespace-pre-wrap text-sm sm:text-[15px] leading-relaxed text-gray-900 dark:text-gray-100">{message.text}</p>
+                        )}
+                        {/* Copy Button */}
+                        <button
+                          onClick={() => handleCopyMessage(message.id, message.text)}
+                          className="mt-2 p-1.5 rounded-md opacity-0 group-hover:opacity-100 transition-opacity bg-gray-200/70 dark:bg-gray-700/50 hover:bg-gray-300 dark:hover:bg-gray-600"
+                          title="Copy message"
+                        >
+                          {copiedMessageId === message.id ? (
+                            <Check className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-green-500" />
+                          ) : (
+                            <Copy className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-gray-600 dark:text-gray-400" />
+                          )}
+                        </button>
+                        <p className="text-xs text-gray-400 dark:text-gray-500 mt-2">
+                          {message.timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                        </p>
+                      </div>
+                    </div>
                   </div>
                 </div>
               ))}
               
               {isLoading && (
-                <div className="flex gap-4">
-                  <div className="w-10 h-10 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center flex-shrink-0">
-                    <Sparkles className="w-5 h-5 text-white" />
-                  </div>
-                  <div className="flex-1">
-                    <div className="flex gap-2 px-5 py-3">
-                      <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce"></div>
-                      <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '0.2s' }}></div>
-                      <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '0.4s' }}></div>
+                <div className="w-full py-6 px-4 sm:px-6 lg:px-8 bg-gray-50/50 dark:bg-gray-800/20 border-b border-gray-100/50 dark:border-gray-800/50">
+                  <div className="max-w-4xl mx-auto flex gap-3 sm:gap-4">
+                    <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center flex-shrink-0">
+                      <Sparkles className="w-4 h-4 sm:w-5 sm:h-5 text-white" />
+                    </div>
+                    <div className="flex-1">
+                      <div className="flex gap-2 py-2">
+                        <div className="w-2 h-2 bg-gray-400 dark:bg-gray-500 rounded-full animate-bounce"></div>
+                        <div className="w-2 h-2 bg-gray-400 dark:bg-gray-500 rounded-full animate-bounce" style={{ animationDelay: '0.2s' }}></div>
+                        <div className="w-2 h-2 bg-gray-400 dark:bg-gray-500 rounded-full animate-bounce" style={{ animationDelay: '0.4s' }}></div>
+                      </div>
                     </div>
                   </div>
                 </div>
@@ -1481,8 +1053,8 @@ export default function ChatPage() {
         </div>
 
         {/* Chat Input Bar - Multi-functional (Gemini-style) */}
-        <div className="border-t border-gray-200/50 dark:border-gray-800/50 bg-white/70 dark:bg-gray-900/50 backdrop-blur-sm p-4">
-          <div className="max-w-4xl mx-auto">
+        <div className="border-t border-gray-200/50 dark:border-gray-800/50 bg-white dark:bg-gray-900 p-3 sm:p-4">
+          <div className="max-w-4xl mx-auto px-1 sm:px-0">
             <div className="relative flex items-end gap-2 bg-gray-100/60 dark:bg-gray-800/40 rounded-full border border-gray-300/50 dark:border-gray-700/40 p-2 focus-within:bg-gray-100 dark:focus-within:bg-gray-800/60 focus-within:border-gray-400 dark:focus-within:border-gray-600 transition-all">
               {/* Attachment/Tools Menu */}
               <div className="relative" ref={attachMenuRef}>
@@ -1723,7 +1295,6 @@ export default function ChatPage() {
                   <button
                     onClick={() => {
                       setShowSettingsModal(false);
-                      setShowSidebar(false);
                       setShowFeedbackModal(true);
                     }}
                     className="w-full p-3 bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 rounded-lg transition-colors flex items-center gap-3 text-sm text-gray-700 dark:text-gray-300"
@@ -1908,134 +1479,6 @@ export default function ChatPage() {
       )}
 
       {/* Auth Modal */}
-      {showAuthModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[100] p-4">
-          <div 
-            ref={authModalRef}
-            className="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl w-full max-w-md overflow-hidden"
-          >
-            {/* Modal Header */}
-            <div className="p-6 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between">
-              <h2 className="text-xl font-semibold text-gray-900 dark:text-white">
-                {authMode === 'login' ? 'Log In' : 'Sign Up'}
-              </h2>
-              <button
-                onClick={() => {
-                  setShowAuthModal(false);
-                  setAuthError('');
-                }}
-                className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-full transition-colors"
-                aria-label="Close"
-              >
-                <X className="w-5 h-5" />
-              </button>
-            </div>
-
-            {/* Modal Body */}
-            <form onSubmit={handleAuthSubmit} className="p-6 space-y-4">
-              {authError && (
-                <div className="p-3 bg-red-100 dark:bg-red-900/30 border border-red-300 dark:border-red-700 rounded-lg">
-                  <p className="text-sm text-red-700 dark:text-red-400">{authError}</p>
-                </div>
-              )}
-
-              {authMode === 'signup' && (
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                    Full Name
-                  </label>
-                  <input
-                    type="text"
-                    value={authName}
-                    onChange={(e) => setAuthName(e.target.value)}
-                    placeholder="Your name"
-                    className="w-full px-4 py-2 bg-gray-100 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    required
-                  />
-                </div>
-              )}
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                  Email
-                </label>
-                <input
-                  type="email"
-                  value={authEmail}
-                  onChange={(e) => setAuthEmail(e.target.value)}
-                  placeholder="your.email@example.com"
-                  className="w-full px-4 py-2 bg-gray-100 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  required
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                  Password
-                </label>
-                <input
-                  type="password"
-                  value={authPassword}
-                  onChange={(e) => setAuthPassword(e.target.value)}
-                  placeholder="••••••••"
-                  className="w-full px-4 py-2 bg-gray-100 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  required
-                  minLength={6}
-                />
-              </div>
-
-              <button
-                type="submit"
-                disabled={authLoading}
-                className="w-full px-4 py-2.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors font-medium"
-              >
-                {authLoading ? 'Processing...' : (authMode === 'login' ? 'Log In' : 'Sign Up')}
-              </button>
-
-              <div className="text-center pt-2">
-                <button
-                  type="button"
-                  onClick={() => {
-                    setAuthMode(authMode === 'login' ? 'signup' : 'login');
-                    setAuthError('');
-                    setAuthPassword('');
-                  }}
-                  className="text-sm text-blue-600 dark:text-blue-400 hover:underline"
-                >
-                  {authMode === 'login' ? 'Need an account? Sign Up' : 'Already have an account? Log In'}
-                </button>
-              </div>
-
-              <div className="relative pt-4">
-                <div className="absolute inset-0 flex items-center">
-                  <div className="w-full border-t border-gray-300 dark:border-gray-600"></div>
-                </div>
-                <div className="relative flex justify-center text-sm">
-                  <span className="px-2 bg-white dark:bg-gray-800 text-gray-500 dark:text-gray-400">Or continue with</span>
-                </div>
-              </div>
-
-              <button
-                type="button"
-                onClick={() => signIn('google')}
-                className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors font-medium flex items-center justify-center gap-2"
-              >
-                🔷 Google
-              </button>
-
-              <button
-                type="button"
-                onClick={() => signIn('facebook')}
-                className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors font-medium flex items-center justify-center gap-2"
-              >
-                🔵 Facebook
-              </button>
-            </form>
-          </div>
-        </div>
-      )}
-
-      </div>
-    </LayoutContainer>
+    </MainLayout>
   );
 }
