@@ -2,6 +2,7 @@
 
 import { useSession, signOut, signIn } from "next-auth/react";
 import { useState, useRef, useEffect } from "react";
+import { useSearchParams } from 'next/navigation';
 import { Send, Upload, Sparkles, FileText, Image as ImageIcon, X, Trash2, Plus, Settings, HelpCircle, FolderOpen, Code, Copy, Check, Brain, ToggleLeft, ToggleRight, Moon, Sun, MessageSquare, LogOut } from "lucide-react";
 import ReactMarkdown from "react-markdown";
 import { MainLayout } from "@/components/Layout/MainLayout";
@@ -74,6 +75,44 @@ export default function ChatPage() {
   const headingMenuRef = useRef<HTMLButtonElement | null>(null);
   const [headingMenuOpen, setHeadingMenuOpen] = useState(false);
   const [openDropdownId, setOpenDropdownId] = useState<string | null>(null);
+  const [guestId, setGuestId] = useState<string | null>(null);
+
+  const searchParams = useSearchParams();
+
+  // Format timestamp to local time
+  const formatTimestamp = (timestamp: Date | string) => {
+    const date = typeof timestamp === 'string' ? new Date(timestamp) : timestamp;
+    return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+  };
+
+  // Format date for chat history
+  const formatChatDate = (timestamp: Date | string) => {
+    const date = typeof timestamp === 'string' ? new Date(timestamp) : timestamp;
+    const now = new Date();
+    const diffInMs = now.getTime() - date.getTime();
+    const diffInHours = diffInMs / (1000 * 60 * 60);
+    
+    if (diffInHours < 24) {
+      return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    } else if (diffInHours < 48) {
+      return 'Yesterday';
+    } else if (diffInHours < 168) {
+      return date.toLocaleDateString([], { weekday: 'short' });
+    } else {
+      return date.toLocaleDateString([], { month: 'short', day: 'numeric' });
+    }
+  };
+
+  // Open settings modal when ?openSettings=true is present in URL
+  useEffect(() => {
+    try {
+      if (searchParams?.get('openSettings') === 'true') {
+        setShowSettingsModal(true);
+      }
+    } catch (e) {
+      // ignore
+    }
+  }, [searchParams]);
 
   // Shorthand commands mapping
   const shorthands: { [key: string]: string } = {
@@ -153,6 +192,14 @@ export default function ChatPage() {
 
   // Load theme from localStorage on mount
   useEffect(() => {
+    // Initialize guest ID for non-logged-in users
+    let storedGuestId = localStorage.getItem('guestId');
+    if (!storedGuestId) {
+      storedGuestId = `guest-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+      localStorage.setItem('guestId', storedGuestId);
+    }
+    setGuestId(storedGuestId);
+
     const savedTheme = localStorage.getItem('theme') as 'light' | 'dark' | null;
     const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
     const initialTheme = savedTheme || (prefersDark ? 'dark' : 'light');
@@ -652,19 +699,34 @@ export default function ChatPage() {
     }
   }, [showAttachMenu, showSettingsModal, showFeedbackModal, openDropdownId, headingMenuOpen]);
 
-  // Load history from backend for signed-in user
+  // Load history from backend for signed-in user or guest
   useEffect(() => {
     const load = async () => {
-      if (!session?.user?.email) return;
+      const effectiveUserId = session?.user?.email || guestId;
+      if (!effectiveUserId) {
+        console.log('⚠️ No user session or guest ID yet, skipping history load');
+        return;
+      }
+      
+      const userType = session?.user?.email ? 'logged-in user' : 'guest';
+      console.log(`🔄 Loading chat history for ${userType}:`, effectiveUserId);
+      
       try {
-        const res = await fetch(`/api/history?userId=${encodeURIComponent(session.user.email)}`);
+        const url = session?.user?.email 
+          ? `/api/history?userId=${encodeURIComponent(session.user.email)}`
+          : `/api/history?guestId=${encodeURIComponent(guestId || '')}`;
+        
+        console.log('📡 Fetching from:', url);
+        const res = await fetch(url);
         if (!res.ok) {
           console.error('Failed to fetch history', await res.text());
           return;
         }
         const json = await res.json();
+        console.log('Received history response:', json);
         // Handle both array response and {data: array} response
         const data = Array.isArray(json) ? json : json?.data;
+        console.log('Processed data:', data);
         if (data && data.length > 0) {
           // Map API shape to ChatHistory expected shape
           const mapped = data.map((c: any) => ({
@@ -675,7 +737,11 @@ export default function ChatPage() {
             messages: c.messages || [],
             pinned: c.pinned || false,
           }));
+          console.log('Setting chat history with', mapped.length, 'chats');
           setChatHistory(mapped);
+        } else {
+          console.log('No chat history data received');
+          setChatHistory([]);
         }
       } catch (e) {
         console.error('Error loading history', e);
@@ -683,7 +749,7 @@ export default function ChatPage() {
     };
 
     load();
-  }, [session?.user?.email]);
+  }, [session?.user?.email, guestId]);
 
   const handleSend = async () => {
     if ((!input.trim() && attachedFiles.length === 0) || isLoading) return;
@@ -914,7 +980,6 @@ export default function ChatPage() {
       onShareChat={handleShare}
       selectedChatId={selectedChatId || currentChatId}
       onOpenSettings={() => setShowSettingsModal(true)}
-      isMobile={typeof window !== 'undefined' && window.innerWidth < 1024}
     >
       <div className="flex flex-col h-full bg-white dark:bg-gray-900 relative">
         {/* Chat Heading with Options (Gemini-style) - Shows only when messages exist */}
@@ -1081,7 +1146,7 @@ export default function ChatPage() {
                           )}
                         </button>
                         <p className="text-xs text-gray-400 dark:text-gray-500 mt-2">
-                          {message.timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                          {formatTimestamp(message.timestamp)}
                         </p>
                       </div>
                     </div>

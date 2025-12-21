@@ -11,8 +11,6 @@ CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 -- ============================================
 -- Uncomment these lines if you want to start fresh:
 -- DROP TABLE IF EXISTS feedback CASCADE;
--- DROP TABLE IF EXISTS chat_history CASCADE;
--- DROP TABLE IF EXISTS chat_shares CASCADE;
 -- DROP TABLE IF EXISTS chats CASCADE;
 -- DROP TABLE IF EXISTS users CASCADE;
 
@@ -25,24 +23,20 @@ CREATE TABLE IF NOT EXISTS public.users (
   name TEXT,
   password TEXT,
   image TEXT,
-  provider TEXT DEFAULT 'credentials',
-  created_at TIMESTAMPTZ DEFAULT NOW(),
-  updated_at TIMESTAMPTZ DEFAULT NOW()
+  provider TEXT,
+  created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
 -- ============================================
--- CREATE CHAT_HISTORY TABLE (Main Table)
--- Stores individual chat conversations with prompt/response pairs
+-- CREATE CHATS TABLE
 -- ============================================
-CREATE TABLE IF NOT EXISTS public.chat_history (
+CREATE TABLE IF NOT EXISTS public.chats (
   id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
   user_id TEXT NOT NULL,
-  prompt TEXT NOT NULL,
-  response TEXT NOT NULL,
+  messages JSONB DEFAULT '[]'::jsonb NOT NULL,
   title TEXT,
-  pinned BOOLEAN DEFAULT FALSE,
   is_deleted BOOLEAN DEFAULT FALSE,
-  deleted_at TIMESTAMPTZ,
+  deleted_at TIMESTAMPTZ DEFAULT NULL,
   created_at TIMESTAMPTZ DEFAULT NOW(),
   updated_at TIMESTAMPTZ DEFAULT NOW()
 );
@@ -60,37 +54,13 @@ CREATE TABLE IF NOT EXISTS public.feedback (
 );
 
 -- ============================================
--- CREATE CHAT_SHARES TABLE (for sharing chats)
--- ============================================
-CREATE TABLE IF NOT EXISTS public.chat_shares (
-  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
-  chat_id UUID NOT NULL,
-  token TEXT NOT NULL UNIQUE,
-  created_by TEXT,
-  expires_at TIMESTAMPTZ,
-  created_at TIMESTAMPTZ DEFAULT NOW()
-);
-
--- ============================================
 -- CREATE INDEXES FOR PERFORMANCE
 -- ============================================
--- Users table indexes
 CREATE INDEX IF NOT EXISTS idx_users_email ON public.users(email);
-
--- Chat_history table indexes
-CREATE INDEX IF NOT EXISTS idx_chat_history_user_id ON public.chat_history(user_id);
-CREATE INDEX IF NOT EXISTS idx_chat_history_is_deleted ON public.chat_history(is_deleted);
-CREATE INDEX IF NOT EXISTS idx_chat_history_pinned ON public.chat_history(pinned DESC);
-CREATE INDEX IF NOT EXISTS idx_chat_history_updated_at ON public.chat_history(updated_at DESC);
-CREATE INDEX IF NOT EXISTS idx_chat_history_created_at ON public.chat_history(created_at DESC);
-
--- Feedback table indexes
+CREATE INDEX IF NOT EXISTS idx_chats_user_id ON public.chats(user_id);
+CREATE INDEX IF NOT EXISTS idx_chats_updated_at ON public.chats(updated_at DESC);
 CREATE INDEX IF NOT EXISTS idx_feedback_user_email ON public.feedback(user_email);
 CREATE INDEX IF NOT EXISTS idx_feedback_created_at ON public.feedback(created_at DESC);
-
--- Chat_shares table indexes
-CREATE INDEX IF NOT EXISTS idx_chat_shares_chat_id ON public.chat_shares(chat_id);
-CREATE INDEX IF NOT EXISTS idx_chat_shares_token ON public.chat_shares(token);
 
 -- ============================================
 -- AUTO-UPDATE TIMESTAMP FUNCTION
@@ -104,37 +74,31 @@ END;
 $$ LANGUAGE plpgsql;
 
 -- ============================================
--- CREATE TRIGGERS FOR AUTO-UPDATE TIMESTAMPS
+-- CREATE TRIGGER FOR CHATS
 -- ============================================
--- Trigger for users table
-DROP TRIGGER IF EXISTS set_users_updated_at ON public.users;
-CREATE TRIGGER set_users_updated_at
-  BEFORE UPDATE ON public.users
+DROP TRIGGER IF EXISTS set_updated_at ON public.chats;
+CREATE TRIGGER set_updated_at
+  BEFORE UPDATE ON public.chats
   FOR EACH ROW
   EXECUTE FUNCTION public.update_updated_at();
 
--- Trigger for chat_history table
-DROP TRIGGER IF EXISTS set_chat_history_updated_at ON public.chat_history;
-CREATE TRIGGER set_chat_history_updated_at
-  BEFORE UPDATE ON public.chat_history
-  FOR EACH ROW
-  EXECUTE FUNCTION public.update_updated_at();
+-- Add columns for soft-delete to existing table if missing
+ALTER TABLE public.chats ADD COLUMN IF NOT EXISTS is_deleted BOOLEAN DEFAULT FALSE;
+ALTER TABLE public.chats ADD COLUMN IF NOT EXISTS deleted_at TIMESTAMPTZ DEFAULT NULL;
 
 -- ============================================
 -- ENABLE ROW LEVEL SECURITY (RLS)
 -- ============================================
 ALTER TABLE public.users ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.chat_history ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.chats ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.feedback ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.chat_shares ENABLE ROW LEVEL SECURITY;
 
 -- ============================================
 -- DROP EXISTING POLICIES (if any)
 -- ============================================
 DROP POLICY IF EXISTS "Allow all for users" ON public.users;
-DROP POLICY IF EXISTS "Allow all for chat_history" ON public.chat_history;
+DROP POLICY IF EXISTS "Allow all for chats" ON public.chats;
 DROP POLICY IF EXISTS "Allow all for feedback" ON public.feedback;
-DROP POLICY IF EXISTS "Allow all for chat_shares" ON public.chat_shares;
 
 -- ============================================
 -- CREATE RLS POLICIES (PERMISSIVE FOR NOW)
@@ -146,9 +110,9 @@ CREATE POLICY "Allow all for users"
   USING (true)
   WITH CHECK (true);
 
--- Chat_history table - allow all operations
-CREATE POLICY "Allow all for chat_history"
-  ON public.chat_history
+-- Chats table - allow all operations
+CREATE POLICY "Allow all for chats"
+  ON public.chats
   FOR ALL
   USING (true)
   WITH CHECK (true);
@@ -160,27 +124,29 @@ CREATE POLICY "Allow all for feedback"
   USING (true)
   WITH CHECK (true);
 
--- Chat_shares table - allow all operations
-CREATE POLICY "Allow all for chat_shares"
-  ON public.chat_shares
-  FOR ALL
-  USING (true)
-  WITH CHECK (true);
-
 -- ============================================
 -- VERIFY TABLES WERE CREATED
 -- ============================================
 SELECT 
   table_name,
-  (SELECT COUNT(*) FROM information_schema.columns c WHERE c.table_name = t.table_name AND c.table_schema = 'public') as column_count
+  (SELECT COUNT(*) FROM information_schema.columns WHERE table_name = t.table_name) as column_count
 FROM information_schema.tables t
 WHERE table_schema = 'public' 
-  AND table_name IN ('users', 'chat_history', 'feedback', 'chat_shares')
+  AND table_name IN ('users', 'chats', 'feedback')
 ORDER BY table_name;
 
 -- ============================================
--- SETUP COMPLETE
+-- Table for tokenized share links
 -- ============================================
--- You should see 4 tables: users, chat_history, feedback, chat_shares
--- chat_shares enables sharing chat conversations via unique links
+CREATE TABLE IF NOT EXISTS public.chat_shares (
+  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  chat_id UUID NOT NULL,
+  token TEXT NOT NULL,
+  created_by TEXT,
+  expires_at TIMESTAMPTZ,
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS idx_chat_shares_chat_id ON public.chat_shares(chat_id);
+CREATE INDEX IF NOT EXISTS idx_chat_shares_token ON public.chat_shares(token);
 

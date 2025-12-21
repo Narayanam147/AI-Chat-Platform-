@@ -234,23 +234,25 @@ export async function POST(request: NextRequest) {
 
     let savedChatId = chatId;
 
-    // Save to database if userId is provided
-    if (userId) {
-      try {
-        // Always create a new chat_history entry for each prompt/response pair
-        const newChat = await ChatModel.create({
-          user_id: userId,
-          prompt: prompt,
-          response: aiResponse,
-          title: prompt.substring(0, 50) + (prompt.length > 50 ? '...' : ''),
-        });
-        savedChatId = newChat?.id || null;
-        console.log('✅ Chat history saved:', savedChatId);
+    // Save to database for all users (logged in or guest)
+    try {
+      // Use email for logged-in users, or generate guest ID from request
+      const guestId = request.headers.get('x-guest-id') || `guest-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+      const effectiveUserId = userId || guestId;
+      
+      // Create a new chat_history entry for each prompt/response pair
+      const newChat = await ChatModel.create({
+        user_id: effectiveUserId,
+        prompt: prompt,
+        response: aiResponse,
+        title: prompt.substring(0, 50) + (prompt.length > 50 ? '...' : ''),
+      });
+      savedChatId = newChat?.id || null;
+      console.log('✅ Chat history saved:', savedChatId, 'for user:', effectiveUserId);
         
-      } catch (dbError) {
-        console.error('❌ Supabase save error:', dbError);
-        console.log('💡 To enable chat history: Configure Supabase connection');
-      }
+    } catch (dbError) {
+      console.error('❌ Supabase save error:', dbError);
+      console.log('💡 To enable chat history: Configure Supabase connection');
     }
 
     return NextResponse.json({ response: aiResponse, chatId: savedChatId });

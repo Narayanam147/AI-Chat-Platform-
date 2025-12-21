@@ -21,7 +21,7 @@ export async function POST(request: NextRequest) {
 
     // Verify ownership (if user_id is set) before performing admin soft-delete
     const { data: existing, error: fetchErr } = await supabaseAdmin
-      .from('chat_history')
+      .from('chats')
       .select('user_id')
       .eq('id', id)
       .single();
@@ -37,7 +37,7 @@ export async function POST(request: NextRequest) {
     }
 
     const { data, error } = await supabaseAdmin
-      .from('chat_history')
+      .from('chats')
       .update({ is_deleted: true, deleted_at: new Date().toISOString() })
       .eq('id', id)
       .select()

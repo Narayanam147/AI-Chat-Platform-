@@ -17,7 +17,6 @@ interface MainLayoutProps {
   onShareChat?: (chatId: string) => void;
   selectedChatId?: string | null;
   onOpenSettings?: () => void;
-  isMobile?: boolean;
 }
 
 export function MainLayout({ 
@@ -32,7 +31,6 @@ export function MainLayout({
   onShareChat,
   selectedChatId,
   onOpenSettings,
-  isMobile: isMobileProp
 }: MainLayoutProps) {
   const { data: session } = useSession();
   const [isSidebarOpen, setIsSidebarOpen] = useState(true); // Default open on desktop, will adjust for mobile
@@ -46,28 +44,9 @@ export function MainLayout({
   const [authLoading, setAuthLoading] = useState(false);
   const [authError, setAuthError] = useState('');
   const [searchQuery, setSearchQuery] = useState('');
-  const [isMobileState, setIsMobileState] = useState(false);
   
   const profileMenuRef = useRef<HTMLDivElement>(null);
   const authModalRef = useRef<HTMLDivElement>(null);
-
-  // Use prop if provided, otherwise use state
-  const isMobile = isMobileProp !== undefined ? isMobileProp : isMobileState;
-
-  // Detect mobile and set initial sidebar state
-  useEffect(() => {
-    const checkMobile = () => {
-      const mobile = window.innerWidth < 1024;
-      setIsMobileState(mobile);
-      // On mobile, sidebar should start closed
-      if (mobile) {
-        setIsSidebarOpen(false);
-      }
-    };
-    checkMobile();
-    window.addEventListener('resize', checkMobile);
-    return () => window.removeEventListener('resize', checkMobile);
-  }, []);
 
   // Load theme
   useEffect(() => {
@@ -261,45 +240,41 @@ export function MainLayout({
 
       {/* Main Content Area */}
       <div className="flex-1 flex overflow-hidden relative">
-        {/* Mobile Overlay - Click to close sidebar - MUST be below sidebar z-index */}
-        {isMobile && isSidebarOpen && (
+        {/* Overlay - Click to close sidebar */}
+        {isSidebarOpen && (
           <div 
-            className="fixed inset-0 bg-black/60 z-[70] transition-opacity duration-300" 
+            className="fixed inset-0 bg-black/60 z-50 lg:hidden" 
             onClick={() => setIsSidebarOpen(false)}
             aria-label="Close sidebar overlay"
           />
         )}
 
-        {/* Sidebar - Above overlay (z-80) but below top navbar (z-100) */}
+        {/* Sidebar */}
         <aside
           className={`
-            ${isMobile ? 'fixed inset-y-0 left-0 top-[57px]' : 'relative flex-shrink-0'}
-            z-[80]
-            h-full
+            fixed lg:relative inset-y-0 left-0 top-[57px] lg:top-0
+            z-[60]
+            w-64
             bg-white dark:bg-gray-900
             border-r border-gray-200 dark:border-gray-800
-            transition-all duration-300 ease-in-out
-            ${isMobile 
-              ? isSidebarOpen ? 'translate-x-0 w-72' : '-translate-x-full w-72'
-              : isSidebarOpen ? 'w-64' : 'w-0'
-            }
-            ${isMobile && isSidebarOpen && 'shadow-2xl'}
+            transition-transform duration-300
+            ${isSidebarOpen ? 'translate-x-0' : '-translate-x-full'}
+            lg:translate-x-0
+            shadow-xl lg:shadow-none
             overflow-hidden
           `}
         >
-          <div className={`h-full flex flex-col ${!isSidebarOpen && !isMobile ? 'invisible w-0' : 'visible'}`}>
+          <div className="h-full flex flex-col">
             {/* Sidebar Header */}
             <div className="flex-shrink-0 p-4 border-b border-gray-200 dark:border-gray-800 flex items-center justify-between bg-white dark:bg-gray-900">
               <h2 className="text-lg font-semibold text-gray-900 dark:text-white">Chats</h2>
-              {isMobile && (
-                <button
-                  onClick={() => setIsSidebarOpen(false)}
-                  className="p-1.5 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-md transition-colors touch-manipulation"
-                  aria-label="Close sidebar"
-                >
-                  <X className="w-5 h-5 text-gray-500 dark:text-gray-400" />
-                </button>
-              )}
+              <button
+                onClick={() => setIsSidebarOpen(false)}
+                className="lg:hidden p-1.5 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-md transition-colors"
+                aria-label="Close sidebar"
+              >
+                <X className="w-5 h-5 text-gray-500 dark:text-gray-400" />
+              </button>
             </div>
 
             {/* New Chat Button */}
@@ -307,9 +282,9 @@ export function MainLayout({
               <button
                 onClick={() => {
                   onNewChat?.();
-                  if (isMobile) setIsSidebarOpen(false);
+                  setIsSidebarOpen(false);
                 }}
-                className="w-full py-3 px-4 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors font-medium text-sm flex items-center justify-center gap-3 shadow-sm touch-manipulation"
+                className="w-full py-3 px-4 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors font-medium text-sm flex items-center justify-center gap-3 shadow-sm"
               >
                 <Plus className="w-5 h-5" />
                 New Chat
@@ -338,7 +313,14 @@ export function MainLayout({
             {/* Chat History */}
             <div className="flex-1 overflow-y-auto overflow-x-hidden px-2 scroll-smooth">
               {filteredHistory.length === 0 ? (
-                <div className="p-4 text-center text-gray-500 text-sm">No chats yet</div>
+                <div className="p-4 text-center">
+                  <p className="text-gray-500 dark:text-gray-400 text-sm mb-2">No chats yet</p>
+                  {!session && (
+                    <p className="text-xs text-gray-400 dark:text-gray-500">
+                      Your chats will be saved automatically
+                    </p>
+                  )}
+                </div>
               ) : (
                 <div className="space-y-1">
                   {filteredHistory.map((chat) => (
@@ -346,7 +328,7 @@ export function MainLayout({
                       key={chat.id}
                       onClick={() => {
                         onSelectChat?.(chat);
-                        if (isMobile) setIsSidebarOpen(false);
+                        setIsSidebarOpen(false);
                       }}
                       className={`group relative px-3 py-2.5 rounded-lg transition-colors cursor-pointer ${
                         selectedChatId === chat.id ? 'bg-gray-200 dark:bg-gray-800' : 'hover:bg-gray-100 dark:hover:bg-gray-800'
@@ -361,19 +343,10 @@ export function MainLayout({
                           <ChatHistoryDropdown
                             chatId={chat.id}
                             isPinned={chat.pinned}
-                            onPin={(id) => {
-                              onPinChat?.(id);
-                              if (isMobile) setIsSidebarOpen(false);
-                            }}
-                            onRename={(id) => {
-                              onRenameChat?.(id);
-                            }}
-                            onShare={(id) => {
-                              onShareChat?.(id);
-                            }}
-                            onDelete={(id) => {
-                              onDeleteChat?.(id);
-                            }}
+                            onPin={(id) => onPinChat?.(id)}
+                            onRename={(id) => onRenameChat?.(id)}
+                            onShare={(id) => onShareChat?.(id)}
+                            onDelete={(id) => onDeleteChat?.(id)}
                           />
                         </div>
                       </div>
@@ -388,9 +361,9 @@ export function MainLayout({
               <button
                 onClick={() => { 
                   onOpenSettings?.(); 
-                  if (isMobile) setIsSidebarOpen(false); 
+                  setIsSidebarOpen(false); 
                 }}
-                className="w-full px-3 py-2.5 text-left text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition-colors flex items-center gap-3 touch-manipulation active:bg-gray-200 dark:active:bg-gray-700"
+                className="w-full px-3 py-2.5 text-left text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition-colors flex items-center gap-3"
               >
                 <Settings className="w-5 h-5" />
                 <span>Settings</span>
@@ -400,7 +373,7 @@ export function MainLayout({
         </aside>
 
         {/* Main Content - Expands to 100% when sidebar closes on desktop */}
-        <main className="flex-1 min-w-0 overflow-hidden bg-white dark:bg-gray-900 transition-all duration-300">
+        <main className="flex-1 min-w-0 overflow-auto bg-white dark:bg-gray-900 transition-all duration-300">
           {children}
         </main>
       </div>
