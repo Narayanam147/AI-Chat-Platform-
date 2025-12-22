@@ -247,6 +247,7 @@ export function MainLayout({
                         <Pin className={`w-4 h-4 ${isSelectedPinned ? 'text-yellow-500 dark:text-yellow-400' : 'text-gray-700 dark:text-gray-300'}`} />
                         <span className="text-sm text-gray-700 dark:text-gray-200">{isSelectedPinned ? 'Unpin' : 'Pin'}</span>
                       </button>
+                      
                       <button onClick={(e) => { e.stopPropagation(); onRenameChat?.(selectedChatId); setShowActionsMenu(false); }} className="w-full text-left px-3 py-2 hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-2">
                         <Edit3 className="w-4 h-4 text-gray-700 dark:text-gray-300" />
                         <span className="text-sm text-gray-700 dark:text-gray-200">Rename</span>
