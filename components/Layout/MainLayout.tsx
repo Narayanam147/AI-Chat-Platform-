@@ -1,5 +1,6 @@
 'use client';
 
+import Image from 'next/image';
 import React, { ReactNode, useState, useEffect, useRef } from 'react';
 import { useSession, signOut, signIn } from 'next-auth/react';
 import { Menu, Moon, Sun, Sparkles, LogOut, Settings, Plus, MessageSquare, Search, X, Trash2 } from 'lucide-react';
@@ -240,7 +241,7 @@ export function MainLayout({
                 className="cursor-pointer touch-manipulation"
               >
                 {session?.user?.image ? (
-                  <img src={session.user.image} alt="User" className="w-9 h-9 rounded-full object-cover hover:ring-2 hover:ring-blue-500 transition-all" />
+                  <Image src={session.user.image} alt="User" width={36} height={36} className="w-9 h-9 rounded-full object-cover hover:ring-2 hover:ring-blue-500 transition-all" />
                 ) : (
                   <div className="w-9 h-9 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center hover:ring-2 hover:ring-blue-500 transition-all">
                     <span className="text-white font-semibold text-sm">{getUserInitials()}</span>

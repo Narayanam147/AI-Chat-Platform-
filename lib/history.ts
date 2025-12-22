@@ -135,4 +135,5 @@ export async function softDeleteHistory(id: string, userId?: string | null): Pro
 	}
 }
 
-export default { saveHistoryEntry, fetchHistoryForUser, softDeleteHistory };
+const history = { saveHistoryEntry, fetchHistoryForUser, softDeleteHistory };
+export default history;
