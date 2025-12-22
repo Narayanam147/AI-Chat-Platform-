@@ -25,6 +25,17 @@ interface ChatHistory {
   pinned?: boolean;
 }
 
+interface UserActivity {
+  topics: string[];
+  preferredStyle: string;
+  recentQueries: string[];
+  interactionCount: number;
+  writingStyle: string;
+  preferredLength: string;
+  expertise: { [key: string]: number };
+  conversationPatterns: string[];
+}
+
 export default function ChatClientPage() {
     const { data: session } = useSession();
     // Simple admin check (add your admin email(s) here)
@@ -49,7 +60,7 @@ export default function ChatClientPage() {
   const [renameValue, setRenameValue] = useState('');
   const renameInputRef = useRef<HTMLInputElement>(null);
   const [searchQuery, setSearchQuery] = useState("");
-  const [userActivity, setUserActivity] = useState({
+  const [userActivity, setUserActivity] = useState<UserActivity>({
     topics: [],
     preferredStyle: 'balanced',
     recentQueries: [],
