@@ -2,6 +2,7 @@
 
 import { useSession, signOut, signIn } from "next-auth/react";
 import { useState, useRef, useEffect } from "react";
+import { useSearchParams } from 'next/navigation';
 import { Send, Upload, Sparkles, FileText, Image as ImageIcon, X, Trash2, Plus, Settings, HelpCircle, FolderOpen, Code, Copy, Check, Brain, ToggleLeft, ToggleRight, Moon, Sun, MessageSquare, LogOut } from "lucide-react";
 import ReactMarkdown from "react-markdown";
 import { MainLayout } from "@/components/Layout/MainLayout";
@@ -33,6 +34,7 @@ export default function ChatPage() {
   const [isLoading, setIsLoading] = useState(false);
   const [chatHistory, setChatHistory] = useState<ChatHistory[]>([]);
   const [selectedChatId, setSelectedChatId] = useState<string | null>(null);
+  const [activeTitle, setActiveTitle] = useState<string | null>(null);
   const [showAttachMenu, setShowAttachMenu] = useState(false);
   const [showSettingsModal, setShowSettingsModal] = useState(false);
   const [showFeedbackModal, setShowFeedbackModal] = useState(false);
@@ -71,8 +73,6 @@ export default function ChatPage() {
   const attachMenuRef = useRef<HTMLDivElement>(null);
   const settingsModalRef = useRef<HTMLDivElement>(null);
   const feedbackModalRef = useRef<HTMLDivElement>(null);
-  const headingMenuRef = useRef<HTMLButtonElement | null>(null);
-  const [headingMenuOpen, setHeadingMenuOpen] = useState(false);
   const [openDropdownId, setOpenDropdownId] = useState<string | null>(null);
   const [mounted, setMounted] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
@@ -398,6 +398,7 @@ export default function ChatPage() {
     setInput("");
     setSelectedChatId(null);
     setCurrentChatId(null); // Clear current chat ID to start fresh conversation
+    setActiveTitle(null);
   };
 
   const handleDeleteChat = async (chatId: string) => {
@@ -458,12 +459,28 @@ export default function ChatPage() {
     setTimeout(() => renameInputRef.current?.focus(), 50);
   };
 
+  // Handle rename requests coming from header or sidebar (may include an id)
+  const handleRenameRequest = (id?: string) => {
+    if (id) {
+      // ensure the chat is selected so renaming applies to correct chat
+      setSelectedChatId(id);
+      setCurrentChatId(id);
+      const title = chatHistory.find(c => c.id === id)?.title || '';
+      setRenameValue(title);
+      setRenameMode(true);
+      setTimeout(() => renameInputRef.current?.focus(), 50);
+      return;
+    }
+    startRename();
+  };
+
   const saveRename = async () => {
     const id = selectedChatId || currentChatId;
     if (!id) return;
     const title = renameValue.trim() || 'Untitled Chat';
     setChatHistory(prev => prev.map(c => c.id === id ? { ...c, title } : c));
     setRenameMode(false);
+    setActiveTitle(title);
     await persistChatTitle(id, title);
   };
 
@@ -654,14 +671,13 @@ export default function ChatPage() {
       }
       // Close dropdown menus when clicking outside
       setOpenDropdownId(null);
-      setHeadingMenuOpen(false);
     };
 
-    if (showAttachMenu || showSettingsModal || showFeedbackModal || openDropdownId || headingMenuOpen) {
+    if (showAttachMenu || showSettingsModal || showFeedbackModal || openDropdownId) {
       document.addEventListener('mousedown', handleClickOutside);
       return () => document.removeEventListener('mousedown', handleClickOutside);
     }
-  }, [showAttachMenu, showSettingsModal, showFeedbackModal, openDropdownId, headingMenuOpen]);
+  }, [showAttachMenu, showSettingsModal, showFeedbackModal, openDropdownId]);
 
   // Load history from backend for signed-in user
   useEffect(() => {
@@ -695,6 +711,74 @@ export default function ChatPage() {
 
     load();
   }, [session?.user?.email]);
+
+  // Handle shared links like /chat?chatId=... — load that chat if present
+  const searchParams = useSearchParams();
+  useEffect(() => {
+    const sharedId = searchParams?.get?.('chatId');
+    if (!sharedId) return;
+
+    // If chat already loaded in history, select it
+    const existing = chatHistory.find(c => String(c.id) === String(sharedId));
+    if (existing) {
+      setSelectedChatId(existing.id);
+      setCurrentChatId(existing.id);
+      setActiveTitle(existing.title || null);
+      if (existing.messages && existing.messages.length) {
+        const mapped = existing.messages.map((m: any, i: number) => ({
+          id: `${existing.id}-${i}`,
+          text: m.text,
+            sender: (m.sender === 'ai' ? 'ai' : 'user') as 'ai' | 'user',
+          timestamp: new Date(m.timestamp || new Date()),
+        }));
+        setMessages(mapped);
+      } else {
+        setMessages([]);
+      }
+      return;
+    }
+
+    // Otherwise fetch the chat by id from the backend
+    (async () => {
+      try {
+        const res = await fetch(`/api/history/${encodeURIComponent(sharedId)}`);
+        if (!res.ok) {
+          console.warn('Shared chat not found:', sharedId);
+          return;
+        }
+        const c = await res.json();
+        const mappedMessages = (c.messages || []).map((m: any, i: number) => ({
+          id: `${c.id}-${i}`,
+          text: m.text,
+          sender: (m.sender === 'ai' ? 'ai' : 'user') as 'ai' | 'user',
+          timestamp: new Date(m.timestamp || new Date()),
+        }));
+
+        // Add to local history if not present
+        setChatHistory(prev => {
+          const exists = prev.some(p => String(p.id) === String(c.id));
+          if (exists) return prev;
+          const newEntry = {
+            id: String(c.id),
+            title: c.title || 'Untitled Chat',
+            timestamp: c.lastMessageAt ? new Date(c.lastMessageAt) : new Date(),
+            preview: c.snippet || (mappedMessages[0]?.text?.slice(0, 100) || ''),
+            messages: c.messages || [],
+            pinned: c.pinned || false,
+          };
+          return [newEntry, ...prev];
+        });
+
+        setSelectedChatId(String(c.id));
+        setCurrentChatId(String(c.id));
+        setActiveTitle(c.title || null);
+        setMessages(mappedMessages);
+      } catch (e) {
+        console.error('Error loading shared chat', e);
+      }
+    })();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [searchParams, chatHistory]);
 
   const handleSend = async () => {
     if ((!input.trim() && attachedFiles.length === 0) || isLoading) return;
@@ -885,10 +969,11 @@ export default function ChatPage() {
 
     return (
     <MainLayout
-      title="Ace"
-      onNewChat={handleNewChat}
-      chatHistory={chatHistory}
-      onSelectChat={(chat) => {
+    title="Ace"
+    activeTitle={activeTitle}
+    onNewChat={handleNewChat}
+    chatHistory={chatHistory}
+    onSelectChat={(chat) => {
         if (chat.messages && chat.messages.length) {
           const mapped = chat.messages.map((m: any, i: number) => ({
             id: `${chat.id}-${i}`,
@@ -902,155 +987,51 @@ export default function ChatPage() {
         }
         setSelectedChatId(chat.id);
         setCurrentChatId(chat.id);
+        setActiveTitle(chat.title || null);
       }}
       onDeleteChat={handleDeleteChat}
       onPinChat={togglePin}
-      onRenameChat={startRename}
+      onRenameChat={handleRenameRequest}
       onShareChat={handleShare}
         selectedChatId={selectedChatId || currentChatId}
       onOpenSettings={() => setShowSettingsModal(true)}
         isMobile={isMobile}
     >
       <div className="flex flex-col h-full bg-white dark:bg-gray-900 relative">
-        {/* Chat Heading with Options (Gemini-style) - Shows only when messages exist */}
-        {(selectedChatId || currentChatId) && messages.length > 0 && (
-          <div className="sticky top-0 flex items-center justify-between px-4 sm:px-8 py-3 border-b border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 backdrop-blur-sm transition-all duration-300 z-[30] shadow-sm">
-            <div className="flex items-center gap-3 flex-1 min-w-0">
-              {!renameMode ? (
-                <h2 className="text-sm font-medium text-gray-700 dark:text-gray-200 max-w-xs sm:max-w-2xl truncate">
-                  {chatHistory.find((c) => c.id === (selectedChatId || currentChatId))?.title || 'New chat'}
-                </h2>
-              ) : (
-                <input
-                  ref={renameInputRef}
-                  className="text-sm font-medium bg-transparent outline-none border-b border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-200 max-w-xs sm:max-w-2xl"
-                  value={renameValue}
-                  onChange={(e) => setRenameValue(e.target.value)}
-                  onBlur={saveRename}
-                  onKeyDown={(e) => {
-                    if (e.key === 'Enter') saveRename();
-                    if (e.key === 'Escape') cancelRename();
-                  }}
-                  aria-label="Rename chat"
-                />
-              )}
-            </div>
-            <div className="relative flex-shrink-0">
-              <button
-                onClick={(e) => {
-                  e.stopPropagation();
-                  setHeadingMenuOpen(v => !v);
-                }}
-                aria-haspopup="true"
-                aria-expanded={headingMenuOpen}
-                ref={headingMenuRef}
-                className="p-2 rounded hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors touch-manipulation"
-                title="Open actions"
-              >
-                <svg className="w-5 h-5 text-gray-600 dark:text-gray-400" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24" aria-hidden>
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M12 5v.01M12 12v.01M12 19v.01" />
-                </svg>
-              </button>
-
-              {headingMenuOpen && (
-                <div className="absolute right-0 top-full mt-2 w-48 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-2xl z-[40] overflow-hidden pointer-events-auto">
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      const id = selectedChatId || currentChatId;
-                      if (!id) return;
-                      togglePin(id);
-                      setHeadingMenuOpen(false);
-                    }}
-                    className="w-full text-left px-4 py-3 text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors touch-manipulation active:bg-gray-200 dark:active:bg-gray-600"
-                  >
-                    {chatHistory.find(c => c.id === (selectedChatId || currentChatId))?.pinned ? 'Unpin' : 'Pin'}
-                  </button>
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      startRename();
-                      setHeadingMenuOpen(false);
-                    }}
-                    className="w-full text-left px-4 py-3 text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors touch-manipulation active:bg-gray-200 dark:active:bg-gray-600"
-                  >
-                    Rename
-                  </button>
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      handleShare(selectedChatId || currentChatId || undefined);
-                      setHeadingMenuOpen(false);
-                    }}
-                    className="w-full text-left px-4 py-3 text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors touch-manipulation active:bg-gray-200 dark:active:bg-gray-600"
-                  >
-                    Share
-                  </button>
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      const id = selectedChatId || currentChatId;
-                      if (!id) return;
-                      setHeadingMenuOpen(false);
-                      handleDeleteChat(id);
-                    }}
-                    className="w-full text-left px-4 py-3 text-red-600 dark:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/40 transition-colors touch-manipulation active:bg-red-100 dark:active:bg-red-900/60"
-                  >
-                    Delete
-                  </button>
-                </div>
-              )}
-            </div>
-          </div>
-        )}
+        {/* (Removed in-chat sticky header; top navbar now shows title and actions) */}
 
         {/* Conversation View - Messages */}
-        <div className={messages.length === 0 ? "flex-1 overflow-hidden bg-gradient-to-b from-white/50 dark:from-gray-900/30 to-white dark:to-gray-900 transition-all duration-300" : "flex-1 overflow-y-auto overflow-x-hidden bg-gradient-to-b from-white/50 dark:from-gray-900/30 to-white dark:to-gray-900 transition-all duration-300 scroll-smooth"}>
-          {/* Greeting State - ONLY when no messages */}
+        <div className="flex-1 overflow-y-auto overflow-x-hidden bg-gradient-to-b from-white/50 dark:from-gray-900/30 to-white dark:to-gray-900 transition-all duration-300 scroll-smooth">
+          {/* Greeting State - ONLY when no messages: Gemini-style centered input */}
           {messages.length === 0 && (
             <div className="flex items-center justify-center h-full animate-fadeIn px-4 py-8">
-              <div className="text-center max-w-2xl">
-                <h2 className="text-2xl sm:text-4xl font-semibold text-gray-900 dark:text-white mb-4">
-                  Ace
-                </h2>
-                <p className="text-sm sm:text-lg text-gray-600 dark:text-gray-400 mb-2">
-                  Hello, {session?.user?.name?.split(' ')[0] || 'there'}
-                </p>
-                <p className="text-sm sm:text-lg text-gray-600 dark:text-gray-400 mb-6">
-                  How can I help you today?
-                </p>
+              <div className="w-full max-w-2xl px-4">
+                <div className="mx-auto text-center mb-6 space-y-4">
+                  <h2 className="text-2xl sm:text-4xl font-semibold text-gray-900 dark:text-white">Hello, sara</h2>
+                  <p className="text-lg text-gray-700 dark:text-gray-300">How can I help you today?</p>
 
-                {/* Centered initial input (Gemini-style) */}
-                <div className="mt-6">
-                  <div className="mx-auto w-full max-w-4xl">
-                    <div className="relative bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-3xl p-6 shadow-lg">
+                  <form onSubmit={(e) => { e.preventDefault(); handleSend(); }} className="w-full mt-4">
+                    <div className="relative">
                       <textarea
                         value={input}
                         onChange={(e) => setInput(e.target.value)}
-                        onKeyDown={(e) => {
-                          if (e.key === 'Enter' && !e.shiftKey) {
-                            e.preventDefault();
-                            handleSend();
-                          }
-                        }}
                         placeholder="Ask Ace"
-                        className="w-full resize-none bg-transparent outline-none text-center text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 text-2xl md:text-3xl leading-tight min-h-[64px] max-h-[220px] px-2"
-                        rows={1}
+                        className="w-full bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-2xl p-4 pr-16 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 text-lg sm:text-xl resize-none focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        rows={3}
                         disabled={isLoading}
-                        style={{ height: 'auto', overflowY: input.split('\n').length > 3 ? 'auto' : 'hidden' }}
                       />
-                      <div className="absolute right-4 bottom-4">
-                        <button
-                          onClick={handleSend}
-                          disabled={isLoading || !input.trim()}
-                          className="w-11 h-11 flex items-center justify-center bg-blue-600 hover:bg-blue-700 text-white rounded-full disabled:bg-gray-400 disabled:cursor-not-allowed shadow-md"
-                        >
-                          <Send className="w-5 h-5" />
-                        </button>
-                      </div>
+
+                      <button
+                        type="submit"
+                        disabled={isLoading || !input.trim()}
+                        aria-label="Send message"
+                        className={`absolute right-3 bottom-3 w-12 h-12 rounded-full flex items-center justify-center shadow-lg transition-transform ${isLoading || !input.trim() ? 'bg-gray-300/60 dark:bg-gray-700/60 cursor-not-allowed opacity-60' : 'bg-gray-300 dark:bg-gray-700 hover:scale-105'}`}
+                      >
+                        <Send className="w-5 h-5 text-white" />
+                      </button>
                     </div>
-                    <p className="text-sm text-gray-500 dark:text-gray-400 mt-4">AI can make mistakes. Verify important information.</p>
-                  </div>
+                    <p className="text-xs text-gray-500 dark:text-gray-400 text-center mt-3">AI can make mistakes. Verify important information.</p>
+                  </form>
                 </div>
               </div>
             </div>
@@ -1138,19 +1119,18 @@ export default function ChatPage() {
           )}
         </div>
 
-        {/* Chat Input Bar - Multi-functional (Gemini-style) - show only when messages exist */}
-        {messages.length > 0 && (
-          <div className="sticky bottom-0 z-20 border-t border-gray-200/50 dark:border-gray-800/50 bg-white dark:bg-gray-900 p-2 sm:p-3">
+        {/* Chat Input Bar - Multi-functional (Gemini-style) - hidden on empty state */}
+        <div className={`${messages.length === 0 ? 'hidden' : ''} border-t border-gray-200/50 dark:border-gray-800/50 bg-white dark:bg-gray-900 p-3`}>
           <div className="max-w-4xl mx-auto px-1 sm:px-0">
-            <div className="relative flex items-end gap-2 bg-gray-100/60 dark:bg-gray-800/40 rounded-full border border-gray-300/50 dark:border-gray-700/40 p-2 focus-within:bg-gray-100 dark:focus-within:bg-gray-800/60 focus-within:border-gray-400 dark:focus-within:border-gray-600 transition-all">
+            <div className="relative flex items-center gap-3 bg-white dark:bg-gray-900 rounded-full border border-gray-200 dark:border-gray-800 p-3 shadow-sm transition-all">
               {/* Attachment/Tools Menu */}
               <div className="relative" ref={attachMenuRef}>
                 <button
                   onClick={() => setShowAttachMenu(!showAttachMenu)}
-                  className="p-2.5 hover:bg-gray-200/60 dark:hover:bg-gray-700/40 rounded-full transition-colors"
+                  className="p-2 hover:bg-gray-100 dark:hover:bg-gray-800/40 rounded-full transition-colors"
                   title="Add attachments"
                 >
-                  <Plus className="w-5 h-5 text-gray-600 dark:text-gray-400" />
+                  <Plus className="w-4 h-4 text-gray-600 dark:text-gray-400" />
                 </button>
 
                 {showAttachMenu && (
@@ -1212,34 +1192,37 @@ export default function ChatPage() {
               )}
 
               {/* Text Input Field */}
-              <textarea
-                value={input}
-                onChange={(e) => setInput(e.target.value)}
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter' && !e.shiftKey) {
-                    e.preventDefault();
-                    handleSend();
-                  }
-                }}
-                placeholder="Ask Ace"
-                className="flex-1 px-3 py-2.5 bg-transparent border-none focus:outline-none resize-none text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 text-[15px] min-h-[40px] max-h-[200px]"
-                rows={1}
-                disabled={isLoading}
-                style={{
-                  height: 'auto',
-                  overflowY: input.split('\n').length > 3 ? 'auto' : 'hidden'
-                }}
-              />
+              <div className="relative flex-1">
+                <textarea
+                  value={input}
+                  onChange={(e) => setInput(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' && !e.shiftKey) {
+                      e.preventDefault();
+                      handleSend();
+                    }
+                  }}
+                  placeholder="Ask Ace"
+                  className="w-full px-4 py-2 pr-14 bg-transparent border-none focus:outline-none resize-none text-[15px] text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 min-h-[42px] max-h-[200px]"
+                  rows={1}
+                  disabled={isLoading}
+                  style={{
+                    height: 'auto',
+                    overflowY: input.split('\n').length > 4 ? 'auto' : 'hidden'
+                  }}
+                />
 
-              {/* Submit Button */}
-              <button
-                onClick={handleSend}
-                disabled={isLoading || !input.trim()}
-                className="p-2.5 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-400 dark:disabled:bg-gray-700/60 rounded-full transition-colors disabled:cursor-not-allowed"
-                title="Send message"
-              >
-                <Send className="w-5 h-5 text-white" />
-              </button>
+                {/* Submit Button inside input */}
+                <button
+                  onClick={handleSend}
+                  disabled={isLoading || !input.trim()}
+                  aria-label="Send message"
+                  className={`absolute right-3 top-1/2 -translate-y-1/2 w-10 h-10 rounded-full flex items-center justify-center shadow-md transition-transform ${isLoading || !input.trim() ? 'bg-gray-300/60 dark:bg-gray-700/60 cursor-not-allowed opacity-70' : 'bg-blue-600 hover:bg-blue-700'}`}
+                  title="Send message"
+                >
+                  <Send className="w-4 h-4 text-white" />
+                </button>
+              </div>
             </div>
 
             {/* Input helper text */}
@@ -1271,8 +1254,7 @@ export default function ChatPage() {
               </div>
             )}
           </div>
-          </div>
-        )}
+        </div>
       </div>
 
       {/* Settings Modal */}
@@ -1504,6 +1486,33 @@ export default function ChatPage() {
                     </div>
                   )}
                 </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Rename Modal */}
+      {renameMode && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[350] p-4">
+          <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl w-full max-w-md overflow-hidden p-6">
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-lg font-semibold text-gray-900 dark:text-white">Rename Chat</h2>
+              <button onClick={cancelRename} className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded">
+                <X className="w-4 h-4 text-gray-600 dark:text-gray-300" />
+              </button>
+            </div>
+            <div className="space-y-4">
+              <input
+                ref={renameInputRef}
+                value={renameValue}
+                onChange={(e) => setRenameValue(e.target.value)}
+                className="w-full px-4 py-3 bg-gray-100 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-lg text-gray-900 dark:text-white focus:outline-none"
+                placeholder="Enter chat title"
+              />
+              <div className="flex gap-3 justify-end">
+                <button onClick={cancelRename} className="px-4 py-2 rounded-lg bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300">Cancel</button>
+                <button onClick={saveRename} className="px-4 py-2 rounded-lg bg-blue-600 text-white">Save</button>
               </div>
             </div>
           </div>
