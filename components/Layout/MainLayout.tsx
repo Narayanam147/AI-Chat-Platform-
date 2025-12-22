@@ -8,7 +8,6 @@ import { ChatHistoryDropdown } from '@/components/ChatHistoryDropdown';
 
 interface MainLayoutProps {
   children: ReactNode;
-  title?: string;
   onNewChat?: () => void;
   chatHistory?: any[];
   onSelectChat?: (chat: any) => void;
@@ -19,11 +18,12 @@ interface MainLayoutProps {
   selectedChatId?: string | null;
   onOpenSettings?: () => void;
   isMobile?: boolean;
+  chatTitle?: string;
+  isChatActive?: boolean;
 }
 
 export function MainLayout({ 
   children, 
-  title = 'AI Chat',
   onNewChat,
   chatHistory = [],
   onSelectChat,
@@ -33,7 +33,9 @@ export function MainLayout({
   onShareChat,
   selectedChatId,
   onOpenSettings,
-  isMobile: isMobileProp
+  isMobile: isMobileProp,
+  chatTitle,
+  isChatActive,
 }: MainLayoutProps) {
   const { data: session } = useSession();
   const [isSidebarOpen, setIsSidebarOpen] = useState(true); // Default open on desktop, will adjust for mobile
@@ -100,13 +102,6 @@ export function MainLayout({
       return session.user.email[0].toUpperCase();
     }
     return 'U';
-  };
-
-  const handleThemeToggle = () => {
-    const newTheme = theme === 'light' ? 'dark' : 'light';
-    setTheme(newTheme);
-    localStorage.setItem('theme', newTheme);
-    document.documentElement.classList.toggle('dark', newTheme === 'dark');
   };
 
   const handleAuthSubmit = async (e: React.FormEvent) => {
@@ -184,24 +179,17 @@ export function MainLayout({
           >
             <Menu className="w-6 h-6 text-gray-700 dark:text-gray-300" />
           </button>
+        </div>
 
-          {/* Theme Toggle */}
-          <button
-            onClick={(e) => {
-              e.stopPropagation();
-              handleThemeToggle();
-            }}
-            className="p-2 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition-colors touch-manipulation"
-            aria-label="Toggle theme"
-          >
-            {theme === 'light' ? <Moon className="w-5 h-5" /> : <Sun className="w-5 h-5" />}
-          </button>
-
-          {/* App Title */}
-          <div className="flex items-center gap-2">
-            <Sparkles className="w-6 h-6 text-blue-600" />
-            <h1 className="text-xl font-semibold text-gray-900 dark:text-white hidden sm:block">{title}</h1>
-          </div>
+        <div className="flex-1 flex justify-center">
+          {isChatActive ? (
+            <h1 className="text-xl font-semibold text-gray-900 dark:text-white truncate">{chatTitle}</h1>
+          ) : (
+            <div className="flex items-center gap-2">
+              <Sparkles className="w-6 h-6 text-blue-600" />
+              <h1 className="text-xl font-semibold text-gray-900 dark:text-white">Ace</h1>
+            </div>
+          )}
         </div>
 
         {/* Auth Buttons / User Profile */}
@@ -299,7 +287,6 @@ export function MainLayout({
               : isSidebarOpen ? 'w-64' : 'w-0'
             }
             ${isMobile && isSidebarOpen && 'shadow-2xl'}
-            overflow-hidden
           `}
         >
           <div className={`h-full flex flex-col ${!isSidebarOpen && !isMobile ? 'invisible w-0' : 'visible'}`}>
