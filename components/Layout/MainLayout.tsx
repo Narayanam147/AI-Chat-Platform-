@@ -322,7 +322,7 @@ export function MainLayout({
         {/* Sidebar - Above overlay (z-80) but below top navbar (z-100) */}
         <aside
           className={`
-            ${isMobile ? 'fixed inset-y-0 left-0 top-24' : 'relative flex-shrink-0'}
+            ${isMobile ? 'fixed left-0 top-16 bottom-0' : 'relative flex-shrink-0'}
             z-[80]
             h-full
             bg-white dark:bg-gray-900
