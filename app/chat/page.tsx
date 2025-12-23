@@ -449,9 +449,15 @@ export default function ChatPage() {
     }
   };
 
-  const startRename = () => {
-    const id = selectedChatId || currentChatId;
+  // Accept optional chat id so rename can be triggered from sidebar actions
+  const startRename = (idParam?: string) => {
+    const id = idParam || selectedChatId || currentChatId;
     if (!id) return;
+    // Ensure the selected chat state reflects the chat being renamed
+    if (idParam && idParam !== selectedChatId) {
+      setSelectedChatId(idParam);
+      setCurrentChatId(idParam);
+    }
     const title = chatHistory.find(c => c.id === id)?.title || '';
     setRenameValue(title);
     setRenameMode(true);
@@ -462,9 +468,16 @@ export default function ChatPage() {
     const id = selectedChatId || currentChatId;
     if (!id) return;
     const title = renameValue.trim() || 'Untitled Chat';
+    // Save previous state to allow rollback on error
+    const previous = chatHistory;
     setChatHistory(prev => prev.map(c => c.id === id ? { ...c, title } : c));
     setRenameMode(false);
-    await persistChatTitle(id, title);
+    const ok = await persistChatTitle(id, title);
+    if (!ok) {
+      // Rollback and notify user
+      setChatHistory(previous);
+      alert('Failed to save chat title. Please try again.');
+    }
   };
 
   const cancelRename = () => {
@@ -561,15 +574,22 @@ export default function ChatPage() {
 
   // Persist chat title change to backend
   const persistChatTitle = async (chatId: string, title: string) => {
-    if (!chatId) return;
+    if (!chatId) return false;
     try {
-      await fetch(`/api/history/${encodeURIComponent(chatId)}`, {
+      const res = await fetch(`/api/history/${encodeURIComponent(chatId)}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ title }),
       });
+      if (!res.ok) {
+        const txt = await res.text();
+        console.error('Failed to persist chat title:', res.status, txt);
+        return false;
+      }
+      return true;
     } catch (e) {
       console.error('Failed to persist chat title', e);
+      return false;
     }
   };
 
@@ -883,9 +903,15 @@ export default function ChatPage() {
 
     if (!mounted) return null;
 
+    // Compute active chat title for MainLayout header
+    const activeTitle = (selectedChatId || currentChatId)
+      ? chatHistory.find(c => c.id === (selectedChatId || currentChatId))?.title
+      : undefined;
+
     return (
-    <MainLayout
+      <MainLayout
       title="Ace"
+        activeTitle={activeTitle}
       onNewChat={handleNewChat}
       chatHistory={chatHistory}
       onSelectChat={(chat) => {
@@ -912,94 +938,39 @@ export default function ChatPage() {
         isMobile={isMobile}
     >
       <div className="flex flex-col h-full bg-white dark:bg-gray-900 relative">
-        {/* Chat Heading with Options (Gemini-style) - Shows only when messages exist */}
-        {(selectedChatId || currentChatId) && messages.length > 0 && (
-          <div className="sticky top-0 flex items-center justify-between px-4 sm:px-8 py-3 border-b border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 backdrop-blur-sm transition-all duration-300 z-[30] shadow-sm">
-            <div className="flex items-center gap-3 flex-1 min-w-0">
-              {!renameMode ? (
-                <h2 className="text-sm font-medium text-gray-700 dark:text-gray-200 max-w-xs sm:max-w-2xl truncate">
-                  {chatHistory.find((c) => c.id === (selectedChatId || currentChatId))?.title || 'New chat'}
-                </h2>
-              ) : (
-                <input
-                  ref={renameInputRef}
-                  className="text-sm font-medium bg-transparent outline-none border-b border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-200 max-w-xs sm:max-w-2xl"
-                  value={renameValue}
-                  onChange={(e) => setRenameValue(e.target.value)}
-                  onBlur={saveRename}
-                  onKeyDown={(e) => {
-                    if (e.key === 'Enter') saveRename();
-                    if (e.key === 'Escape') cancelRename();
-                  }}
-                  aria-label="Rename chat"
-                />
-              )}
-            </div>
-            <div className="relative flex-shrink-0">
-              <button
-                onClick={(e) => {
-                  e.stopPropagation();
-                  setHeadingMenuOpen(v => !v);
-                }}
-                aria-haspopup="true"
-                aria-expanded={headingMenuOpen}
-                ref={headingMenuRef}
-                className="p-2 rounded hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors touch-manipulation"
-                title="Open actions"
-              >
-                <svg className="w-5 h-5 text-gray-600 dark:text-gray-400" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24" aria-hidden>
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M12 5v.01M12 12v.01M12 19v.01" />
-                </svg>
-              </button>
-
-              {headingMenuOpen && (
-                <div className="absolute right-0 top-full mt-2 w-48 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-2xl z-[40] overflow-hidden pointer-events-auto">
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      const id = selectedChatId || currentChatId;
-                      if (!id) return;
-                      togglePin(id);
-                      setHeadingMenuOpen(false);
+        {/* Chat heading removed: title is shown in top header center (MainLayout)
+            Show a centered modal for renaming when `renameMode` is active */}
+        {renameMode && (
+          <div className="fixed inset-0 z-[60] flex items-center justify-center">
+            <div className="absolute inset-0 bg-black/40" onClick={cancelRename} />
+            <div className="relative w-full max-w-lg mx-4">
+              <div className="bg-white dark:bg-gray-900 rounded-2xl p-6 shadow-xl">
+                <h3 className="text-xl font-semibold text-gray-900 dark:text-gray-100 mb-4">Rename this chat</h3>
+                <div className="mb-4">
+                  <input
+                    ref={renameInputRef}
+                    value={renameValue}
+                    onChange={(e) => setRenameValue(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') { e.preventDefault(); saveRename(); }
+                      if (e.key === 'Escape') { cancelRename(); }
                     }}
-                    className="w-full text-left px-4 py-3 text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors touch-manipulation active:bg-gray-200 dark:active:bg-gray-600"
-                  >
-                    {chatHistory.find(c => c.id === (selectedChatId || currentChatId))?.pinned ? 'Unpin' : 'Pin'}
-                  </button>
+                    className="w-full px-4 py-3 border border-gray-300 dark:border-gray-700 rounded-md bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none"
+                    placeholder="Enter chat title"
+                    aria-label="Rename chat"
+                  />
+                </div>
+                <div className="flex justify-end items-center gap-3">
+                  <button onClick={cancelRename} className="text-sm text-blue-600 hover:underline">Cancel</button>
                   <button
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      startRename();
-                      setHeadingMenuOpen(false);
-                    }}
-                    className="w-full text-left px-4 py-3 text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors touch-manipulation active:bg-gray-200 dark:active:bg-gray-600"
+                    onClick={saveRename}
+                    disabled={!renameValue.trim()}
+                    className={`px-4 py-2 rounded-md text-sm text-white ${renameValue.trim() ? 'bg-blue-600 hover:bg-blue-700' : 'bg-gray-300 cursor-not-allowed'}`}
                   >
                     Rename
                   </button>
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      handleShare(selectedChatId || currentChatId || undefined);
-                      setHeadingMenuOpen(false);
-                    }}
-                    className="w-full text-left px-4 py-3 text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors touch-manipulation active:bg-gray-200 dark:active:bg-gray-600"
-                  >
-                    Share
-                  </button>
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      const id = selectedChatId || currentChatId;
-                      if (!id) return;
-                      setHeadingMenuOpen(false);
-                      handleDeleteChat(id);
-                    }}
-                    className="w-full text-left px-4 py-3 text-red-600 dark:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/40 transition-colors touch-manipulation active:bg-red-100 dark:active:bg-red-900/60"
-                  >
-                    Delete
-                  </button>
                 </div>
-              )}
+              </div>
             </div>
           </div>
         )}
@@ -1009,16 +980,45 @@ export default function ChatPage() {
           {/* Greeting State - ONLY when no messages */}
           {messages.length === 0 && (
             <div className="flex items-center justify-center h-full animate-fadeIn px-4 py-8">
-              <div className="text-center max-w-2xl">
-                <h2 className="text-2xl sm:text-4xl font-semibold text-gray-900 dark:text-white mb-4">
-                  Ace
-                </h2>
-                <p className="text-sm sm:text-lg text-gray-600 dark:text-gray-400 mb-2">
+              <div className="text-center w-full max-w-3xl">
+                {/* App name removed from greeting to avoid duplicating top header title */}
+                <p className="text-sm sm:text-lg text-gray-600 dark:text-gray-400 mb-1">
                   Hello, {session?.user?.name?.split(' ')[0] || 'there'}
                 </p>
-                <p className="text-sm sm:text-lg text-gray-600 dark:text-gray-400">
+                <p className="text-sm sm:text-lg text-gray-600 dark:text-gray-400 mb-6">
                   How can I help you today?
                 </p>
+
+                {/* Centered input like Gemini */}
+                <div className="mx-auto max-w-2xl px-3">
+                  <div className="relative flex items-center gap-3 bg-gray-100/60 dark:bg-gray-800/40 rounded-3xl border border-gray-300/50 dark:border-gray-700/40 p-3">
+                    <textarea
+                      value={input}
+                      onChange={(e) => setInput(e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter' && !e.shiftKey) {
+                          e.preventDefault();
+                          handleSend();
+                        }
+                      }}
+                      placeholder="Ask Ace"
+                      className="flex-1 px-3 py-2 bg-transparent border-none focus:outline-none resize-none text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 text-[15px] min-h-[48px] max-h-[180px]"
+                      rows={1}
+                      disabled={isLoading}
+                      style={{ height: 'auto', overflowY: input.split('\n').length > 3 ? 'auto' : 'hidden' }}
+                    />
+
+                    <button
+                      onClick={handleSend}
+                      disabled={isLoading || !input.trim()}
+                      className="p-3 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-400 dark:disabled:bg-gray-700/60 rounded-full transition-colors disabled:cursor-not-allowed"
+                      title="Send message"
+                    >
+                      <Send className="w-5 h-5 text-white" />
+                    </button>
+                  </div>
+                  <p className="text-xs text-gray-500 dark:text-gray-500 text-center mt-3">AI can make mistakes. Verify important information.</p>
+                </div>
               </div>
             </div>
           )}
@@ -1105,7 +1105,8 @@ export default function ChatPage() {
           )}
         </div>
 
-        {/* Chat Input Bar - Multi-functional (Gemini-style) */}
+        {/* Chat Input Bar - Multi-functional (Gemini-style) - shown when conversation exists */}
+        {messages.length > 0 && (
         <div className="border-t border-gray-200/50 dark:border-gray-800/50 bg-white dark:bg-gray-900 p-2 sm:p-3 -mb-2">
           <div className="max-w-4xl mx-auto px-1 sm:px-0">
             <div className="relative flex items-end gap-2 bg-gray-100/60 dark:bg-gray-800/40 rounded-full border border-gray-300/50 dark:border-gray-700/40 p-2 focus-within:bg-gray-100 dark:focus-within:bg-gray-800/60 focus-within:border-gray-400 dark:focus-within:border-gray-600 transition-all">
@@ -1238,6 +1239,7 @@ export default function ChatPage() {
             )}
           </div>
         </div>
+        )}
       </div>
 
       {/* Settings Modal */}

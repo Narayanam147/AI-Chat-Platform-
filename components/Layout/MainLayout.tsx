@@ -194,12 +194,17 @@ export function MainLayout({
 
   const selectedChat = chatHistory.find(c => String(c.id) === String(selectedChatId)) || null;
   const isSelectedPinned = Boolean(selectedChat?.pinned);
+  // Determine which chat id to use for header actions: prefer selectedChatId, otherwise try to match activeTitle, fallback to first chat
+  const headerChatId = selectedChatId
+    || (activeTitle ? (chatHistory.find(c => c.title === activeTitle)?.id as string | undefined) : undefined)
+    || (chatHistory.length > 0 ? String(chatHistory[0].id) : undefined);
 
   return (
     <div className="flex flex-col h-screen overflow-hidden bg-white dark:bg-gray-900">
-      {/* Top Navbar - simplified and robust */}
+      {/* Top Navbar - single header with left controls, centered chat title + actions, and right profile */}
       <header className="sticky top-0 z-[100] px-4 py-3 border-b border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 shadow-sm">
-        <div className="flex items-center justify-between">
+        <div className="relative flex items-center justify-between">
+          {/* Left: hamburger + Ace */}
           <div className="flex items-center gap-3">
             <button
               onClick={(e) => { e.stopPropagation(); setIsSidebarOpen(!isSidebarOpen); }}
@@ -208,22 +213,63 @@ export function MainLayout({
             >
               <Menu className="w-6 h-6 text-gray-700 dark:text-gray-300" />
             </button>
-            {!selectedChatId && (
-              <div className="hidden sm:flex items-center ml-2">
-                <span className="text-lg sm:text-xl font-semibold text-gray-900 dark:text-white">Ace</span>
-              </div>
-            )}
+            <div className="flex items-center">
+              <span className="text-lg sm:text-xl font-semibold text-gray-900 dark:text-white">Ace</span>
+            </div>
           </div>
 
-          <div className="flex-1 flex justify-center pointer-events-none">
-            <h1 className="text-lg sm:text-xl font-semibold text-gray-900 dark:text-white truncate max-w-[60vw] pointer-events-auto">
-              {selectedChatId ? (activeTitle || title || 'Untitled Chat') : ''}
-            </h1>
+          {/* Center: absolutely centered title with actions (keeps perfect center) */}
+          <div className="absolute left-1/2 top-1/2 transform -translate-x-1/2 -translate-y-1/2">
+            <div className="relative" ref={actionsMenuRef}>
+              {(activeTitle || selectedChatId) && (
+                <button
+                  onClick={(e) => { e.stopPropagation(); setShowActionsMenu(prev => !prev); }}
+                  className="flex items-center gap-2 px-3 py-1 rounded-md hover:bg-gray-100 dark:hover:bg-gray-800 pointer-events-auto"
+                  aria-expanded={showActionsMenu}
+                >
+                  <span className="text-lg font-semibold text-gray-900 dark:text-white truncate max-w-[48vw]">
+                    {activeTitle || title || 'Untitled Chat'}
+                  </span>
+                  <ChevronDown className="w-4 h-4 text-gray-600 dark:text-gray-300" />
+                </button>
+              )}
+              {showActionsMenu && headerChatId && (
+                <div className="absolute left-1/2 transform -translate-x-1/2 mt-2 w-48 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-lg z-[150] overflow-hidden">
+                  <button className="w-full px-3 py-2 text-left text-sm hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-2" onClick={() => { onPinChat?.(String(headerChatId)); setShowActionsMenu(false); }}>
+                    <Pin className="w-4 h-4" />
+                    <span>{isSelectedPinned ? 'Unpin' : 'Pin'}</span>
+                  </button>
+                  <button className="w-full px-3 py-2 text-left text-sm hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-2" onClick={() => { onRenameChat?.(String(headerChatId)); setShowActionsMenu(false); }}>
+                    <Edit3 className="w-4 h-4" />
+                    <span>Rename</span>
+                  </button>
+                  <button className="w-full px-3 py-2 text-left text-sm hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-2" onClick={() => { onShareChat?.(String(headerChatId)); setShowActionsMenu(false); }}>
+                    <Share2 className="w-4 h-4" />
+                    <span>Share</span>
+                  </button>
+                  <div className="border-t border-gray-100 dark:border-gray-700" />
+                  <button className="w-full px-3 py-2 text-left text-sm text-red-600 hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-2" onClick={() => { onDeleteChat?.(String(headerChatId)); setShowActionsMenu(false); }}>
+                    <Trash2 className="w-4 h-4" />
+                    <span>Delete</span>
+                  </button>
+                </div>
+              )}
+            </div>
           </div>
 
+          {/* Right: theme toggle + profile/login */}
           <div className="flex items-center gap-3">
             <button onClick={(e) => { e.stopPropagation(); handleThemeToggle(); }} className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800">
               {theme === 'light' ? <Moon className="w-5 h-5" /> : <Sun className="w-5 h-5" />}
+            </button>
+
+            <button
+              onClick={(e) => { e.stopPropagation(); onOpenSettings?.(); if (isMobile) setIsSidebarOpen(false); }}
+              className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800"
+              title="Settings"
+              aria-label="Open settings"
+            >
+              <Settings className="w-5 h-5 text-gray-700 dark:text-gray-300" />
             </button>
 
             <div className="relative" ref={profileMenuRef}>
@@ -397,7 +443,8 @@ export function MainLayout({
         </aside>
 
         {/* Main Content - Expands to 100% when sidebar closes on desktop */}
-        <main className="flex-1 min-w-0 overflow-auto bg-white dark:bg-gray-900 transition-all duration-300">
+        {/* Keep main container overflow-hidden so inner views manage scrolling (single scrollbar) */}
+        <main className="flex-1 min-w-0 overflow-hidden bg-white dark:bg-gray-900 transition-all duration-300">
           {children}
         </main>
       </div>
