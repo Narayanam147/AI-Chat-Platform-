@@ -59,6 +59,7 @@ export function MainLayout({
   const authModalRef = useRef<HTMLDivElement>(null);
   const actionsMenuRef = useRef<HTMLDivElement>(null);
   const [showActionsMenu, setShowActionsMenu] = useState(false);
+  const headerRef = useRef<HTMLElement | null>(null);
 
   // Use prop if provided, otherwise use state
   const isMobile = isMobileProp !== undefined ? isMobileProp : isMobileState;
@@ -99,6 +100,21 @@ export function MainLayout({
     const initialTheme = savedTheme || (prefersDark ? 'dark' : 'light');
     setTheme(initialTheme);
     if (initialTheme === 'dark') document.documentElement.classList.add('dark');
+  }, []);
+
+  // Set a CSS variable with the header height so mobile sidebar can align exactly beneath it
+  useEffect(() => {
+    const setHeaderHeight = () => {
+      const h = headerRef.current?.getBoundingClientRect().height || 64;
+      try {
+        document.documentElement.style.setProperty('--app-header-height', `${h}px`);
+      } catch (e) {
+        // Ignore (some environments may restrict)
+      }
+    };
+    setHeaderHeight();
+    window.addEventListener('resize', setHeaderHeight);
+    return () => window.removeEventListener('resize', setHeaderHeight);
   }, []);
 
   // Toggle theme and persist
@@ -202,7 +218,7 @@ export function MainLayout({
   return (
     <div className="flex flex-col h-screen overflow-hidden bg-white dark:bg-gray-900">
       {/* Top Navbar - single header with left controls, centered chat title + actions, and right profile */}
-      <header className="sticky top-0 z-[100] px-4 py-3 border-b border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 shadow-sm">
+      <header ref={headerRef} className="sticky top-0 z-[100] px-4 py-3 border-b border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 shadow-sm">
         <div className="relative flex items-center justify-between">
           {/* Left: hamburger + Ace */}
           <div className="flex items-center gap-3">
@@ -321,8 +337,9 @@ export function MainLayout({
 
         {/* Sidebar - Above overlay (z-80) but below top navbar (z-100) */}
         <aside
+          style={isMobile ? { top: 'var(--app-header-height)' } : undefined}
           className={`
-            ${isMobile ? 'fixed left-0 top-16 bottom-0' : 'relative flex-shrink-0'}
+            ${isMobile ? 'fixed left-0 bottom-0' : 'relative flex-shrink-0'}
             z-[80]
             h-full
             bg-white dark:bg-gray-900
