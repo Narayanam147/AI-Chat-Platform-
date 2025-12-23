@@ -1,7 +1,8 @@
 'use client';
 
+import React, { useState, useEffect, useRef, Suspense } from 'react';
 import { useSession, signOut, signIn } from "next-auth/react";
-import { useState, useRef, useEffect, Suspense } from "react";
+import React, { useState, useRef, useEffect, Suspense } from "react";
 import Image from "next/image";
 import { Send, Upload, Sparkles, FileText, Image as ImageIcon, X, Trash2, Plus, Settings, HelpCircle, FolderOpen, Code, Copy, Check, Brain, ToggleLeft, ToggleRight, Moon, Sun, MessageSquare, LogOut } from "lucide-react";
 import ReactMarkdown from "react-markdown";
@@ -36,20 +37,20 @@ interface UserActivity {
   conversationPatterns: string[];
 }
 
-export default function ChatClientPage() {
-    const { data: session } = useSession();
-    // Simple admin check (add your admin email(s) here)
-    const adminEmails = ["admin@example.com", "sarvanmdubey@gmail.com"];
-    const isAdmin = session?.user?.email && adminEmails.includes(session.user.email);
+function ChatContent() {
+  const { data: session } = useSession();
+  // Simple admin check (add your admin email(s) here)
+  const adminEmails = ['admin@example.com', 'sarvanmdubey@gmail.com'];
+  const isAdmin = session?.user?.email && adminEmails.includes(session.user.email);
   const [messages, setMessages] = useState<Message[]>([]);
-  const [input, setInput] = useState("");
+  const [input, setInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [chatHistory, setChatHistory] = useState<ChatHistory[]>([]);
   const [selectedChatId, setSelectedChatId] = useState<string | null>(null);
   const [showAttachMenu, setShowAttachMenu] = useState(false);
   const [showSettingsModal, setShowSettingsModal] = useState(false);
   const [showFeedbackModal, setShowFeedbackModal] = useState(false);
-  const [feedbackText, setFeedbackText] = useState("");
+  const [feedbackText, setFeedbackText] = useState('');
   const [feedbackSubmitting, setFeedbackSubmitting] = useState(false);
   const [theme, setTheme] = useState<'light' | 'dark'>('light');
   const [copiedMessageId, setCopiedMessageId] = useState<string | null>(null);
@@ -59,7 +60,7 @@ export default function ChatClientPage() {
   const [renameMode, setRenameMode] = useState(false);
   const [renameValue, setRenameValue] = useState('');
   const renameInputRef = useRef<HTMLInputElement>(null);
-  const [searchQuery, setSearchQuery] = useState("");
+  const [searchQuery, setSearchQuery] = useState('');
   const [userActivity, setUserActivity] = useState<UserActivity>({
     topics: [],
     preferredStyle: 'balanced',
@@ -169,7 +170,7 @@ export default function ChatClientPage() {
     if (initialTheme === 'dark') {
       document.documentElement.classList.add('dark');
     } else {
-      document.documentElement.classList.remove('dark');
+      document.documentElement.classList.remove('light');
     }
 
     // Load personalization settings
@@ -362,14 +363,14 @@ export default function ChatClientPage() {
       // No active chat - this shouldn't happen as currentChatId is set when first message is sent
       // But as fallback, create a temporary local entry
       const existingChat = chatHistory.find(ch => 
-        ch.title === firstUserMessage.text.substring(0, 50) + (firstUserMessage.text.length > 50 ? '...' : '')
+        ch.title === `${firstUserMessage.text.substring(0, 50)}${firstUserMessage.text.length > 50 ? '...' : ''}`
       );
       
       if (!existingChat) {
         const tempId = `temp-${Date.now()}`;
         const newChat: ChatHistory = {
           id: tempId,
-          title: firstUserMessage.text.substring(0, 50) + (firstUserMessage.text.length > 50 ? '...' : ''),
+          title: `${firstUserMessage.text.substring(0, 50)}${firstUserMessage.text.length > 50 ? '...' : ''}`,
           timestamp: new Date(),
           preview: firstUserMessage.text.substring(0, 100),
           messages: messages.map(m => ({
@@ -423,7 +424,7 @@ export default function ChatClientPage() {
 
   const handleNewChat = () => {
     setMessages([]);
-    setInput("");
+    setInput('');
     setSelectedChatId(null);
     setCurrentChatId(null); // Clear current chat ID to start fresh conversation
   };
@@ -649,6 +650,15 @@ export default function ChatClientPage() {
     }
   };
 
+  // Listen for theme changes from header toggle
+  useEffect(() => {
+    const handleThemeChangeEvent = (e: CustomEvent<{ theme: 'light' | 'dark' }>) => {
+      setTheme(e.detail.theme);
+    };
+    window.addEventListener('themeChange' as any, handleThemeChangeEvent);
+    return () => window.removeEventListener('themeChange' as any, handleThemeChangeEvent);
+  }, []);
+
   const handleThemeChange = (newTheme: 'light' | 'dark') => {
     setTheme(newTheme);
     localStorage.setItem('theme', newTheme);
@@ -658,10 +668,12 @@ export default function ChatClientPage() {
     } else {
       document.documentElement.classList.remove('dark');
     }
+    // Dispatch custom event to notify header
+    window.dispatchEvent(new CustomEvent('themeChange', { detail: { theme: newTheme } }));
   };
 
   const scrollToBottom = () => {
-    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   };
 
   useEffect(() => {
@@ -753,7 +765,7 @@ export default function ChatClientPage() {
     };
 
     setMessages(prev => [...prev, userMessage]);
-    setInput("");
+    setInput('');
     setAttachedFiles([]); // Clear attached files after sending
     setIsLoading(true);
 
@@ -787,10 +799,10 @@ export default function ChatClientPage() {
 
       console.log('📤 Sending to /api/chat:', { promptText: promptText.substring(0, 100), userId: session?.user?.email });
 
-      const response = await fetch("/api/chat", {
-        method: "POST",
+      const response = await fetch('/api/chat', {
+        method: 'POST',
         headers: {
-          "Content-Type": "application/json",
+          'Content-Type': 'application/json',
         },
         body: JSON.stringify({ 
           prompt: promptText,
@@ -858,10 +870,10 @@ export default function ChatClientPage() {
 
       setMessages(prev => [...prev, aiMessage]);
     } catch (error) {
-      console.error("Chat error:", error);
+      console.error('Chat error:', error);
       const errorMessage: Message = {
         id: (Date.now() + 1).toString(),
-        text: error instanceof Error ? `Error: ${error.message}` : "Sorry, there was an error processing your request.",
+        text: error instanceof Error ? `Error: ${error.message}` : 'Sorry, there was an error processing your request.',
         sender: 'ai',
         timestamp: new Date(),
       };
@@ -871,604 +883,609 @@ export default function ChatClientPage() {
     }
   };
 
-  const handleExport = async (format: 'word' | 'pdf') => {
-    if (messages.length === 0) {
-      alert('No messages to export');
-      return;
-    }
-
-    try {
-      const response = await fetch("/api/export", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ 
-          messages,
-          format,
-          userId: session?.user?.email 
-        }),
-      });
-
-      if (!response.ok) {
-        throw new Error('Export failed');
-      }
-
-      const blob = await response.blob();
-      const url = window.URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = `chat-export-${Date.now()}.${format === 'word' ? 'docx' : 'pdf'}`;
-      document.body.appendChild(a);
-      a.click();
-      window.URL.revokeObjectURL(url);
-      document.body.removeChild(a);
-    } catch (error) {
-      console.error("Export error:", error);
+      const handleExport = async (format: 'word' | 'pdf') => {
+        if (messages.length === 0) {
+          alert('No messages to export');
+          return;
+        }
+    
+        try {
+          const response = await fetch('/api/export', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ 
+              messages,
+              format,
+              userId: session?.user?.email 
+            }),
+          });
+    
+          if (!response.ok) {
+            throw new Error('Export failed');
+          }
+    
+          const blob = await response.blob();
+          const url = window.URL.createObjectURL(blob);
+          const a = document.createElement('a');
+          a.href = url;
+          a.download = `chat-export-${Date.now()}.${format === 'word' ? 'docx' : 'pdf'}`;
+          document.body.appendChild(a);
+          a.click();
+          window.URL.revokeObjectURL(url);
+          document.body.removeChild(a);
+        } catch (error) {
+          console.error('Export error:', error);
       alert('Failed to export. Please try again.');
     }
   };
 
-    if (!mounted) return null;
+  if (!mounted) return null;
 
-    return (
+  return (
     <MainLayout
-      onNewChat={handleNewChat}
-      chatHistory={chatHistory}
-      onSelectChat={(chat) => {
-        if (chat.messages && chat.messages.length) {
-          const mapped = chat.messages.map((m: any, i: number) => ({
-            id: `${chat.id}-${i}`,
-            text: m.text,
-            sender: (m.sender === 'ai' ? 'ai' : 'user') as 'ai' | 'user',
-            timestamp: new Date(m.timestamp || new Date()),
-          }));
-          setMessages(mapped);
-        } else {
-          setMessages([]);
-        }
-        setSelectedChatId(chat.id);
-        setCurrentChatId(chat.id);
-      }}
-      onDeleteChat={handleDeleteChat}
-      onPinChat={togglePin}
-      onRenameChat={startRename}
-      onShareChat={handleShare}
-      selectedChatId={selectedChatId || currentChatId}
-      onOpenSettings={() => setShowSettingsModal(true)}
-      isMobile={isMobile}
-      chatTitle={chatHistory.find((c) => c.id === (selectedChatId || currentChatId))?.title || 'New chat'}
-      isChatActive={!!(selectedChatId || currentChatId)}
-    >
-      <div className="flex flex-col h-full bg-white dark:bg-gray-900 relative">
-        {/* Conversation View - Messages */}
-        <div className="flex-1 overflow-y-auto overflow-x-hidden bg-gradient-to-b from-white/50 dark:from-gray-900/30 to-white dark:to-gray-900 transition-all duration-300 scroll-smooth">
-          {/* Greeting State - ONLY when no messages */}
-          {messages.length === 0 && (
-            <div className="flex items-center justify-center h-full animate-fadeIn px-4 py-8">
-              <div className="text-center max-w-2xl">
-                <h2 className="text-2xl sm:text-4xl font-semibold text-gray-900 dark:text-white mb-4">
-                  Ace
-                </h2>
-                <p className="text-sm sm:text-lg text-gray-600 dark:text-gray-400 mb-2">
-                  Hello, {session?.user?.name?.split(' ')[0] || 'there'}
-                </p>
-                <p className="text-sm sm:text-lg text-gray-600 dark:text-gray-400">
-                  How can I help you today?
-                </p>
-              </div>
-            </div>
-          )}
-
-          {/* Conversation State - ONLY when messages exist */}
-          {messages.length > 0 && (
-            <div className="w-full space-y-0">
-              {messages.map((message) => (
-                <div
-                  key={message.id}
-                  className={`w-full py-4 sm:py-6 px-4 sm:px-6 lg:px-8 ${ 
-                    message.sender === 'user' 
-                      ? 'bg-transparent' 
-                      : 'bg-gray-50/50 dark:bg-gray-800/20'
-                  } border-b border-gray-100/50 dark:border-gray-800/50`}
-                >
-                  <div className="max-w-4xl mx-auto flex gap-2 sm:gap-4">
-                    {/* Avatar */}
-                    <div className="flex-shrink-0">
-                      {message.sender === 'user' ? (
-                        session?.user?.image ? (
-                          <Image src={session.user.image} alt="User" width={40} height={40} className="w-8 h-8 sm:w-10 sm:h-10 rounded-full" />
-                        ) : (
-                          <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center">
-                            <span className="text-white font-semibold text-xs sm:text-sm">{getUserInitials()}</span>
-                          </div>
-                        )
-                      ) : (
-                        <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center">
-                          <Sparkles className="w-4 h-4 sm:w-5 sm:h-5 text-white" />
-                        </div>
-                      )}
-                    </div>
-
-                    {/* Message Content */}
-                    <div className="flex-1 min-w-0 group">
-                      <div className="relative">
-                        {message.sender === 'ai' ? (
-                          <div className="prose prose-sm sm:prose dark:prose-invert max-w-none prose-p:leading-relaxed prose-pre:bg-gray-900 prose-pre:text-gray-100">
-                            <ReactMarkdown>{message.text}</ReactMarkdown>
-                          </div>
-                        ) : (
-                          <p className="whitespace-pre-wrap text-sm sm:text-[15px] leading-relaxed text-gray-900 dark:text-gray-100">{message.text}</p>
-                        )}
-                        {/* Copy Button */}
-                        <button
-                          onClick={() => handleCopyMessage(message.id, message.text)}
-                          className="mt-2 p-1.5 rounded-md opacity-0 group-hover:opacity-100 transition-opacity bg-gray-200/70 dark:bg-gray-700/50 hover:bg-gray-300 dark:hover:bg-gray-600"
-                          title="Copy message"
-                        >
-                          {copiedMessageId === message.id ? (
-                            <Check className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-green-500" />
-                          ) : (
-                            <Copy className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-gray-600 dark:text-gray-400" />
-                          )}
-                        </button>
-                        <p className="text-xs text-gray-400 dark:text-gray-500 mt-2">
-                          {message.timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+          onNewChat={handleNewChat}
+          chatHistory={chatHistory}
+          onSelectChat={(chat) => {
+            if (chat.messages && chat.messages.length) {
+              const mapped = chat.messages.map((m: any, i: number) => ({
+                id: `${chat.id}-${i}`,
+                text: m.text,
+                sender: (m.sender === 'ai' ? 'ai' : 'user') as 'ai' | 'user',
+                timestamp: new Date(m.timestamp || new Date()),
+              }));
+              setMessages(mapped);
+            } else {
+              setMessages([]);
+            }
+            setSelectedChatId(chat.id);
+            setCurrentChatId(chat.id);
+          }}
+          onDeleteChat={handleDeleteChat}
+          onPinChat={togglePin}
+          onRenameChat={startRename}
+          onShareChat={handleShare}
+          selectedChatId={selectedChatId || currentChatId}
+          onOpenSettings={() => setShowSettingsModal(true)}
+          isMobile={isMobile}
+          chatTitle={chatHistory.find((c) => c.id === (selectedChatId || currentChatId))?.title || 'New chat'}
+          isChatActive={!!(selectedChatId || currentChatId)}
+        >
+          <>
+            <div className='flex flex-col h-full bg-white dark:bg-gray-900 relative'>
+              <div className='flex-1 overflow-y-auto'>
+                {/* Conversation View - Messages */}
+                <div className='flex-1 bg-gradient-to-b from-white/50 dark:from-gray-900/30 to-white dark:to-gray-900 transition-all duration-300 scroll-smooth'>
+                  {/* Greeting State - ONLY when no messages */}
+                  {messages.length === 0 && (
+                    <div className='flex items-center justify-center h-full animate-fadeIn px-4 py-8'>
+                      <div className='text-center max-w-2xl'>
+                        <h2 className='text-2xl sm:text-4xl font-semibold text-gray-900 dark:text-white mb-4'>
+                          Ace
+                        </h2>
+                        <p className='text-sm sm:text-lg text-gray-600 dark:text-gray-400 mb-2'>
+                          Hello, {session?.user?.name?.split(' ')[0] || 'there'}
+                        </p>
+                        <p className='text-sm sm:text-lg text-gray-600 dark:text-gray-400'>
+                          How can I help you today?
                         </p>
                       </div>
                     </div>
-                  </div>
-                </div>
-              ))}
-              
-              {isLoading && (
-                <div className="w-full py-6 px-4 sm:px-6 lg:px-8 bg-gray-50/50 dark:bg-gray-800/20 border-b border-gray-100/50 dark:border-gray-800/50">
-                  <div className="max-w-4xl mx-auto flex gap-3 sm:gap-4">
-                    <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center flex-shrink-0">
-                      <Sparkles className="w-4 h-4 sm:w-5 sm:h-5 text-white" />
-                    </div>
-                    <div className="flex-1">
-                      <div className="flex gap-2 py-2">
-                        <div className="w-2 h-2 bg-gray-400 dark:bg-gray-500 rounded-full animate-bounce"></div>
-                        <div className="w-2 h-2 bg-gray-400 dark:bg-gray-500 rounded-full animate-bounce" style={{ animationDelay: '0.2s' }}></div>
-                        <div className="w-2 h-2 bg-gray-400 dark:bg-gray-500 rounded-full animate-bounce" style={{ animationDelay: '0.4s' }}></div>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              )}
-              <div ref={messagesEndRef} />
-            </div>
-          )}
-        </div>
-
-        {/* Chat Input Bar - Multi-functional (Gemini-style) */}
-        <div className="border-t border-gray-200/50 dark:border-gray-800/50 bg-white dark:bg-gray-900 p-2 sm:p-3 -mb-2">
-          <div className="max-w-4xl mx-auto px-1 sm:px-0">
-            <div className="relative flex items-end gap-2 bg-gray-100/60 dark:bg-gray-800/40 rounded-full border border-gray-300/50 dark:border-gray-700/40 p-2 focus-within:bg-gray-100 dark:focus-within:bg-gray-800/60 focus-within:border-gray-400 dark:focus-within:border-gray-600 transition-all">
-              {/* Attachment/Tools Menu */}
-              <div className="relative" ref={attachMenuRef}>
-                <button
-                  onClick={() => setShowAttachMenu(!showAttachMenu)}
-                  className="p-2.5 hover:bg-gray-200/60 dark:hover:bg-gray-700/40 rounded-full transition-colors"
-                  title="Add attachments"
-                >
-                  <Plus className="w-5 h-5 text-gray-600 dark:text-gray-400" />
-                </button>
-
-                {showAttachMenu && (
-                  <div className="absolute bottom-full left-0 mb-2 w-56 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl shadow-xl py-2 z-[50]">
-                    <button
-                      onClick={() => {
-                        fileInputRef.current?.click();
-                        setShowAttachMenu(false);
-                      }}
-                      className="w-full px-4 py-3 text-left text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors flex items-center gap-3"
-                    >
-                      <Upload className="w-4 h-4" />
-                      Upload files
-                    </button>
-                    <button className="w-full px-4 py-3 text-left text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors flex items-center gap-3">
-                      <FolderOpen className="w-4 h-4" />
-                      Add from Drive
-                    </button>
-                    <button className="w-full px-4 py-3 text-left text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors flex items-center gap-3">
-                      <Code className="w-4 h-4" />
-                      Import code
-                    </button>
-                  </div>
-                )}
-              </div>
-
-              {/* Hidden file input */}
-              <input
-                type="file"
-                ref={fileInputRef}
-                className="hidden"
-                multiple
-                accept="image/*,.pdf,.doc,.docx,.txt"
-                onChange={handleFileSelect}
-              />
-
-              {/* Attached Files Preview */}
-              {attachedFiles.length > 0 && (
-                <div className="flex flex-wrap gap-2 px-2">
-                  {attachedFiles.map((file, index) => (
-                    <div key={index} className="flex items-center gap-2 bg-gray-200/60 dark:bg-gray-700/50 rounded-lg px-3 py-1.5">
-                      {file.type.startsWith('image/') ? (
-                        <ImageIcon className="w-4 h-4 text-blue-500" />
-                      ) : (
-                        <FileText className="w-4 h-4 text-blue-500" />
-                      )}
-                      <span className="text-xs text-gray-700 dark:text-gray-300 max-w-[100px] truncate">
-                        {file.name}
-                      </span>
-                      <button
-                        onClick={() => removeAttachedFile(index)}
-                        className="p-0.5 hover:bg-gray-300 dark:hover:bg-gray-600 rounded"
-                      >
-                        <X className="w-3 h-3 text-gray-500" />
-                      </button>
-                    </div>
-                  ))}
-                </div>
-              )}
-
-              {/* Text Input Field */}
-              <textarea
-                value={input}
-                onChange={(e) => setInput(e.target.value)}
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter' && !e.shiftKey) {
-                    e.preventDefault();
-                    handleSend();
-                  }
-                }}
-                placeholder="Ask Ace"
-                className="flex-1 px-3 py-2.5 bg-transparent border-none focus:outline-none resize-none text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 text-[15px] min-h-[40px] max-h-[200px]"
-                rows={1}
-                disabled={isLoading}
-                style={{
-                  height: 'auto',
-                  overflowY: input.split('\n').length > 3 ? 'auto' : 'hidden'
-                }}
-              />
-
-              {/* Submit Button */}
-              <button
-                onClick={handleSend}
-                disabled={isLoading || !input.trim()}
-                className="p-2.5 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-400 dark:disabled:bg-gray-700/60 rounded-full transition-colors disabled:cursor-not-allowed"
-                title="Send message"
-              >
-                <Send className="w-5 h-5 text-white" />
-              </button>
-            </div>
-
-            {/* Input helper text */}
-            <p className="text-xs text-gray-500 dark:text-gray-500 text-center mt-2.5">
-              AI can make mistakes. Verify important information.
-            </p>
-
-            {/* Shorthand suggestions popup */}
-            {input.startsWith('/') && (
-              <div className="absolute bottom-full left-0 right-0 mb-2 max-h-64 overflow-y-auto bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-lg z-50">
-                <div className="p-3 space-y-1">
-                  {Object.entries(shorthands).map(([shorthand, description]) => (
-                    <button
-                      key={shorthand}
-                      onClick={() => setInput(shorthand)}
-                      className="w-full text-left px-3 py-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded transition-colors group"
-                    >
-                      <div className="flex items-start gap-2">
-                        <code className="text-blue-600 dark:text-blue-400 font-semibold text-sm flex-shrink-0">
-                          {shorthand}
-                        </code>
-                        <span className="text-xs text-gray-600 dark:text-gray-400 group-hover:text-gray-900 dark:group-hover:text-white transition-colors">
-                          {description}
-                        </span>
-                      </div>
-                    </button>
-                  ))}
-                </div>
-              </div>
-            )}
-          </div>
-        </div>
-      </div>
-
-      {/* Settings Modal */}
-      {showSettingsModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[300] p-4">
-          <div 
-            ref={settingsModalRef}
-            className="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl w-full max-w-md overflow-hidden"
-          >
-            {/* Modal Header */}
-            <div className="p-6 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between">
-              <h2 className="text-xl font-semibold text-gray-900 dark:text-white">Settings</h2>
-              <button
-                onClick={() => setShowSettingsModal(false)}
-                className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-full transition-colors"
-                aria-label="Close settings"
-              >
-                <X className="w-5 h-5 text-gray-600 dark:text-gray-400" />
-              </button>
-            </div>
-
-            {/* Modal Content */}
-            <div className="p-6 space-y-6 max-h-[70vh] overflow-y-auto">
-              {/* Theme Selection */}
-              <div>
-                <h3 className="text-sm font-semibold text-gray-900 dark:text-white mb-3">Theme</h3>
-                <div className="flex gap-3">
-                  <button
-                    onClick={() => handleThemeChange('light')}
-                    className={`flex-1 p-4 rounded-lg border-2 transition-all ${ 
-                      theme === 'light'
-                        ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20'
-                        : 'border-gray-300 dark:border-gray-600 hover:border-gray-400'
-                    }`}
-                  >
-                    <Sun className="w-6 h-6 mx-auto mb-2 text-gray-700 dark:text-gray-300" />
-                    <span className="text-sm font-medium text-gray-900 dark:text-white">Light</span>
-                  </button>
-                  <button
-                    onClick={() => handleThemeChange('dark')}
-                    className={`flex-1 p-4 rounded-lg border-2 transition-all ${ 
-                      theme === 'dark'
-                        ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20'
-                        : 'border-gray-300 dark:border-gray-600 hover:border-gray-400'
-                    }`}
-                  >
-                    <Moon className="w-6 h-6 mx-auto mb-2 text-gray-700 dark:text-gray-300" />
-                    <span className="text-sm font-medium text-gray-900 dark:text-white">Dark</span>
-                  </button>
-                </div>
-              </div>
-
-              {/* Export Chat */}
-              <div>
-                <h3 className="text-sm font-semibold text-gray-900 dark:text-white mb-3">Export Chat</h3>
-                <div className="space-y-2">
-                  <button
-                    onClick={() => handleExport('word')}
-                    className="w-full p-4 bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 rounded-lg transition-colors flex items-center gap-3"
-                  >
-                    <FileText className="w-5 h-5 text-blue-600" />
-                    <div className="flex-1 text-left">
-                      <p className="text-sm font-medium text-gray-900 dark:text-white">Export as DOC</p>
-                      <p className="text-xs text-gray-600 dark:text-gray-400">Download chat as Word document</p>
-                    </div>
-                  </button>
-                  <button
-                    onClick={() => handleExport('pdf')}
-                    className="w-full p-4 bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 rounded-lg transition-colors flex items-center gap-3"
-                  >
-                    <FileText className="w-5 h-5 text-red-600" />
-                    <div className="flex-1 text-left">
-                      <p className="text-sm font-medium text-gray-900 dark:text-white">Export as PDF</p>
-                      <p className="text-xs text-gray-600 dark:text-gray-400">Download chat as PDF file</p>
-                    </div>
-                  </button>
-                </div>
-              </div>
-
-              {/* Clear History */}
-              <div>
-                <h3 className="text-sm font-semibold text-gray-900 dark:text-white mb-3">Clear History</h3>
-                <button
-                  onClick={handleClearAllChats}
-                  className="w-full p-4 bg-red-50 dark:bg-red-900/20 hover:bg-red-100 dark:hover:bg-red-900/30 border border-red-200 dark:border-red-800 rounded-lg transition-colors flex items-center gap-3"
-                >
-                  <Trash2 className="w-5 h-5 text-red-600 dark:text-red-500" />
-                  <div className="flex-1 text-left">
-                    <p className="text-sm font-medium text-red-700 dark:text-red-500">Clear All History</p>
-                    <p className="text-xs text-red-600 dark:text-red-400">Permanently delete all chat history</p>
-                  </div>
-                </button>
-              </div>
-
-              {/* Help & Support */}
-              <div>
-                <h3 className="text-sm font-semibold text-gray-900 dark:text-white mb-3">Help & Support</h3>
-                <div className="space-y-2">
-                  <a
-                    href="/help"
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="w-full p-3 bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 rounded-lg transition-colors flex items-center gap-3 text-sm text-gray-700 dark:text-gray-300"
-                  >
-                    <HelpCircle className="w-5 h-5" />
-                    Help Center
-                  </a>
-                  <button
-                    onClick={() => {
-                      setShowSettingsModal(false);
-                      setShowFeedbackModal(true);
-                    }}
-                    className="w-full p-3 bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 rounded-lg transition-colors flex items-center gap-3 text-sm text-gray-700 dark:text-gray-300"
-                  >
-                    <MessageSquare className="w-5 h-5" />
-                    Send Feedback
-                  </button>
-                  <a
-                    href="/terms"
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="w-full p-3 bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 rounded-lg transition-colors flex items-center gap-3 text-sm text-gray-700 dark:text-gray-300"
-                  >
-                    <FileText className="w-5 h-5" />
-                    Terms of Service
-                  </a>
-                  <a
-                    href="/privacy"
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="w-full p-3 bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 rounded-lg transition-colors flex items-center gap-3 text-sm text-gray-700 dark:text-gray-300"
-                  >
-                    <FileText className="w-5 h-5" />
-                    Privacy Policy
-                  </a>
-                </div>
-              </div>
-
-              {/* Personalization / User Activity - At Bottom */}
-              <div>
-                <h3 className="text-sm font-semibold text-gray-900 dark:text-white mb-3 flex items-center gap-2">
-                  <Brain className="w-4 h-4" />
-                  Your Past Chats with AI
-                </h3>
-                <div className="p-4 bg-purple-50 dark:bg-purple-900/20 rounded-lg border border-purple-200 dark:border-purple-800 mb-3">
-                  <p className="text-xs text-purple-800 dark:text-purple-300">
-                    AI learns from your past chats, understanding more about you and your preferences to personalize your experience. You can manage and delete your data, or turn this off anytime.
-                  </p>
-                </div>
-                <div className="space-y-3">
-                  <div className="flex items-center justify-between p-4 bg-gray-100 dark:bg-gray-700 rounded-lg">
-                    <div className="flex-1">
-                      <p className="text-sm font-medium text-gray-900 dark:text-white">Adaptive Responses</p>
-                      <p className="text-xs text-gray-600 dark:text-gray-400">AI learns from your activity to provide better answers</p>
-                    </div>
-                    <button
-                      onClick={togglePersonalization}
-                      className="ml-4 focus:outline-none"
-                      aria-label={personalizationEnabled ? "Disable personalization" : "Enable personalization"}
-                    >
-                      {personalizationEnabled ? (
-                        <ToggleRight className="w-10 h-10 text-blue-600" />
-                      ) : (
-                        <ToggleLeft className="w-10 h-10 text-gray-400" />
-                      )}
-                    </button>
-                  </div>
-                  
-                  {personalizationEnabled && isAdmin && (
-                    <div className="p-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg border border-blue-200 dark:border-blue-800">
-                      <p className="text-xs font-medium text-blue-800 dark:text-blue-300 mb-3">📊 User Learning Profile (Admin Only)</p>
-                      <div className="space-y-2 text-xs text-blue-700 dark:text-blue-400">
-                        <div className="flex justify-between">
-                          <span>Total Interactions:</span>
-                          <span className="font-medium">{userActivity.interactionCount}</span>
-                        </div>
-                        <div className="flex justify-between">
-                          <span>Topics Learned:</span>
-                          <span className="font-medium">{userActivity.topics.length}</span>
-                        </div>
-                        <div className="flex justify-between">
-                          <span>Writing Style:</span>
-                          <span className="font-medium capitalize">{userActivity.writingStyle}</span>
-                        </div>
-                        <div className="flex justify-between">
-                          <span>Response Length:</span>
-                          <span className="font-medium capitalize">{userActivity.preferredLength}</span>
-                        </div>
-                        {Object.keys(userActivity.expertise).length > 0 && (
-                          <div>
-                            <span className="block mb-1">Expertise Areas:</span>
-                            <div className="flex flex-wrap gap-1 mt-1">
-                              {Object.entries(userActivity.expertise)
-                                .sort((a, b) => (b[1] as number) - (a[1] as number))
-                                .slice(0, 4)
-                                .map(([area]) => (
-                                  <span key={area} className="px-2 py-0.5 bg-blue-200 dark:bg-blue-800 rounded text-xs capitalize">
-                                    {area}
-                                  </span>
-                                ))}
+                  )}
+    
+                  {/* Conversation State - ONLY when messages exist */}
+                  {messages.length > 0 && (
+                    <div className='w-full space-y-0'>
+                      {messages.map((message) => (
+                        <div
+                          key={message.id}
+                          className={`w-full py-4 sm:py-6 px-4 sm:px-6 lg:px-8 ${message.sender === 'user' ? 'bg-transparent' : 'bg-gray-50/50 dark:bg-gray-800/20'} border-b border-gray-100/50 dark:border-gray-800/50`}
+                        >
+                          <div className='max-w-4xl mx-auto flex gap-2 sm:gap-4'>
+                            {/* Avatar */}
+                            <div className='flex-shrink-0'>
+                              {message.sender === 'user' ? (
+                                session?.user?.image ? (
+                                  <Image src={session.user.image} alt='User' width={40} height={40} className='w-8 h-8 sm:w-10 sm:h-10 rounded-full' />
+                                ) : (
+                                  <div className='w-8 h-8 sm:w-10 sm:h-10 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center'>
+                                    <span className='text-white font-semibold text-xs sm:text-sm'>{getUserInitials()}</span>
+                                  </div>
+                                )
+                              ) : (
+                                <div className='w-8 h-8 sm:w-10 sm:h-10 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center'>
+                                  <Sparkles className='w-4 h-4 sm:w-5 sm:h-5 text-white' />
+                                </div>
+                              )}
+                            </div>
+    
+                            {/* Message Content */}
+                            <div className='flex-1 min-w-0 group'>
+                              <div className='relative'>
+                                {message.sender === 'ai' ? (
+                                  <div className='prose prose-sm sm:prose dark:prose-invert max-w-none prose-p:leading-relaxed prose-pre:bg-gray-900 prose-pre:text-gray-100'>
+                                    <ReactMarkdown>{message.text}</ReactMarkdown>
+                                  </div>
+                                ) : (
+                                  <p className='whitespace-pre-wrap text-sm sm:text-[15px] leading-relaxed text-gray-900 dark:text-gray-100'>{message.text}</p>
+                                )}
+                                {/* Copy Button */}
+                                <button
+                                  onClick={() => handleCopyMessage(message.id, message.text)}
+                                  className='mt-2 p-1.5 rounded-md opacity-0 group-hover:opacity-100 transition-opacity bg-gray-200/70 dark:bg-gray-700/50 hover:bg-gray-300 dark:hover:bg-gray-600'
+                                  title='Copy message'
+                                >
+                                  {copiedMessageId === message.id ? (
+                                    <Check className='w-3.5 h-3.5 sm:w-4 sm:h-4 text-green-500' />
+                                  ) : (
+                                    <Copy className='w-3.5 h-3.5 sm:w-4 sm:h-4 text-gray-600 dark:text-gray-400' />
+                                  )}
+                                </button>
+                                <p className='text-xs text-gray-400 dark:text-gray-500 mt-2'>
+                                  {message.timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                                </p>
+                              </div>
                             </div>
                           </div>
-                        )}
-                        {userActivity.conversationPatterns.length > 0 && (
-                          <div>
-                            <span className="block mb-1">Conversation Style:</span>
-                            <div className="flex flex-wrap gap-1 mt-1">
-                              {userActivity.conversationPatterns.slice(0, 3).map((pattern) => (
-                                <span key={pattern} className="px-2 py-0.5 bg-purple-200 dark:bg-purple-800 rounded text-xs">
-                                  {pattern.replace('_', ' ')}
-                                </span>
-                              ))}
+                        </div>
+                      ))}
+                      
+                      {isLoading && (
+                        <div className='w-full py-6 px-4 sm:px-6 lg:px-8 bg-gray-50/50 dark:bg-gray-800/20 border-b border-gray-100/50 dark:border-gray-800/50'>
+                          <div className='max-w-4xl mx-auto flex gap-3 sm:gap-4'>
+                            <div className='w-8 h-8 sm:w-10 sm:h-10 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center flex-shrink-0'>
+                              <Sparkles className='w-4 h-4 sm:w-5 sm:h-5 text-white' />
+                            </div>
+                            <div className='flex-1'>
+                              <div className='flex gap-2 py-2'>
+                                <div className='w-2 h-2 bg-gray-400 dark:bg-gray-500 rounded-full animate-bounce'></div>
+                                <div className='w-2 h-2 bg-gray-400 dark:bg-gray-500 rounded-full animate-bounce' style={{ animationDelay: '0.2s' }}></div>
+                                <div className='w-2 h-2 bg-gray-400 dark:bg-gray-500 rounded-full animate-bounce' style={{ animationDelay: '0.4s' }}></div>
+                              </div>
                             </div>
                           </div>
-                        )}
-                        {userActivity.topics.length > 0 && (
-                          <div>
-                            <span className="block mb-1">Recent Topics:</span>
-                            <p className="text-xs opacity-80 truncate">{userActivity.topics.slice(0, 8).join(', ')}</p>
-                          </div>
-                        )}
-                      </div>
-                      <button
-                        onClick={clearUserActivity}
-                        className="mt-4 w-full px-3 py-2 text-xs text-red-600 dark:text-red-400 border border-red-300 dark:border-red-700 rounded-lg hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors"
-                      >
-                        🗑️ Clear All Activity Data
-                      </button>
+                        </div>
+                      )}
+                      <div ref={messagesEndRef} />
                     </div>
                   )}
                 </div>
               </div>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Feedback Modal */}
-      {showFeedbackModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[300] p-4">
-          <div 
-            ref={feedbackModalRef}
-            className="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl w-full max-w-md overflow-hidden"
-          >
-            {/* Modal Header */}
-            <div className="p-6 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between">
-              <h2 className="text-xl font-semibold text-gray-900 dark:text-white">Send Feedback</h2>
-              <button
-                onClick={() => {
-                  setShowFeedbackModal(false);
-                  setFeedbackText('');
-                }}
-                className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-full transition-colors"
-                aria-label="Close feedback"
-              >
-                <X className="w-5 h-5 text-gray-600 dark:text-gray-400" />
-              </button>
-            </div>
-
-            {/* Modal Content */}
-            <div className="p-6">
-                <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">
-                Help us improve Ace by sharing your thoughts, suggestions, or reporting issues.
-              </p>
-              <textarea
-                value={feedbackText}
-                onChange={(e) => setFeedbackText(e.target.value)}
-                placeholder="Type your feedback here..."
-                className="w-full h-32 p-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-900 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none"
-              />
-              <div className="flex gap-3 mt-4">
-                <button
-                  onClick={() => {
-                    setShowFeedbackModal(false);
-                    setFeedbackText('');
-                  }}
-                  className="flex-1 px-4 py-2.5 bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors font-medium"
-                >
-                  Cancel
-                </button>
-                <button
-                  onClick={handleSubmitFeedback}
-                  disabled={!feedbackText.trim() || feedbackSubmitting}
-                  className="flex-1 px-4 py-2.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors font-medium"
-                >
-                  {feedbackSubmitting ? 'Sending...' : 'Submit'}
-                </button>
+    
+              {/* Chat Input Bar - Multi-functional (Gemini-style) */}
+              <div className='flex justify-center w-full'>
+                <div className='w-full max-w-4xl'>
+                  <div className='relative flex items-end gap-2 bg-gray-100/60 dark:bg-gray-800/40 rounded-full border border-gray-300/50 dark:border-gray-700/40 p-2 focus-within:bg-gray-100 dark:focus-within:bg-gray-800/60 focus-within:border-gray-400 dark:focus-within:border-gray-600 transition-all'>
+                      {/* Attachment/Tools Menu */}
+                      <div className='relative' ref={attachMenuRef}>
+                        <button
+                          onClick={() => setShowAttachMenu(!showAttachMenu)}
+                          className='p-2.5 hover:bg-gray-200/60 dark:hover:bg-gray-700/40 rounded-full transition-colors'
+                          title='Add attachments'
+                        >
+                          <Plus className='w-5 h-5 text-gray-600 dark:text-gray-400' />
+                        </button>
+    
+                        {showAttachMenu && (
+                          <div className='absolute bottom-full left-0 mb-2 w-56 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl shadow-xl py-2 z-[50]'>
+                            <button
+                              onClick={() => {
+                                fileInputRef.current?.click();
+                                setShowAttachMenu(false);
+                              }}
+                              className='w-full px-4 py-3 text-left text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors flex items-center gap-3'
+                            >
+                              <Upload className='w-4 h-4' />
+                              Upload files
+                            </button>
+                            <button className='w-full px-4 py-3 text-left text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors flex items-center gap-3'>
+                              Add from Drive
+                            </button>
+                            <button className='w-full px-4 py-3 text-left text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors flex items-center gap-3'>
+                              <FolderOpen className='w-4 h-4' />
+                              Import code
+                            </button>
+                          </div>
+                        )}
+                      </div>
+    
+                      {/* Hidden file input */}
+                      <input
+                        type='file'
+                        ref={fileInputRef}
+                        className='hidden'
+                        multiple
+                        accept='image/*,.pdf,.doc,.docx,.txt'
+                        onChange={handleFileSelect}
+                      />
+    
+                      {/* Attached Files Preview */}
+                      {attachedFiles.length > 0 && (
+                        <div className='flex flex-wrap gap-2 px-2'>
+                          {attachedFiles.map((file, index) => (
+                            <div key={index} className='flex items-center gap-2 bg-gray-200/60 dark:bg-gray-700/50 rounded-lg px-3 py-1.5'>
+                              {file.type.startsWith('image/') ? (
+                                <ImageIcon className='w-4 h-4 text-blue-500' />
+                              ) : (
+                                <FileText className='w-4 h-4 text-blue-500' />
+                              )}
+                              <span className='text-xs text-gray-700 dark:text-gray-300 max-w-[100px] truncate'>
+                                {file.name}
+                              </span>
+                              <button
+                                onClick={() => removeAttachedFile(index)}
+                                className='p-0.5 hover:bg-gray-300 dark:hover:bg-gray-600 rounded'
+                              >
+                                <X className='w-3 h-3 text-gray-500' />
+                              </button>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+    
+                      {/* Text Input Field */}
+                      <textarea
+                        value={input}
+                        onChange={(e) => setInput(e.target.value)}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter' && !e.shiftKey) {
+                            e.preventDefault();
+                            handleSend();
+                          }
+                        }}
+                        placeholder='Ask Ace'
+                        className='flex-1 px-3 py-2.5 bg-transparent border-none focus:outline-none resize-none text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 text-[15px] min-h-[40px] max-h-[200px]'
+                        rows={1}
+                        disabled={isLoading}
+                        style={{
+                          height: 'auto',
+                          overflowY: input.split('\n').length > 3 ? 'auto' : 'hidden'
+                        }}
+                      />
+    
+                      {/* Submit Button */}
+                      <button
+                        onClick={handleSend}
+                        disabled={isLoading || !input.trim()}
+                        className='p-2.5 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-400 dark:disabled:bg-gray-700/60 rounded-full transition-colors disabled:cursor-not-allowed'
+                        title='Send message'
+                      >
+                        <Send className='w-5 h-5 text-white' />
+                      </button>
+                    </div>
+    
+                    {/* Input helper text */}
+                    <p className='text-xs text-gray-500 dark:text-gray-500 text-center mt-2.5'>
+                      AI can make mistakes. Verify important information.
+                    </p>
+    
+                    {/* Shorthand suggestions popup */}
+                    {input.startsWith('/') && (
+                      <div className='absolute bottom-full left-0 right-0 mb-2 max-h-64 overflow-y-auto bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-lg z-50'>
+                        <div className='p-3 space-y-1'>
+                          {Object.entries(shorthands).map(([shorthand, description]) => (
+                            <button
+                              key={shorthand}
+                              onClick={() => setInput(shorthand)}
+                              className='w-full text-left px-3 py-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded transition-colors group'
+                            >
+                              <div className='flex items-start gap-2'>
+                                <code className='text-blue-600 dark:text-blue-400 font-semibold text-sm flex-shrink-0'>
+                                  {shorthand}
+                                </code>
+                                <span className='text-xs text-gray-600 dark:text-gray-400 group-hover:text-gray-900 dark:group-hover:text-white transition-colors'>
+                                  {description}
+                                </span>
+                              </div>
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </div>
               </div>
             </div>
-          </div>
-        </div>
-      )}
-
+    
+            {/* Settings Modal */}
+            {showSettingsModal && (
+              <div className='fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[300] p-4'>
+                <div 
+                  ref={settingsModalRef}
+                  className='bg-white dark:bg-gray-800 rounded-2xl shadow-2xl w-full max-w-md overflow-hidden'
+                >
+                  {/* Modal Header */}
+                  <div className='p-6 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between'>
+                    <h2 className='text-xl font-semibold text-gray-900 dark:text-white'>Settings</h2>
+                    <button
+                      onClick={() => setShowSettingsModal(false)}
+                      className='p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-full transition-colors'
+                      aria-label='Close settings'
+                    >
+                      <X className='w-5 h-5 text-gray-600 dark:text-gray-400' />
+                    </button>
+                  </div>
+    
+                  {/* Modal Content */}
+                  <div className='p-6 space-y-6 max-h-[70vh] overflow-y-auto'>
+                    {/* Theme Selection */}
+                    <div>
+                      <h3 className='text-sm font-semibold text-gray-900 dark:text-white mb-3'>Theme</h3>
+                      <div className='flex gap-3'>
+                        <button
+                          onClick={() => handleThemeChange('light')}
+                          className={`flex-1 p-4 rounded-lg border-2 transition-all ${ 
+                            theme === 'light'
+                              ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20'
+                              : 'border-gray-300 dark:border-gray-600 hover:border-gray-400'
+                          }`}
+                        >
+                          <span className='text-sm font-medium text-gray-900 dark:text-white'>Light</span>
+                        </button>
+                        <button
+                          onClick={() => handleThemeChange('dark')}
+                          className={`flex-1 p-4 rounded-lg border-2 transition-all ${ 
+                            theme === 'dark'
+                              ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20'
+                              : 'border-gray-300 dark:border-gray-600 hover:border-gray-400'
+                          }`}
+                        >
+                          <span className='text-sm font-medium text-gray-900 dark:text-white'>Dark</span>
+                        </button>
+                      </div>
+                    </div>
+    
+                    {/* Export Chat */}
+                    <div>
+                      <h3 className='text-sm font-semibold text-gray-900 dark:text-white mb-3'>Export Chat</h3>
+                      <div className='space-y-2'>
+                        <button
+                          onClick={() => handleExport('word')}
+                          className='w-full p-4 bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 rounded-lg transition-colors flex items-center gap-3'
+                        >
+                          <FileText className='w-5 h-5 text-blue-600' />
+                          <div className='flex-1 text-left'>
+                            <p className='text-sm font-medium text-gray-900 dark:text-white'>Export as DOC</p>
+                            <p className='text-xs text-gray-600 dark:text-gray-400'>Download chat as Word document</p>
+                          </div>
+                        </button>
+                        <button
+                          onClick={() => handleExport('pdf')}
+                          className='w-full p-4 bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 rounded-lg transition-colors flex items-center gap-3'
+                        >
+                          <FileText className='w-5 h-5 text-red-600' />
+                          <div className='flex-1 text-left'>
+                            <p className='text-sm font-medium text-gray-900 dark:text-white'>Export as PDF</p>
+                            <p className='text-xs text-gray-600 dark:text-gray-400'>Download chat as PDF file</p>
+                          </div>
+                        </button>
+                      </div>
+                    </div>
+    
+                    {/* Clear History */}
+                    <div>
+                      <h3 className='text-sm font-semibold text-gray-900 dark:text-white mb-3'>Clear History</h3>
+                      <button
+                        onClick={handleClearAllChats}
+                        className='w-full p-4 bg-red-50 dark:bg-red-900/20 hover:bg-red-100 dark:hover:bg-red-900/30 border border-red-200 dark:border-red-800 rounded-lg transition-colors flex items-center gap-3'
+                      >
+                        <Trash2 className='w-5 h-5 text-red-600 dark:text-red-500' />
+                        <div className='flex-1 text-left'>
+                          <p className='text-sm font-medium text-red-700 dark:text-red-500'>Clear All History</p>
+                          <p className='text-xs text-red-600 dark:text-red-400'>Permanently delete all chat history</p>
+                        </div>
+                      </button>
+                    </div>
+    
+                    {/* Help & Support */}
+                    <div>
+                      <h3 className='text-sm font-semibold text-gray-900 dark:text-white mb-3'>Help & Support</h3>
+                      <div className='space-y-2'>
+                        <a
+                          href='/help'
+                          target='_blank'
+                          rel='noopener noreferrer'
+                          className='w-full p-3 bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 rounded-lg transition-colors flex items-center gap-3 text-sm text-gray-700 dark:text-gray-300'
+                        >
+                          <HelpCircle className='w-5 h-5' />
+                          Help Center
+                        </a>
+                        <button
+                          onClick={() => {
+                            setShowSettingsModal(false);
+                            setShowFeedbackModal(true);
+                          }}
+                          className='w-full p-3 bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 rounded-lg transition-colors flex items-center gap-3 text-sm text-gray-700 dark:text-gray-300'
+                        >
+                          <MessageSquare className='w-5 h-5' />
+                          Send Feedback
+                        </button>
+                        <a
+                          href='/terms'
+                          target='_blank'
+                          rel='noopener noreferrer'
+                          className='w-full p-3 bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 rounded-lg transition-colors flex items-center gap-3 text-sm text-gray-700 dark:text-gray-300'
+                        >
+                          <FileText className='w-5 h-5' />
+                          Terms of Service
+                        </a>
+                        <a
+                          href='/privacy'
+                          target='_blank'
+                          rel='noopener noreferrer'
+                          className='w-full p-3 bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 rounded-lg transition-colors flex items-center gap-3 text-sm text-gray-700 dark:text-gray-300'
+                        >
+                          <FileText className='w-5 h-5' />
+                          Privacy Policy
+                        </a>
+                      </div>
+                    </div>
+    
+                    {/* Personalization / User Activity - At Bottom */}
+                    <div>
+                      <h3 className='text-sm font-semibold text-gray-900 dark:text-white mb-3 flex items-center gap-2'>
+                        <Brain className='w-4 h-4' />
+                        Your Past Chats with AI
+                      </h3>
+                      <div className='p-4 bg-purple-50 dark:bg-purple-900/20 rounded-lg border border-purple-200 dark:border-purple-800 mb-3'>
+                        <p className='text-xs text-purple-800 dark:text-purple-300'>
+                          AI learns from your past chats, understanding more about you and your preferences to personalize your experience. You can manage and delete your data, or turn this off anytime.
+                        </p>
+                      </div>
+                      <div className='space-y-3'>
+                        <div className='flex items-center justify-between p-4 bg-gray-100 dark:bg-gray-700 rounded-lg'>
+                          <div className='flex-1'>
+                            <p className='text-sm font-medium text-gray-900 dark:text-white'>Adaptive Responses</p>
+                            <p className='text-xs text-gray-600 dark:text-gray-400'>AI learns from your activity to provide better answers</p>
+                          </div>
+                          <button
+                            onClick={togglePersonalization}
+                            className='ml-4 focus:outline-none'
+                            aria-label={personalizationEnabled ? 'Disable personalization' : 'Enable personalization'}
+                          >
+                            {personalizationEnabled ? (
+                              <ToggleRight className='w-10 h-10 text-blue-600' />
+                            ) : (
+                              <ToggleLeft className='w-10 h-10 text-gray-400' />
+                            )}
+                          </button>
+                        </div>
+                        
+                        {personalizationEnabled && isAdmin && (
+                          <div className='p-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg border border-blue-200 dark:border-blue-800'>
+                            <p className='text-xs font-medium text-blue-800 dark:text-blue-300 mb-3'>📊 User Learning Profile (Admin Only)</p>
+                            <div className='space-y-2 text-xs text-blue-700 dark:text-blue-400'>
+                              <div className='flex justify-between'>
+                                <span>Total Interactions:</span>
+                                <span className='font-medium'>{userActivity.interactionCount}</span>
+                              </div>
+                              <div className='flex justify-between'>
+                                <span>Topics Learned:</span>
+                                <span className='font-medium'>{userActivity.topics.length}</span>
+                              </div>
+                              <div className='flex justify-between'>
+                                <span>Writing Style:</span>
+                                <span className='font-medium capitalize'>{userActivity.writingStyle}</span>
+                              </div>
+                              <div className='flex justify-between'>
+                                <span>Response Length:</span>
+                                <span className='font-medium capitalize'>{userActivity.preferredLength}</span>
+                              </div>
+                              {Object.keys(userActivity.expertise).length > 0 && (
+                                <div>
+                                  <span className='block mb-1'>Expertise Areas:</span>
+                                  <div className='flex flex-wrap gap-1 mt-1'>
+                                    {Object.entries(userActivity.expertise)
+                                      .sort((a, b) => (b[1] as number) - (a[1] as number))
+                                      .slice(0, 4)
+                                      .map(([area]) => (
+                                        <span key={area} className='px-2 py-0.5 bg-blue-200 dark:bg-blue-800 rounded text-xs capitalize'>
+                                          {area}
+                                        </span>
+                                      ))}
+                                  </div>
+                                </div>
+                              )}
+                              {userActivity.conversationPatterns.length > 0 && (
+                                <div>
+                                  <span className='block mb-1'>Conversation Style:</span>
+                                  <div className='flex flex-wrap gap-1 mt-1'>
+                                    {userActivity.conversationPatterns.slice(0, 3).map((pattern) => (
+                                      <span key={pattern} className='px-2 py-0.5 bg-purple-200 dark:bg-purple-800 rounded text-xs'>
+                                        {pattern.replace('_', ' ')}
+                                      </span>
+                                    ))}
+                                  </div>
+                                </div>
+                              )}
+                              {userActivity.topics.length > 0 && (
+                                <div>
+                                  <span className='block mb-1'>Recent Topics:</span>
+                                  <p className='text-xs opacity-80 truncate'>{userActivity.topics.slice(0, 8).join(', ')}</p>
+                                </div>
+                              )}
+                            </div>
+                            <button
+                              onClick={clearUserActivity}
+                              className='mt-4 w-full px-3 py-2 text-xs text-red-600 dark:text-red-400 border border-red-300 dark:border-red-700 rounded-lg hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors'
+                            >
+                              🗑️ Clear All Activity Data
+                            </button>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+    
+            {/* Feedback Modal */}
+            {showFeedbackModal && (
+              <div className='fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[300] p-4'>
+                <div 
+                  ref={feedbackModalRef}
+                  className='bg-white dark:bg-gray-800 rounded-2xl shadow-2xl w-full max-w-md overflow-hidden'
+                >
+                  {/* Modal Header */}
+                  <div className='p-6 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between'>
+                    <h2 className='text-xl font-semibold text-gray-900 dark:text-white'>Send Feedback</h2>
+                    <button
+                      onClick={() => {
+                        setShowFeedbackModal(false);
+                        setFeedbackText('');
+                      }}
+                      className='p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-full transition-colors'
+                      aria-label='Close feedback'
+                    >
+                      <X className='w-5 h-5 text-gray-600 dark:text-gray-400' />
+                    </button>
+                  </div>
+    
+                  {/* Modal Content */}
+                  <div className='p-6'>
+                      <p className='text-sm text-gray-600 dark:text-gray-400 mb-4'>
+                      Help us improve Ace by sharing your thoughts, suggestions, or reporting issues.
+                    </p>
+                    <textarea
+                      value={feedbackText}
+                      onChange={(e) => setFeedbackText(e.target.value)}
+                      placeholder='Type your feedback here...'
+                      className='w-full h-32 p-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-900 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none'
+                    />
+                    <div className='flex gap-3 mt-4'>
+                      <button
+                        onClick={() => {
+                          setShowFeedbackModal(false);
+                          setFeedbackText('');
+                        }}
+                        className='flex-1 px-4 py-2.5 bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors font-medium'
+                      >
+                        Cancel
+                      </button>
+                      <button
+                        onClick={handleSubmitFeedback}
+                        disabled={!feedbackText.trim() || feedbackSubmitting}
+                        className='flex-1 px-4 py-2.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors font-medium'
+                      >
+                        {feedbackSubmitting ? 'Sending...' : 'Submit'}
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
       {/* Auth Modal */}
+      </>
     </MainLayout>
+  );
+}
+
+export default function ChatClientPage() {
+  return (
+    <Suspense fallback={<div>Loading...</div>}>
+      <ChatContent />
+    </Suspense>
   );
 }

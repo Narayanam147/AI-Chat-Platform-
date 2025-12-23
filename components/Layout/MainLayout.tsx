@@ -76,36 +76,22 @@ export function MainLayout({
     };
     checkMobile();
     window.addEventListener('resize', checkMobile);
-
+    
     // Listen for toggleSidebar events from chat page
     const handleToggleSidebar = () => {
-      setIsSidebarOpen(prev => !prev);
+      if (isMobile) {
+        setIsSidebarOpen(prev => !prev);
+      } else {
+        setIsSidebarOpen(prev => !prev);
+      }
     };
     window.addEventListener('toggleSidebar', handleToggleSidebar);
-
+    
     return () => {
       window.removeEventListener('resize', checkMobile);
       window.removeEventListener('toggleSidebar', handleToggleSidebar);
     };
   }, [isMobile]);
-
-  // Body scroll lock for mobile sidebar
-  useEffect(() => {
-    if (isMobile && isSidebarOpen) {
-      document.body.style.overflow = 'hidden';
-      document.body.style.position = 'fixed';
-      document.body.style.width = '100%';
-    } else {
-      document.body.style.overflow = '';
-      document.body.style.position = '';
-      document.body.style.width = '';
-    }
-    return () => {
-      document.body.style.overflow = '';
-      document.body.style.position = '';
-      document.body.style.width = '';
-    };
-  }, [isMobile, isSidebarOpen]);
 
   // Load theme
   useEffect(() => {
@@ -131,6 +117,15 @@ export function MainLayout({
     return () => window.removeEventListener('resize', setHeaderHeight);
   }, []);
 
+  // Listen for theme changes from settings
+  useEffect(() => {
+    const handleThemeChange = (e: CustomEvent<{ theme: 'light' | 'dark' }>) => {
+      setTheme(e.detail.theme);
+    };
+    window.addEventListener('themeChange' as any, handleThemeChange);
+    return () => window.removeEventListener('themeChange' as any, handleThemeChange);
+  }, []);
+
   // Toggle theme and persist
   const handleThemeToggle = () => {
     const newTheme = theme === 'light' ? 'dark' : 'light';
@@ -138,6 +133,8 @@ export function MainLayout({
     try { localStorage.setItem('theme', newTheme); } catch (e) {}
     if (newTheme === 'dark') document.documentElement.classList.add('dark');
     else document.documentElement.classList.remove('dark');
+    // Dispatch custom event to notify other components
+    window.dispatchEvent(new CustomEvent('themeChange', { detail: { theme: newTheme } }));
   };
 
   const getUserInitials = () => {
@@ -340,22 +337,21 @@ export function MainLayout({
 
       {/* Main Content Area */}
       <div className="flex-1 flex overflow-hidden relative">
-        {/* Mobile Overlay - Click to close sidebar - MUST be above sidebar but below header */}
+        {/* Mobile Overlay - Click to close sidebar - MUST be below sidebar z-index */}
         {isMobile && isSidebarOpen && (
-          <div
-            className="fixed inset-0 bg-black/60 z-[50] transition-opacity duration-300"
-            style={{ top: 'var(--app-header-height,64px)', pointerEvents: 'auto' }}
+          <div 
+            className="fixed inset-0 bg-black/60 z-[70] transition-opacity duration-300" 
             onClick={() => setIsSidebarOpen(false)}
             aria-label="Close sidebar overlay"
           />
         )}
 
-        {/* Sidebar - Above overlay but below top navbar (z-100) */}
+        {/* Sidebar - Above overlay (z-80) but below top navbar (z-100) */}
         <aside
           style={isMobile ? { top: 'var(--app-header-height)' } : undefined}
           className={`
             ${isMobile ? 'fixed left-0 bottom-0' : 'relative flex-shrink-0'}
-            z-[60]
+            z-[80]
             h-full
             bg-white dark:bg-gray-900
             border-r border-gray-200 dark:border-gray-800
@@ -442,15 +438,12 @@ export function MainLayout({
                             }}
                             onRename={(id) => {
                               onRenameChat?.(id);
-                              if (isMobile) setIsSidebarOpen(false);
                             }}
                             onShare={(id) => {
                               onShareChat?.(id);
-                              if (isMobile) setIsSidebarOpen(false);
                             }}
                             onDelete={(id) => {
                               onDeleteChat?.(id);
-                              if (isMobile) setIsSidebarOpen(false);
                             }}
                           />
                         </div>
