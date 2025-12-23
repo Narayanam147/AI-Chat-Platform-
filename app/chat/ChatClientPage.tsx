@@ -1,10 +1,12 @@
 'use client';
 
 import { useSession, signOut, signIn } from "next-auth/react";
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, Suspense } from "react";
+import Image from "next/image";
 import { Send, Upload, Sparkles, FileText, Image as ImageIcon, X, Trash2, Plus, Settings, HelpCircle, FolderOpen, Code, Copy, Check, Brain, ToggleLeft, ToggleRight, Moon, Sun, MessageSquare, LogOut } from "lucide-react";
 import ReactMarkdown from "react-markdown";
 import { MainLayout } from "@/components/Layout/MainLayout";
+import { useSearchParams } from "next/navigation";
 
 interface Message {
   id: string;
@@ -23,7 +25,18 @@ interface ChatHistory {
   pinned?: boolean;
 }
 
-export default function ChatPage() {
+interface UserActivity {
+  topics: string[];
+  preferredStyle: string;
+  recentQueries: string[];
+  interactionCount: number;
+  writingStyle: string;
+  preferredLength: string;
+  expertise: { [key: string]: number };
+  conversationPatterns: string[];
+}
+
+export default function ChatClientPage() {
     const { data: session } = useSession();
     // Simple admin check (add your admin email(s) here)
     const adminEmails = ["admin@example.com", "sarvanmdubey@gmail.com"];
@@ -47,16 +60,7 @@ export default function ChatPage() {
   const [renameValue, setRenameValue] = useState('');
   const renameInputRef = useRef<HTMLInputElement>(null);
   const [searchQuery, setSearchQuery] = useState("");
-  const [userActivity, setUserActivity] = useState<{
-    topics: string[];
-    preferredStyle: string;
-    recentQueries: string[];
-    interactionCount: number;
-    writingStyle: string;
-    preferredLength: string;
-    expertise: { [key: string]: number };
-    conversationPatterns: string[];
-  }>({
+  const [userActivity, setUserActivity] = useState<UserActivity>({
     topics: [],
     preferredStyle: 'balanced',
     recentQueries: [],
@@ -76,6 +80,8 @@ export default function ChatPage() {
   const [openDropdownId, setOpenDropdownId] = useState<string | null>(null);
   const [mounted, setMounted] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
+
+  const searchParams = useSearchParams();
 
   // Shorthand commands mapping
   const shorthands: { [key: string]: string } = {
@@ -183,6 +189,28 @@ export default function ChatPage() {
     }
   }, []);
 
+  useEffect(() => {
+    const chatId = searchParams.get('chatId');
+    if (chatId) {
+      const chat = chatHistory.find(c => c.id === chatId);
+      if (chat) {
+        if (chat.messages && chat.messages.length) {
+          const mapped = chat.messages.map((m: any, i: number) => ({
+            id: `${chat.id}-${i}`,
+            text: m.text,
+            sender: (m.sender === 'ai' ? 'ai' : 'user') as 'ai' | 'user',
+            timestamp: new Date(m.timestamp || new Date()),
+          }));
+          setMessages(mapped);
+        } else {
+          setMessages([]);
+        }
+        setSelectedChatId(chat.id);
+        setCurrentChatId(chat.id);
+      }
+    }
+  }, [searchParams, chatHistory]);
+
   // Prevent hydration mismatch by only rendering interactive UI after mount
   useEffect(() => {
     setMounted(true);
@@ -196,7 +224,7 @@ export default function ChatPage() {
   const extractTopics = (text: string): string[] => {
     const keywords = text.toLowerCase()
       .replace(/[^a-z0-9\s]/g, '')
-      .split(/\s+/)
+      .split(/\s+/) // Corrected regex for splitting by whitespace
       .filter(word => word.length > 4)
       .filter(word => !['about', 'would', 'could', 'should', 'there', 'their', 'which', 'where', 'please', 'thanks', 'thank'].includes(word));
     return Array.from(new Set(keywords)).slice(0, 5);
@@ -885,7 +913,6 @@ export default function ChatPage() {
 
     return (
     <MainLayout
-      title="Ace"
       onNewChat={handleNewChat}
       chatHistory={chatHistory}
       onSelectChat={(chat) => {
@@ -907,103 +934,13 @@ export default function ChatPage() {
       onPinChat={togglePin}
       onRenameChat={startRename}
       onShareChat={handleShare}
-        selectedChatId={selectedChatId || currentChatId}
+      selectedChatId={selectedChatId || currentChatId}
       onOpenSettings={() => setShowSettingsModal(true)}
-        isMobile={isMobile}
+      isMobile={isMobile}
+      chatTitle={chatHistory.find((c) => c.id === (selectedChatId || currentChatId))?.title || 'New chat'}
+      isChatActive={!!(selectedChatId || currentChatId)}
     >
       <div className="flex flex-col h-full bg-white dark:bg-gray-900 relative">
-        {/* Chat Heading with Options (Gemini-style) - Shows only when messages exist */}
-        {(selectedChatId || currentChatId) && messages.length > 0 && (
-          <div className="sticky top-0 flex items-center justify-between px-4 sm:px-8 py-3 border-b border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 backdrop-blur-sm transition-all duration-300 z-[30] shadow-sm">
-            <div className="flex items-center gap-3 flex-1 min-w-0">
-              {!renameMode ? (
-                <h2 className="text-sm font-medium text-gray-700 dark:text-gray-200 max-w-xs sm:max-w-2xl truncate">
-                  {chatHistory.find((c) => c.id === (selectedChatId || currentChatId))?.title || 'New chat'}
-                </h2>
-              ) : (
-                <input
-                  ref={renameInputRef}
-                  className="text-sm font-medium bg-transparent outline-none border-b border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-200 max-w-xs sm:max-w-2xl"
-                  value={renameValue}
-                  onChange={(e) => setRenameValue(e.target.value)}
-                  onBlur={saveRename}
-                  onKeyDown={(e) => {
-                    if (e.key === 'Enter') saveRename();
-                    if (e.key === 'Escape') cancelRename();
-                  }}
-                  aria-label="Rename chat"
-                />
-              )}
-            </div>
-            <div className="relative flex-shrink-0">
-              <button
-                onClick={(e) => {
-                  e.stopPropagation();
-                  setHeadingMenuOpen(v => !v);
-                }}
-                aria-haspopup="true"
-                aria-expanded={headingMenuOpen}
-                ref={headingMenuRef}
-                className="p-2 rounded hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors touch-manipulation"
-                title="Open actions"
-              >
-                <svg className="w-5 h-5 text-gray-600 dark:text-gray-400" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24" aria-hidden>
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M12 5v.01M12 12v.01M12 19v.01" />
-                </svg>
-              </button>
-
-              {headingMenuOpen && (
-                <div className="absolute right-0 top-full mt-2 w-48 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-2xl z-[40] overflow-hidden pointer-events-auto">
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      const id = selectedChatId || currentChatId;
-                      if (!id) return;
-                      togglePin(id);
-                      setHeadingMenuOpen(false);
-                    }}
-                    className="w-full text-left px-4 py-3 text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors touch-manipulation active:bg-gray-200 dark:active:bg-gray-600"
-                  >
-                    {chatHistory.find(c => c.id === (selectedChatId || currentChatId))?.pinned ? 'Unpin' : 'Pin'}
-                  </button>
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      startRename();
-                      setHeadingMenuOpen(false);
-                    }}
-                    className="w-full text-left px-4 py-3 text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors touch-manipulation active:bg-gray-200 dark:active:bg-gray-600"
-                  >
-                    Rename
-                  </button>
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      handleShare(selectedChatId || currentChatId || undefined);
-                      setHeadingMenuOpen(false);
-                    }}
-                    className="w-full text-left px-4 py-3 text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors touch-manipulation active:bg-gray-200 dark:active:bg-gray-600"
-                  >
-                    Share
-                  </button>
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      const id = selectedChatId || currentChatId;
-                      if (!id) return;
-                      setHeadingMenuOpen(false);
-                      handleDeleteChat(id);
-                    }}
-                    className="w-full text-left px-4 py-3 text-red-600 dark:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/40 transition-colors touch-manipulation active:bg-red-100 dark:active:bg-red-900/60"
-                  >
-                    Delete
-                  </button>
-                </div>
-              )}
-            </div>
-          </div>
-        )}
-
         {/* Conversation View - Messages */}
         <div className="flex-1 overflow-y-auto overflow-x-hidden bg-gradient-to-b from-white/50 dark:from-gray-900/30 to-white dark:to-gray-900 transition-all duration-300 scroll-smooth">
           {/* Greeting State - ONLY when no messages */}
@@ -1029,7 +966,7 @@ export default function ChatPage() {
               {messages.map((message) => (
                 <div
                   key={message.id}
-                  className={`w-full py-4 sm:py-6 px-4 sm:px-6 lg:px-8 ${
+                  className={`w-full py-4 sm:py-6 px-4 sm:px-6 lg:px-8 ${ 
                     message.sender === 'user' 
                       ? 'bg-transparent' 
                       : 'bg-gray-50/50 dark:bg-gray-800/20'
@@ -1040,7 +977,7 @@ export default function ChatPage() {
                     <div className="flex-shrink-0">
                       {message.sender === 'user' ? (
                         session?.user?.image ? (
-                          <img src={session.user.image} alt="User" className="w-8 h-8 sm:w-10 sm:h-10 rounded-full" />
+                          <Image src={session.user.image} alt="User" width={40} height={40} className="w-8 h-8 sm:w-10 sm:h-10 rounded-full" />
                         ) : (
                           <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center">
                             <span className="text-white font-semibold text-xs sm:text-sm">{getUserInitials()}</span>
@@ -1267,7 +1204,7 @@ export default function ChatPage() {
                 <div className="flex gap-3">
                   <button
                     onClick={() => handleThemeChange('light')}
-                    className={`flex-1 p-4 rounded-lg border-2 transition-all ${
+                    className={`flex-1 p-4 rounded-lg border-2 transition-all ${ 
                       theme === 'light'
                         ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20'
                         : 'border-gray-300 dark:border-gray-600 hover:border-gray-400'
@@ -1278,7 +1215,7 @@ export default function ChatPage() {
                   </button>
                   <button
                     onClick={() => handleThemeChange('dark')}
-                    className={`flex-1 p-4 rounded-lg border-2 transition-all ${
+                    className={`flex-1 p-4 rounded-lg border-2 transition-all ${ 
                       theme === 'dark'
                         ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20'
                         : 'border-gray-300 dark:border-gray-600 hover:border-gray-400'

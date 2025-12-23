@@ -101,8 +101,10 @@ export async function saveNewChat(payload: {
   }
 }
 
-export default {
+const chatClient = {
   fetchChatsForUser,
   softDeleteChat,
   saveNewChat,
 };
+
+export default chatClient;

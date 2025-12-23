@@ -58,4 +58,5 @@ export async function softDeleteHistory(id: string, userId?: string | null) {
   }
 }
 
-export default { saveHistoryEntry, fetchHistoryForUser, softDeleteHistory };
+const chatHistoryClient = { saveHistoryEntry, fetchHistoryForUser, softDeleteHistory };
+export default chatHistoryClient;

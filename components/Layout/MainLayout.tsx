@@ -1,5 +1,6 @@
 'use client';
 
+import Image from 'next/image';
 import React, { ReactNode, useState, useEffect, useRef } from 'react';
 import { useSession, signOut, signIn } from 'next-auth/react';
 import { Menu, Moon, Sun, Sparkles, LogOut, Settings, Plus, MessageSquare, Search, X, Trash2, Pin, Edit3, Share2, ChevronDown } from 'lucide-react';
@@ -19,6 +20,8 @@ interface MainLayoutProps {
   selectedChatId?: string | null;
   onOpenSettings?: () => void;
   isMobile?: boolean;
+  chatTitle?: string;
+  isChatActive?: boolean;
 }
 
 export function MainLayout({ 
@@ -34,7 +37,9 @@ export function MainLayout({
   onShareChat,
   selectedChatId,
   onOpenSettings,
-  isMobile: isMobileProp
+  isMobile: isMobileProp,
+  chatTitle,
+  isChatActive,
 }: MainLayoutProps) {
   const { data: session } = useSession();
   const [isSidebarOpen, setIsSidebarOpen] = useState(true); // Default open on desktop, will adjust for mobile
@@ -93,7 +98,17 @@ export function MainLayout({
     const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
     const initialTheme = savedTheme || (prefersDark ? 'dark' : 'light');
     setTheme(initialTheme);
+    if (initialTheme === 'dark') document.documentElement.classList.add('dark');
   }, []);
+
+  // Toggle theme and persist
+  const handleThemeToggle = () => {
+    const newTheme = theme === 'light' ? 'dark' : 'light';
+    setTheme(newTheme);
+    try { localStorage.setItem('theme', newTheme); } catch (e) {}
+    if (newTheme === 'dark') document.documentElement.classList.add('dark');
+    else document.documentElement.classList.remove('dark');
+  };
 
   const getUserInitials = () => {
     if (session?.user?.name) {
@@ -103,13 +118,6 @@ export function MainLayout({
       return session.user.email[0].toUpperCase();
     }
     return 'U';
-  };
-
-  const handleThemeToggle = () => {
-    const newTheme = theme === 'light' ? 'dark' : 'light';
-    setTheme(newTheme);
-    localStorage.setItem('theme', newTheme);
-    document.documentElement.classList.toggle('dark', newTheme === 'dark');
   };
 
   const handleAuthSubmit = async (e: React.FormEvent) => {
@@ -189,154 +197,70 @@ export function MainLayout({
 
   return (
     <div className="flex flex-col h-screen overflow-hidden bg-white dark:bg-gray-900">
-      {/* Top Navbar - Always Visible - Highest z-index */}
-      <header className="sticky top-0 z-[100] px-4 py-3 border-b border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 shadow-sm relative">
-        <div className="flex items-center gap-3">
-          {/* Hamburger Toggle */}
-          <button
-            onClick={(e) => {
-              e.stopPropagation();
-              setIsSidebarOpen(!isSidebarOpen);
-            }}
-            className="relative z-[110] p-2 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition-colors touch-manipulation"
-            aria-label="Toggle sidebar"
-          >
-            <Menu className="w-6 h-6 text-gray-700 dark:text-gray-300" />
-          </button>
-
-          {/* Theme Toggle */}
-          <button
-            onClick={(e) => {
-              e.stopPropagation();
-              handleThemeToggle();
-            }}
-            className="p-2 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition-colors touch-manipulation"
-            aria-label="Toggle theme"
-          >
-            {theme === 'light' ? <Moon className="w-5 h-5" /> : <Sun className="w-5 h-5" />}
-          </button>
-
-          {/* left area: show brand when no chat selected */}
-          {!selectedChatId && (
-            <div className="ml-2 hidden sm:flex items-center gap-2">
-              <span className="text-lg sm:text-xl font-semibold tracking-tight text-gray-900 dark:text-white">Ace</span>
-            </div>
-          )}
-        </div>
-
-        {/* Center title: show chat title (or Ace) centered in the top bar; actions appear when a chat is active */}
-        <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-          <div className="pointer-events-auto relative flex items-center gap-3 max-w-[80%]">
-            <h1 className="text-lg sm:text-xl font-semibold text-gray-900 dark:text-white truncate text-center max-w-[60vw]">
-              {selectedChatId ? (activeTitle || title || 'Untitled Chat') : ''}
-            </h1>
-            {selectedChatId && (
-              <div className="flex items-center gap-1">
-                <div className="relative" ref={actionsMenuRef}>
-                  <button
-                    onClick={(e) => { e.stopPropagation(); setShowActionsMenu(prev => !prev); }}
-                    title="Actions"
-                    className="p-2 rounded-md hover:bg-gray-100 dark:hover:bg-gray-800"
-                  >
-                    <ChevronDown className="w-5 h-5 text-gray-700 dark:text-gray-300" />
-                  </button>
-
-                  {showActionsMenu && (
-                    <div className="absolute right-0 mt-2 w-40 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-md shadow-lg z-[120] py-2">
-                      <button onClick={(e) => { e.stopPropagation(); onPinChat?.(selectedChatId); setShowActionsMenu(false); }} className={`w-full text-left px-3 py-2 hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-2 ${isSelectedPinned ? 'bg-yellow-50 dark:bg-yellow-900/20' : ''}`}>
-                        <Pin className={`w-4 h-4 ${isSelectedPinned ? 'text-yellow-500 dark:text-yellow-400' : 'text-gray-700 dark:text-gray-300'}`} />
-                        <span className="text-sm text-gray-700 dark:text-gray-200">{isSelectedPinned ? 'Unpin' : 'Pin'}</span>
-                      </button>
-                      
-                      <button onClick={(e) => { e.stopPropagation(); onRenameChat?.(selectedChatId); setShowActionsMenu(false); }} className="w-full text-left px-3 py-2 hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-2">
-                        <Edit3 className="w-4 h-4 text-gray-700 dark:text-gray-300" />
-                        <span className="text-sm text-gray-700 dark:text-gray-200">Rename</span>
-                      </button>
-                      <button onClick={(e) => { e.stopPropagation(); onShareChat?.(selectedChatId); setShowActionsMenu(false); }} className="w-full text-left px-3 py-2 hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-2">
-                        <Share2 className="w-4 h-4 text-gray-700 dark:text-gray-300" />
-                        <span className="text-sm text-gray-700 dark:text-gray-200">Share</span>
-                      </button>
-                      <button onClick={(e) => { e.stopPropagation(); onDeleteChat?.(selectedChatId); setShowActionsMenu(false); }} className="w-full text-left px-3 py-2 hover:bg-red-50 dark:hover:bg-red-900/20 flex items-center gap-2">
-                        <Trash2 className="w-4 h-4 text-red-600" />
-                        <span className="text-sm text-red-600">Delete</span>
-                      </button>
-                    </div>
-                  )}
-                </div>
+      {/* Top Navbar - simplified and robust */}
+      <header className="sticky top-0 z-[100] px-4 py-3 border-b border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 shadow-sm">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <button
+              onClick={(e) => { e.stopPropagation(); setIsSidebarOpen(!isSidebarOpen); }}
+              className="p-2 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition-colors"
+              aria-label="Toggle sidebar"
+            >
+              <Menu className="w-6 h-6 text-gray-700 dark:text-gray-300" />
+            </button>
+            {!selectedChatId && (
+              <div className="hidden sm:flex items-center ml-2">
+                <span className="text-lg sm:text-xl font-semibold text-gray-900 dark:text-white">Ace</span>
               </div>
             )}
           </div>
-        </div>
 
-        {/* Auth Buttons / User Profile */}
-        <div className="relative flex items-center justify-end" ref={profileMenuRef}>
-          {!session ? (
-            <div className="flex items-center gap-2">
-              <button
-                onClick={(e) => {
-                  e.stopPropagation();
-                  setAuthMode('login');
-                  setShowAuthModal(true);
-                  setAuthError('');
-                }}
-                className="px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors touch-manipulation"
-              >
-                Log In
-              </button>
-              <button
-                onClick={(e) => {
-                  e.stopPropagation();
-                  setAuthMode('signup');
-                  setShowAuthModal(true);
-                  setAuthError('');
-                }}
-                className="px-4 py-2 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-lg transition-colors touch-manipulation"
-              >
-                Sign Up
-              </button>
-            </div>
-          ) : (
-            <>
-              <div
-                onClick={(e) => {
-                  e.stopPropagation();
-                  setShowProfileMenu(!showProfileMenu);
-                }}
-                className="cursor-pointer touch-manipulation"
-              >
-                {session?.user?.image ? (
-                  <img src={session.user.image} alt="User" className="w-9 h-9 rounded-full object-cover hover:ring-2 hover:ring-blue-500 transition-all" />
-                ) : (
-                  <div className="w-9 h-9 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center hover:ring-2 hover:ring-blue-500 transition-all">
-                    <span className="text-white font-semibold text-sm">{getUserInitials()}</span>
-                  </div>
-                )}
-              </div>
+          <div className="flex-1 flex justify-center pointer-events-none">
+            <h1 className="text-lg sm:text-xl font-semibold text-gray-900 dark:text-white truncate max-w-[60vw] pointer-events-auto">
+              {selectedChatId ? (activeTitle || title || 'Untitled Chat') : ''}
+            </h1>
+          </div>
 
-              {showProfileMenu && (
-                <div className="absolute right-0 top-full mt-2 w-64 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-xl z-[100] overflow-hidden pointer-events-auto">
-                  <div className="p-4 border-b border-gray-200 dark:border-gray-700">
-                    <p className="text-sm text-gray-700 dark:text-gray-300 font-medium truncate">{session?.user?.name || 'User'}</p>
-                    <p className="text-xs text-gray-500 dark:text-gray-400 truncate mt-1">{session?.user?.email}</p>
-                  </div>
-                  <div className="p-2">
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        signOut({ callbackUrl: '/' });
-                      }}
-                      className="w-full px-4 py-2.5 text-left text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors flex items-center gap-3 touch-manipulation"
-                    >
-                      <LogOut className="w-4 h-4" />
-                      Sign out
-                    </button>
-                  </div>
+          <div className="flex items-center gap-3">
+            <button onClick={(e) => { e.stopPropagation(); handleThemeToggle(); }} className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800">
+              {theme === 'light' ? <Moon className="w-5 h-5" /> : <Sun className="w-5 h-5" />}
+            </button>
+
+            <div className="relative" ref={profileMenuRef}>
+              {!session ? (
+                <div className="flex items-center gap-2">
+                  <button onClick={(e) => { e.stopPropagation(); setAuthMode('login'); setShowAuthModal(true); setAuthError(''); }} className="px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg">Log In</button>
+                  <button onClick={(e) => { e.stopPropagation(); setAuthMode('signup'); setShowAuthModal(true); setAuthError(''); }} className="px-4 py-2 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-lg">Sign Up</button>
                 </div>
+              ) : (
+                <>
+                  <div onClick={(e) => { e.stopPropagation(); setShowProfileMenu(!showProfileMenu); }} className="cursor-pointer">
+                    {session?.user?.image ? (
+                      <Image src={session.user.image as string} alt="User" width={36} height={36} className="w-9 h-9 rounded-full object-cover" />
+                    ) : (
+                      <div className="w-9 h-9 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center">
+                        <span className="text-white font-semibold text-sm">{getUserInitials()}</span>
+                      </div>
+                    )}
+                  </div>
+
+                  {showProfileMenu && (
+                    <div className="absolute right-0 mt-2 w-64 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-xl z-[100] overflow-hidden">
+                      <div className="p-4 border-b border-gray-200 dark:border-gray-700">
+                        <p className="text-sm text-gray-700 dark:text-gray-300 font-medium truncate">{session?.user?.name || 'User'}</p>
+                        <p className="text-xs text-gray-500 dark:text-gray-400 truncate mt-1">{session?.user?.email}</p>
+                      </div>
+                      <div className="p-2">
+                        <button onClick={() => signOut({ callbackUrl: '/' })} className="w-full px-4 py-2.5 text-left text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg"> <LogOut className="w-4 h-4 inline-block mr-2"/> Sign out</button>
+                      </div>
+                    </div>
+                  )}
+                </>
               )}
-            </>
-          )}
+            </div>
+          </div>
         </div>
-        </header>
+      </header>
 
       {/* Main Content Area */}
       <div className="flex-1 flex overflow-hidden relative">
@@ -363,7 +287,6 @@ export function MainLayout({
               : isSidebarOpen ? 'w-64' : 'w-0'
             }
             ${isMobile && isSidebarOpen && 'shadow-2xl'}
-            overflow-hidden
           `}
         >
           <div className={`h-full flex flex-col ${!isSidebarOpen && !isMobile ? 'invisible w-0' : 'visible'}`}>
