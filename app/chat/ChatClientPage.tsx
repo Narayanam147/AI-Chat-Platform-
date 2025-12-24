@@ -650,15 +650,6 @@ function ChatContent() {
     }
   };
 
-  // Listen for theme changes from header toggle
-  useEffect(() => {
-    const handleThemeChangeEvent = (e: CustomEvent<{ theme: 'light' | 'dark' }>) => {
-      setTheme(e.detail.theme);
-    };
-    window.addEventListener('themeChange' as any, handleThemeChangeEvent);
-    return () => window.removeEventListener('themeChange' as any, handleThemeChangeEvent);
-  }, []);
-
   const handleThemeChange = (newTheme: 'light' | 'dark') => {
     setTheme(newTheme);
     localStorage.setItem('theme', newTheme);
@@ -668,8 +659,6 @@ function ChatContent() {
     } else {
       document.documentElement.classList.remove('dark');
     }
-    // Dispatch custom event to notify header
-    window.dispatchEvent(new CustomEvent('themeChange', { detail: { theme: newTheme } }));
   };
 
   const scrollToBottom = () => {
@@ -1221,6 +1210,7 @@ function ChatContent() {
                               : 'border-gray-300 dark:border-gray-600 hover:border-gray-400'
                           }`}
                         >
+                          <Sun className='w-6 h-6 mx-auto mb-2 text-gray-700 dark:text-gray-300' />
                           <span className='text-sm font-medium text-gray-900 dark:text-white'>Light</span>
                         </button>
                         <button
@@ -1231,6 +1221,7 @@ function ChatContent() {
                               : 'border-gray-300 dark:border-gray-600 hover:border-gray-400'
                           }`}
                         >
+                          <Moon className='w-6 h-6 mx-auto mb-2 text-gray-700 dark:text-gray-300' />
                           <span className='text-sm font-medium text-gray-900 dark:text-white'>Dark</span>
                         </button>
                       </div>

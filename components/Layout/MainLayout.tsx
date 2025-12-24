@@ -117,15 +117,6 @@ export function MainLayout({
     return () => window.removeEventListener('resize', setHeaderHeight);
   }, []);
 
-  // Listen for theme changes from settings
-  useEffect(() => {
-    const handleThemeChange = (e: CustomEvent<{ theme: 'light' | 'dark' }>) => {
-      setTheme(e.detail.theme);
-    };
-    window.addEventListener('themeChange' as any, handleThemeChange);
-    return () => window.removeEventListener('themeChange' as any, handleThemeChange);
-  }, []);
-
   // Toggle theme and persist
   const handleThemeToggle = () => {
     const newTheme = theme === 'light' ? 'dark' : 'light';
@@ -133,8 +124,6 @@ export function MainLayout({
     try { localStorage.setItem('theme', newTheme); } catch (e) {}
     if (newTheme === 'dark') document.documentElement.classList.add('dark');
     else document.documentElement.classList.remove('dark');
-    // Dispatch custom event to notify other components
-    window.dispatchEvent(new CustomEvent('themeChange', { detail: { theme: newTheme } }));
   };
 
   const getUserInitials = () => {
@@ -286,10 +275,6 @@ export function MainLayout({
 
           {/* Right: theme toggle + profile/login */}
           <div className="flex items-center gap-3">
-            <button onClick={(e) => { e.stopPropagation(); handleThemeToggle(); }} className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800">
-              {theme === 'light' ? <Moon className="w-5 h-5" /> : <Sun className="w-5 h-5" />}
-            </button>
-
             <button
               onClick={(e) => { e.stopPropagation(); onOpenSettings?.(); if (isMobile) setIsSidebarOpen(false); }}
               className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800"

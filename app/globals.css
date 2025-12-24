@@ -10,7 +10,7 @@
 @media (prefers-color-scheme: dark) {
   :root {
     --background: #0a0a0a;
-    --foreground: #ededed;
+    --foreground: #ffffff;
   }
 }
 
@@ -123,29 +123,5 @@ body {
 /* Prevent iOS double-tap zoom on buttons */
 button {
   touch-action: manipulation;
-}
-
-/* Dark mode text color - force white */
-.dark,
-.dark * {
-  color: #ffffff;
-}
-
-/* Preserve intentional colors */
-.dark .text-blue-600,
-.dark .text-blue-700,
-.dark .text-red-600,
-.dark .text-red-500,
-.dark .text-red-700,
-.dark .text-green-600,
-.dark .text-purple-600,
-.dark .text-purple-800,
-.dark [class*="text-blue-"],
-.dark [class*="text-red-"],
-.dark [class*="text-green-"],
-.dark [class*="text-purple-"],
-.dark [class*="text-yellow-"],
-.dark [class*="text-orange-"] {
-  color: inherit;
 }
 

@@ -1057,11 +1057,11 @@ export default function ChatPage() {
                     <div className="flex-1 min-w-0 group">
                       <div className="relative">
                         {message.sender === 'ai' ? (
-                          <div className="prose prose-sm sm:prose dark:prose-invert max-w-none prose-p:leading-relaxed prose-pre:bg-gray-900 prose-pre:text-gray-100">
+                          <div className="prose prose-sm sm:prose dark:prose-invert text-gray-900 dark:text-white max-w-none prose-p:leading-relaxed prose-pre:bg-gray-900 prose-pre:text-gray-100">
                             <ReactMarkdown>{message.text}</ReactMarkdown>
                           </div>
                         ) : (
-                          <p className="whitespace-pre-wrap text-sm sm:text-[15px] leading-relaxed text-gray-900 dark:text-gray-100">{message.text}</p>
+                          <p className="whitespace-pre-wrap text-sm sm:text-[15px] leading-relaxed text-gray-900 dark:text-white">{message.text}</p>
                         )}
                         {/* Copy Button */}
                         <button
