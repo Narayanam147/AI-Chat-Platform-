@@ -2,6 +2,7 @@
 
 import { useSession, signOut, signIn } from "next-auth/react";
 import { useState, useRef, useEffect } from "react";
+import Image from "next/image";
 import { Send, Upload, Sparkles, FileText, Image as ImageIcon, X, Trash2, Plus, Settings, HelpCircle, FolderOpen, Code, Copy, Check, Brain, ToggleLeft, ToggleRight, Moon, Sun, MessageSquare, LogOut } from "lucide-react";
 import ReactMarkdown from "react-markdown";
 import { MainLayout } from "@/components/Layout/MainLayout";
@@ -1040,7 +1041,7 @@ export default function ChatPage() {
                     <div className="flex-shrink-0">
                       {message.sender === 'user' ? (
                         session?.user?.image ? (
-                          <img src={session.user.image} alt="User" className="w-8 h-8 sm:w-10 sm:h-10 rounded-full" />
+                          <Image src={session.user.image} alt="User" width={40} height={40} className="w-8 h-8 sm:w-10 sm:h-10 rounded-full" />
                         ) : (
                           <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center">
                             <span className="text-white font-semibold text-xs sm:text-sm">{getUserInitials()}</span>
