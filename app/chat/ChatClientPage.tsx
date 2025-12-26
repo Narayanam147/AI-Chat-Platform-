@@ -1260,7 +1260,7 @@ function ChatContent() {
                 </div>
               </div>
             </div>
-    
+
             {/* Settings Modal */}
             {showSettingsModal && (
               <div className='fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[300] p-4'>
@@ -1553,7 +1553,7 @@ function ChatContent() {
               </div>
             )}
           </>
-    </MainLayout>
+        </MainLayout>
   );
 }
 
