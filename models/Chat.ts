@@ -9,7 +9,8 @@ export interface Message {
 
 export interface Chat {
   id: string;
-  user_id: string;
+  user_id: string | null;
+  guest_session_id?: string | null;
   messages: Message[];
   title?: string;
   created_at?: string;
@@ -27,6 +28,21 @@ export const ChatModel = {
     
     if (error) {
       console.error('Error fetching chats:', error);
+      return [];
+    }
+    return data || [];
+  },
+
+  async findByGuestSession(guestSessionId: string): Promise<Chat[]> {
+    const { data, error } = await supabase
+      .from('chats')
+      .select('*')
+      .eq('guest_session_id', guestSessionId)
+      .eq('is_deleted', false)
+      .order('updated_at', { ascending: false });
+    
+    if (error) {
+      console.error('Error fetching guest chats:', error);
       return [];
     }
     return data || [];

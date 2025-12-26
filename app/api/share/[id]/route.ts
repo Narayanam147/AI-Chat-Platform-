@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { supabase } from '@/lib/supabase';
+import { supabase, supabaseAdmin } from '@/lib/supabase';
 
 export async function GET(request: NextRequest, { params }: { params: { id: string } }) {
   try {
@@ -10,8 +10,11 @@ export async function GET(request: NextRequest, { params }: { params: { id: stri
     const token = url.searchParams.get('t');
     if (!token) return NextResponse.json({ error: 'Missing token' }, { status: 400 });
 
+    // Use supabaseAdmin for better access
+    const supabaseClient = supabaseAdmin || supabase;
+
     // Validate share entry and expiry
-    const { data: share, error: shareErr } = await supabase
+    const { data: share, error: shareErr } = await supabaseClient
       .from('chat_shares')
       .select('*')
       .eq('id', id)
@@ -26,8 +29,16 @@ export async function GET(request: NextRequest, { params }: { params: { id: stri
       return NextResponse.json({ error: 'Share link expired' }, { status: 410 });
     }
 
+    // Increment view count
+    if (supabaseAdmin) {
+      await supabaseAdmin
+        .from('chat_shares')
+        .update({ view_count: (share.view_count || 0) + 1 })
+        .eq('id', id);
+    }
+
     // Fetch the chat_history row
-    const { data: row, error: rowErr } = await supabase
+    const { data: row, error: rowErr } = await supabaseClient
       .from('chat_history')
       .select('*')
       .eq('id', share.chat_id)

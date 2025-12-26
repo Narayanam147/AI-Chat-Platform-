@@ -9,6 +9,8 @@ export async function POST(request: NextRequest) {
     const body = await request.json();
     const chatId = body?.id;
     const expiresDays = Number(body?.expiresDays ?? 7);
+    const isPublic = body?.isPublic !== false; // default to true
+    
     if (!chatId) return NextResponse.json({ error: 'Missing chat id' }, { status: 400 });
 
     const session = await getServerSession(authOptions);
@@ -29,6 +31,8 @@ export async function POST(request: NextRequest) {
         token,
         created_by: createdBy,
         expires_at: expiresAt,
+        is_public: isPublic,
+        view_count: 0,
       }])
       .select()
       .single();
@@ -39,7 +43,12 @@ export async function POST(request: NextRequest) {
     }
 
     // Return id and token; client will compose origin
-    return NextResponse.json({ id: data.id, token, expires_at: data.expires_at });
+    return NextResponse.json({ 
+      id: data.id, 
+      token, 
+      expires_at: data.expires_at,
+      is_public: data.is_public 
+    });
   } catch (err) {
     console.error('POST /api/share error:', err);
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });

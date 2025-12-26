@@ -7,6 +7,7 @@ import { Send, Upload, Sparkles, FileText, Image as ImageIcon, X, Trash2, Plus, 
 import ReactMarkdown from "react-markdown";
 import { MainLayout } from "@/components/Layout/MainLayout";
 import { useSearchParams } from "next/navigation";
+import { getOrCreateGuestSession, getGuestToken, migrateGuestToUser } from "@/lib/guestSession";
 
 interface Message {
   id: string;
@@ -37,7 +38,7 @@ interface UserActivity {
 }
 
 function ChatContent() {
-  const { data: session } = useSession();
+  const { data: session, status } = useSession();
   // Simple admin check (add your admin email(s) here)
   const adminEmails = ['admin@example.com', 'sarvanmdubey@gmail.com'];
   const isAdmin = session?.user?.email && adminEmails.includes(session.user.email);
@@ -60,6 +61,7 @@ function ChatContent() {
   const [renameValue, setRenameValue] = useState('');
   const renameInputRef = useRef<HTMLInputElement>(null);
   const [searchQuery, setSearchQuery] = useState('');
+  const [guestToken, setGuestToken] = useState<string | null>(null);
   const [userActivity, setUserActivity] = useState<UserActivity>({
     topics: [],
     preferredStyle: 'balanced',
@@ -188,6 +190,74 @@ function ChatContent() {
       }
     }
   }, []);
+
+  // Initialize guest session for non-authenticated users
+  useEffect(() => {
+    async function initGuestSession() {
+      if (status === 'loading') return;
+      
+      if (!session) {
+        // User is not authenticated, create/get guest session
+        const token = await getOrCreateGuestSession();
+        if (token) {
+          setGuestToken(token);
+          console.log('Guest session initialized');
+        }
+      }
+    }
+
+    initGuestSession();
+  }, [session, status]);
+
+  // Migrate guest data when user logs in
+  useEffect(() => {
+    async function handleUserLogin() {
+      if (status === 'loading') return;
+      
+      if (session?.user?.email) {
+        const token = getGuestToken();
+        if (token) {
+          console.log('Migrating guest data to user account...');
+          const success = await migrateGuestToUser(session.user.email);
+          if (success) {
+            console.log('Guest data migrated successfully');
+            // Reload chat history to show migrated chats
+            loadChatHistory();
+          }
+        }
+      }
+    }
+
+    handleUserLogin();
+  }, [session, status]);
+
+  // Load chat history
+  const loadChatHistory = async () => {
+    try {
+      const url = session?.user?.email 
+        ? '/api/history'
+        : `/api/history?guestToken=${encodeURIComponent(guestToken || '')}`;
+      
+      if (!session && !guestToken) {
+        return; // No session or guest token yet
+      }
+
+      const response = await fetch(url);
+      if (response.ok) {
+        const data = await response.json();
+        setChatHistory(data);
+      }
+    } catch (error) {
+      console.error('Failed to load chat history:', error);
+    }
+  };
+
+  // Load chat history when guest token or session is available
+  useEffect(() => {
+    if (session?.user?.email || guestToken) {
+      loadChatHistory();
+    }
+  }, [session, guestToken]);
 
   useEffect(() => {
     const chatId = searchParams.get('chatId');
@@ -556,34 +626,48 @@ function ChatContent() {
       alert('No chat selected to share');
       return;
     }
-    const url = `${window.location.origin}/chat?chatId=${encodeURIComponent(id)}`;
+
     try {
+      // Create a shareable link using the API
+      const response = await fetch('/api/share', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ 
+          id, 
+          expiresDays: 30,
+          isPublic: true 
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to create share link');
+      }
+
+      const data = await response.json();
+      const shareUrl = `${window.location.origin}/shared/${data.id}?t=${data.token}`;
+
       // Prefer Web Share API on mobile
       if (navigator.share) {
         await navigator.share({
-          title: 'Chat from Ace',
-            text: 'Open this chat in Ace',
-          url,
+          title: 'Shared Chat from Ace',
+          text: 'Check out this conversation',
+          url: shareUrl,
         });
         return;
       }
 
       // Fallback: try clipboard
       if (navigator.clipboard && navigator.clipboard.writeText) {
-        await navigator.clipboard.writeText(url);
-        alert('Shareable link copied to clipboard');
+        await navigator.clipboard.writeText(shareUrl);
+        alert('Shareable link copied to clipboard! Anyone with the link can view this chat.');
         return;
       }
 
       // Last resort: show prompt so user can copy manually
-      prompt('Copy this link:', url);
+      prompt('Copy this shareable link:', shareUrl);
     } catch (e) {
-      console.error('Failed to share link', e);
-      try {
-        prompt('Copy this link:', url);
-      } catch (_) {
-        // swallow
-      }
+      console.error('Failed to create share link', e);
+      alert('Failed to create shareable link. Please try again.');
     }
   };
 
@@ -785,7 +869,7 @@ function ChatContent() {
         }))
       } : null;
 
-      console.log('📤 Sending to /api/chat:', { promptText: promptText.substring(0, 100), userId: session?.user?.email });
+      console.log('📤 Sending to /api/chat:', { promptText: promptText.substring(0, 100), userId: session?.user?.email, hasGuestToken: !!guestToken });
 
       const response = await fetch('/api/chat', {
         method: 'POST',
@@ -795,6 +879,7 @@ function ChatContent() {
         body: JSON.stringify({ 
           prompt: promptText,
           userId: session?.user?.email,
+          guestToken: guestToken,
           personalization: personalizationContext,
           chatId: currentChatId // Send current chat ID to append messages
         }),

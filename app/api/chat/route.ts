@@ -1,15 +1,30 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { ChatModel } from '@/models/Chat';
+import { supabaseAdmin } from '@/lib/supabase';
 
 export async function POST(request: NextRequest) {
   try {
-    const { prompt, userId, personalization, chatId } = await request.json();
+    const { prompt, userId, guestToken, personalization, chatId } = await request.json();
 
     if (!prompt) {
       return NextResponse.json(
         { error: 'Prompt is required' },
         { status: 400 }
       );
+    }
+
+    // Determine guest session ID if guestToken is provided
+    let guestSessionId = null;
+    if (!userId && guestToken && supabaseAdmin) {
+      const { data: guestSession } = await supabaseAdmin
+        .from('guest_sessions')
+        .select('id')
+        .eq('session_token', guestToken)
+        .single();
+      
+      if (guestSession) {
+        guestSessionId = guestSession.id;
+      }
     }
 
 
@@ -234,8 +249,8 @@ export async function POST(request: NextRequest) {
 
     let savedChatId = chatId;
 
-    // Save to database if userId is provided
-    if (userId) {
+    // Save to database if userId or guestSessionId is provided
+    if (userId || guestSessionId) {
       try {
         const userMessage = { text: prompt, sender: 'user', timestamp: new Date().toISOString() };
         const assistantMessage = { text: aiResponse, sender: 'ai', timestamp: new Date().toISOString() };
@@ -250,7 +265,8 @@ export async function POST(request: NextRequest) {
           } else {
             // Chat not found, create new one
             const newChat = await ChatModel.create({
-              user_id: userId,
+              user_id: userId || null,
+              guest_session_id: guestSessionId || null,
               messages: [userMessage, assistantMessage],
               title: prompt.substring(0, 50),
             });
@@ -260,12 +276,13 @@ export async function POST(request: NextRequest) {
         } else {
           // Create new chat
           const newChat = await ChatModel.create({
-            user_id: userId,
+            user_id: userId || null,
+            guest_session_id: guestSessionId || null,
             messages: [userMessage, assistantMessage],
             title: prompt.substring(0, 50),
           });
           savedChatId = newChat?.id || null;
-          console.log('✅ New chat created:', savedChatId);
+          console.log('✅ New chat created:', savedChatId, userId ? '(user)' : '(guest)');
         }
         
       } catch (dbError) {
