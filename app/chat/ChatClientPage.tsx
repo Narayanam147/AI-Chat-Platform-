@@ -1025,8 +1025,7 @@ function ChatContent() {
           chatTitle={chatHistory.find((c) => c.id === (selectedChatId || currentChatId))?.title || 'New chat'}
           isChatActive={!!(selectedChatId || currentChatId)}
         >
-          <>
-            <div className='flex flex-col h-full bg-white dark:bg-[#0E2F29] relative'>
+          <div className='flex flex-col h-full bg-white dark:bg-[#0E2F29] relative'>
               <div className='flex-1 overflow-y-auto'>
                 {/* Conversation View - Messages */}
                 <div className='flex-1 bg-gradient-to-b from-white/50 dark:from-[#0E2F29]/30 to-white dark:to-[#0E2F29] transition-all duration-300 scroll-smooth'>
@@ -1259,7 +1258,6 @@ function ChatContent() {
                   </div>
                 </div>
               </div>
-            </div>
 
             {/* Settings Modal */}
             {showSettingsModal && (
@@ -1552,7 +1550,6 @@ function ChatContent() {
                 </div>
               </div>
             )}
-          </>
         </MainLayout>
   );
 }
