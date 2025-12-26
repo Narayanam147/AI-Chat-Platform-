@@ -937,14 +937,14 @@ export default function ChatPage() {
       onOpenSettings={() => setShowSettingsModal(true)}
         isMobile={isMobile}
     >
-      <div className="flex flex-col h-full bg-white dark:bg-gray-900 relative">
+      <div className="flex flex-col h-full bg-white dark:bg-[#0E2F29] relative">
         {/* Chat heading removed: title is shown in top header center (MainLayout)
             Show a centered modal for renaming when `renameMode` is active */}
         {renameMode && (
           <div className="fixed inset-0 z-[60] flex items-center justify-center">
             <div className="absolute inset-0 bg-black/40" onClick={cancelRename} />
             <div className="relative w-full max-w-lg mx-4">
-              <div className="bg-white dark:bg-gray-900 rounded-2xl p-6 shadow-xl">
+              <div className="bg-white dark:bg-[#16423C] rounded-2xl p-6 shadow-xl">
                 <h3 className="text-xl font-semibold text-gray-900 dark:text-gray-100 mb-4">Rename this chat</h3>
                 <div className="mb-4">
                   <input
@@ -955,7 +955,7 @@ export default function ChatPage() {
                       if (e.key === 'Enter') { e.preventDefault(); saveRename(); }
                       if (e.key === 'Escape') { cancelRename(); }
                     }}
-                    className="w-full px-4 py-3 border border-gray-300 dark:border-gray-700 rounded-md bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none"
+                    className="w-full px-4 py-3 border border-gray-300 dark:border-[#16423C] rounded-md bg-white dark:bg-[#0E2F29] text-gray-900 dark:text-white focus:outline-none"
                     placeholder="Enter chat title"
                     aria-label="Rename chat"
                   />
@@ -976,7 +976,7 @@ export default function ChatPage() {
         )}
 
         {/* Conversation View - Messages */}
-        <div className="flex-1 overflow-y-auto overflow-x-hidden bg-gradient-to-b from-white/50 dark:from-gray-900/30 to-white dark:to-gray-900 transition-all duration-300 scroll-smooth">
+        <div className="flex-1 overflow-y-auto overflow-x-hidden bg-gradient-to-b from-white/50 dark:from-[#0E2F29]/30 to-white dark:to-[#0E2F29] transition-all duration-300 scroll-smooth">
           {/* Greeting State - ONLY when no messages */}
           {messages.length === 0 && (
             <div className="flex items-center justify-center h-full animate-fadeIn px-4 py-8">
@@ -991,7 +991,7 @@ export default function ChatPage() {
 
                 {/* Centered input like Gemini */}
                 <div className="mx-auto max-w-2xl px-3">
-                  <div className="relative flex items-center gap-3 bg-gray-100/60 dark:bg-gray-800/40 rounded-3xl border border-gray-300/50 dark:border-gray-700/40 p-3">
+                  <div className="relative flex items-center gap-3 bg-gray-100/60 dark:bg-[#0E2F29]/40 rounded-3xl border border-gray-300/50 dark:border-[#16423C]/40 p-3">
                     <textarea
                       value={input}
                       onChange={(e) => setInput(e.target.value)}
@@ -1057,11 +1057,11 @@ export default function ChatPage() {
                     <div className="flex-1 min-w-0 group">
                       <div className="relative">
                         {message.sender === 'ai' ? (
-                          <div className="prose prose-sm sm:prose dark:prose-invert text-gray-900 dark:text-white max-w-none prose-p:leading-relaxed prose-pre:bg-gray-900 prose-pre:text-gray-100">
+                          <div className="prose prose-sm sm:prose dark:prose-invert max-w-none prose-p:leading-relaxed prose-pre:bg-gray-900 prose-pre:text-gray-100">
                             <ReactMarkdown>{message.text}</ReactMarkdown>
                           </div>
                         ) : (
-                          <p className="whitespace-pre-wrap text-sm sm:text-[15px] leading-relaxed text-gray-900 dark:text-white">{message.text}</p>
+                          <p className="whitespace-pre-wrap text-sm sm:text-[15px] leading-relaxed text-gray-900 dark:text-gray-100">{message.text}</p>
                         )}
                         {/* Copy Button */}
                         <button
@@ -1107,9 +1107,9 @@ export default function ChatPage() {
 
         {/* Chat Input Bar - Multi-functional (Gemini-style) - shown when conversation exists */}
         {messages.length > 0 && (
-        <div className="border-t border-gray-200/50 dark:border-gray-800/50 bg-white dark:bg-gray-900 p-2 sm:p-3 -mb-2">
+        <div className="border-t border-gray-200/50 dark:border-[#16423C]/50 bg-white dark:bg-[#0E2F29] p-2 sm:p-3 -mb-2">
           <div className="max-w-4xl mx-auto px-1 sm:px-0">
-            <div className="relative flex items-end gap-2 bg-gray-100/60 dark:bg-gray-800/40 rounded-full border border-gray-300/50 dark:border-gray-700/40 p-2 focus-within:bg-gray-100 dark:focus-within:bg-gray-800/60 focus-within:border-gray-400 dark:focus-within:border-gray-600 transition-all">
+            <div className="relative flex items-end gap-2 bg-gray-100/60 dark:bg-[#0E2F29]/40 rounded-full border border-gray-300/50 dark:border-[#16423C]/40 p-2 focus-within:bg-gray-100 dark:focus-within:bg-[#0E2F29]/60 focus-within:border-gray-400 dark:focus-within:border-[#16423C] transition-all">
               {/* Attachment/Tools Menu */}
               <div className="relative" ref={attachMenuRef}>
                 <button
@@ -1508,7 +1508,7 @@ export default function ChatPage() {
                 value={feedbackText}
                 onChange={(e) => setFeedbackText(e.target.value)}
                 placeholder="Type your feedback here..."
-                className="w-full h-32 p-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-900 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none"
+                className="w-full h-32 p-3 border border-gray-300 dark:border-[#16423C] rounded-lg bg-white dark:bg-[#0E2F29] text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none"
               />
               <div className="flex gap-3 mt-4">
                 <button

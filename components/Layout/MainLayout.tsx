@@ -3,7 +3,7 @@
 import Image from 'next/image';
 import React, { ReactNode, useState, useEffect, useRef } from 'react';
 import { useSession, signOut, signIn } from 'next-auth/react';
-import { Menu, Moon, Sun, Sparkles, LogOut, Settings, Plus, MessageSquare, Search, X, Trash2, Pin, Edit3, Share2, ChevronDown } from 'lucide-react';
+import { Menu, Sparkles, LogOut, Settings, Plus, MessageSquare, Search, X, Trash2, Pin, Edit3, Share2, ChevronDown } from 'lucide-react';
 import { ChatHistoryDropdown } from '@/components/ChatHistoryDropdown';
 
 interface MainLayoutProps {
@@ -216,9 +216,9 @@ export function MainLayout({
     || (chatHistory.length > 0 ? String(chatHistory[0].id) : undefined);
 
   return (
-    <div className="flex flex-col h-screen overflow-hidden bg-white dark:bg-gray-900">
+    <div className="flex flex-col h-screen overflow-hidden bg-white dark:bg-[#0E2F29]">
       {/* Top Navbar - single header with left controls, centered chat title + actions, and right profile */}
-      <header ref={headerRef} className="sticky top-0 z-[100] px-4 py-3 border-b border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 shadow-sm">
+      <header ref={headerRef} className="sticky top-0 z-[100] px-4 py-3 border-b border-gray-200 dark:border-[#16423C] bg-white dark:bg-[#0E2F29] shadow-sm">
         <div className="relative flex items-center justify-between">
           {/* Left: hamburger + Ace */}
           <div className="flex items-center gap-3">
@@ -250,7 +250,7 @@ export function MainLayout({
                 </button>
               )}
               {showActionsMenu && headerChatId && (
-                <div className="absolute left-1/2 transform -translate-x-1/2 mt-2 w-48 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-lg z-[150] overflow-hidden">
+                <div className="absolute left-1/2 transform -translate-x-1/2 mt-2 w-48 bg-white dark:bg-[#16423C] border border-gray-200 dark:border-[#1a4a42] rounded-lg shadow-lg z-[150] overflow-hidden">
                   <button className="w-full px-3 py-2 text-left text-sm hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-2" onClick={() => { onPinChat?.(String(headerChatId)); setShowActionsMenu(false); }}>
                     <Pin className="w-4 h-4" />
                     <span>{isSelectedPinned ? 'Unpin' : 'Pin'}</span>
@@ -273,7 +273,7 @@ export function MainLayout({
             </div>
           </div>
 
-          {/* Right: theme toggle + profile/login */}
+          {/* Right: profile/login */}
           <div className="flex items-center gap-3">
             <button
               onClick={(e) => { e.stopPropagation(); onOpenSettings?.(); if (isMobile) setIsSidebarOpen(false); }}
@@ -303,7 +303,7 @@ export function MainLayout({
                   </div>
 
                   {showProfileMenu && (
-                    <div className="absolute right-0 mt-2 w-64 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-xl z-[100] overflow-hidden">
+                    <div className="absolute right-0 mt-2 w-64 bg-white dark:bg-[#16423C] border border-gray-200 dark:border-[#1a4a42] rounded-lg shadow-xl z-[100] overflow-hidden">
                       <div className="p-4 border-b border-gray-200 dark:border-gray-700">
                         <p className="text-sm text-gray-700 dark:text-gray-300 font-medium truncate">{session?.user?.name || 'User'}</p>
                         <p className="text-xs text-gray-500 dark:text-gray-400 truncate mt-1">{session?.user?.email}</p>
@@ -320,7 +320,7 @@ export function MainLayout({
         </div>
       </header>
 
-      {/* Main Content Area */}
+      {/* Main Content Area - flex-1 ensures it takes remaining space */}
       <div className="flex-1 flex overflow-hidden relative">
         {/* Mobile Overlay - Click to close sidebar - MUST be below sidebar z-index */}
         {isMobile && isSidebarOpen && (
@@ -338,8 +338,8 @@ export function MainLayout({
             ${isMobile ? 'fixed left-0 bottom-0' : 'relative flex-shrink-0'}
             z-[80]
             h-full
-            bg-white dark:bg-gray-900
-            border-r border-gray-200 dark:border-gray-800
+            bg-white dark:bg-[#0E2F29]
+            border-r border-gray-200 dark:border-[#16423C]
             transition-all duration-300 ease-in-out
             ${isMobile 
               ? isSidebarOpen ? 'translate-x-0 w-72' : '-translate-x-full w-72'
@@ -350,7 +350,7 @@ export function MainLayout({
         >
           <div className={`h-full flex flex-col ${!isSidebarOpen && !isMobile ? 'invisible w-0' : 'visible'}`}>
             {/* Sidebar Header */}
-            <div className="flex-shrink-0 p-3 border-b border-gray-200 dark:border-gray-800 flex items-center justify-between bg-white dark:bg-gray-900">
+            <div className="flex-shrink-0 p-3 border-b border-gray-200 dark:border-[#16423C] flex items-center justify-between bg-white dark:bg-[#0E2F29]">
               <button
                 onClick={() => {
                   onNewChat?.();
@@ -364,7 +364,7 @@ export function MainLayout({
               {isMobile && (
                 <button
                   onClick={() => setIsSidebarOpen(false)}
-                  className="p-1.5 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-md transition-colors touch-manipulation"
+                  className="p-1.5 hover:bg-gray-100 dark:hover:bg-[#16423C] rounded-md transition-colors touch-manipulation"
                   aria-label="Close sidebar"
                 >
                   <X className="w-5 h-5 text-gray-500 dark:text-gray-400" />
@@ -381,10 +381,10 @@ export function MainLayout({
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                   placeholder="Search chats..."
-                  className="w-full pl-9 pr-8 py-2 text-sm bg-gray-100 dark:bg-gray-800 border border-gray-300 dark:border-gray-700 rounded-lg text-gray-900 dark:text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="w-full pl-9 pr-8 py-2 text-sm bg-gray-100 dark:bg-[#16423C] border border-gray-300 dark:border-[#1a4a42] rounded-lg text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
                 />
                 {searchQuery && (
-                  <button onClick={() => setSearchQuery('')} className="absolute right-2 top-1/2 transform -translate-y-1/2 p-1 hover:bg-gray-200 dark:hover:bg-gray-700 rounded">
+                  <button onClick={() => setSearchQuery('')} className="absolute right-2 top-1/2 transform -translate-y-1/2 p-1 hover:bg-gray-200 dark:hover:bg-[#1a4a42] rounded">
                     <X className="w-3 h-3 text-gray-500" />
                   </button>
                 )}
@@ -405,7 +405,7 @@ export function MainLayout({
                         if (isMobile) setIsSidebarOpen(false);
                       }}
                       className={`group relative px-3 py-2.5 rounded-lg transition-colors cursor-pointer ${
-                        selectedChatId === chat.id ? 'bg-gray-200 dark:bg-gray-800' : 'hover:bg-gray-100 dark:hover:bg-gray-800'
+                        selectedChatId === chat.id ? 'bg-blue-100 dark:bg-blue-900/30 border border-blue-200 dark:border-blue-800/50' : 'hover:bg-gray-100 dark:hover:bg-[#16423C]/50'
                       }`}
                     >
                       <div className="flex items-start justify-between gap-2">
@@ -440,13 +440,13 @@ export function MainLayout({
             </div>
 
             {/* Settings Button at Bottom - Always Visible */}
-            <div className="flex-shrink-0 mt-auto p-3 border-t border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900">
+            <div className="flex-shrink-0 mt-auto p-3 border-t border-gray-200 dark:border-[#16423C] bg-white dark:bg-[#0E2F29]">
               <button
                 onClick={() => { 
                   onOpenSettings?.(); 
                   if (isMobile) setIsSidebarOpen(false); 
                 }}
-                className="w-full px-3 py-2.5 text-left text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition-colors flex items-center gap-3 touch-manipulation active:bg-gray-200 dark:active:bg-gray-700"
+                className="w-full px-3 py-2.5 text-left text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-[#16423C] rounded-lg transition-colors flex items-center gap-3 touch-manipulation active:bg-gray-200 dark:active:bg-[#1a4a42]"
               >
                 <Settings className="w-5 h-5" />
                 <span>Settings</span>
@@ -457,7 +457,7 @@ export function MainLayout({
 
         {/* Main Content - Expands to 100% when sidebar closes on desktop */}
         {/* Keep main container overflow-hidden so inner views manage scrolling (single scrollbar) */}
-        <main className="flex-1 min-w-0 overflow-hidden bg-white dark:bg-gray-900 transition-all duration-300">
+        <main className="flex-1 min-w-0 overflow-hidden bg-white dark:bg-[#0E2F29] transition-all duration-300">
           {children}
         </main>
       </div>
@@ -465,7 +465,7 @@ export function MainLayout({
       {/* Auth Modal */}
       {showAuthModal && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[300] p-4">
-          <div ref={authModalRef} className="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl w-full max-w-md overflow-hidden">
+          <div ref={authModalRef} className="bg-white dark:bg-[#16423C] rounded-2xl shadow-2xl w-full max-w-md overflow-hidden">
             <div className="p-6 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between">
               <h2 className="text-xl font-semibold text-gray-900 dark:text-white">{authMode === 'login' ? 'Log In' : 'Sign Up'}</h2>
               <button onClick={() => { setShowAuthModal(false); setAuthError(''); }} className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-full transition-colors">
@@ -511,7 +511,7 @@ export function MainLayout({
                   <div className="w-full border-t border-gray-300 dark:border-gray-600"></div>
                 </div>
                 <div className="relative flex justify-center text-sm">
-                  <span className="px-2 bg-white dark:bg-gray-800 text-gray-500 dark:text-gray-400">Or continue with email</span>
+                  <span className="px-2 bg-white dark:bg-[#16423C] text-gray-500 dark:text-gray-400">Or continue with email</span>
                 </div>
               </div>
               

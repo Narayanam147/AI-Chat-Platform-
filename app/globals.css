@@ -9,8 +9,8 @@
 
 @media (prefers-color-scheme: dark) {
   :root {
-    --background: #0a0a0a;
-    --foreground: #ffffff;
+    --background: #0E2F29;
+    --foreground: #ededed;
   }
 }
 
@@ -85,6 +85,36 @@ body {
 .sidebar-solid {
   @apply bg-white dark:bg-gray-900;
   isolation: isolate;
+}
+
+/* Force settings modal to bottle green in dark mode */
+html.dark .settings-modal-container,
+.dark .settings-modal-container,
+[class~="dark"] .settings-modal-container {
+  background-color: #0E2F29 !important;
+  background: #0E2F29 !important;
+}
+
+/* Override any potential conflicting modal backgrounds */
+.dark div[class*="modal"],
+.dark div[class*="Modal"] {
+  background-color: inherit;
+}
+
+/* Dark mode prose styling for better text visibility */
+.dark .prose {
+  color: #ffffff;
+}
+
+.dark .prose p,
+.dark .prose li,
+.dark .prose h1,
+.dark .prose h2,
+.dark .prose h3,
+.dark .prose h4,
+.dark .prose h5,
+.dark .prose h6 {
+  color: #ffffff;
 }
 
 /* Custom scrollbar */

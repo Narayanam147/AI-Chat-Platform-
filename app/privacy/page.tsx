@@ -7,7 +7,7 @@ export default function PrivacyPolicy() {
   return (
     <div className="h-screen flex flex-col bg-gradient-to-b from-white to-gray-50 dark:from-gray-900 dark:to-gray-800">
       {/* Header */}
-      <div className="flex-shrink-0 bg-white/80 dark:bg-gray-900/80 backdrop-blur-md border-b border-gray-200 dark:border-gray-700">
+      <div className="flex-shrink-0 bg-white/80 dark:bg-[#0E2F29]/80 backdrop-blur-md border-b border-gray-200 dark:border-[#16423C]">
         <div className="max-w-4xl mx-auto px-4 py-4 flex items-center gap-4">
           <Link href="/chat" className="p-2 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition-colors">
             <ArrowLeft className="w-5 h-5 text-gray-600 dark:text-gray-400" />

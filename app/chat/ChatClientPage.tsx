@@ -1,4 +1,4 @@
-'use client';
+﻿'use client';
 
 import React, { useState, useEffect, useRef, Suspense } from 'react';
 import { useSession, signOut, signIn } from "next-auth/react";
@@ -942,10 +942,10 @@ function ChatContent() {
           isChatActive={!!(selectedChatId || currentChatId)}
         >
           <>
-            <div className='flex flex-col h-full bg-white dark:bg-gray-900 relative'>
+            <div className='flex flex-col h-full bg-white dark:bg-[#0E2F29] relative'>
               <div className='flex-1 overflow-y-auto'>
                 {/* Conversation View - Messages */}
-                <div className='flex-1 bg-gradient-to-b from-white/50 dark:from-gray-900/30 to-white dark:to-gray-900 transition-all duration-300 scroll-smooth'>
+                <div className='flex-1 bg-gradient-to-b from-white/50 dark:from-[#0E2F29]/30 to-white dark:to-[#0E2F29] transition-all duration-300 scroll-smooth'>
                   {/* Greeting State - ONLY when no messages */}
                   {messages.length === 0 && (
                     <div className='flex items-center justify-center h-full animate-fadeIn px-4 py-8'>
@@ -969,7 +969,7 @@ function ChatContent() {
                       {messages.map((message) => (
                         <div
                           key={message.id}
-                          className={`w-full py-4 sm:py-6 px-4 sm:px-6 lg:px-8 ${message.sender === 'user' ? 'bg-transparent' : 'bg-gray-50/50 dark:bg-gray-800/20'} border-b border-gray-100/50 dark:border-gray-800/50`}
+                          className={`w-full py-4 sm:py-6 px-4 sm:px-6 lg:px-8 ${message.sender === 'user' ? 'bg-transparent' : 'bg-gray-50/50 dark:bg-[#0E2F29]/20'} border-b border-gray-100/50 dark:border-[#16423C]/50`}
                         >
                           <div className='max-w-4xl mx-auto flex gap-2 sm:gap-4'>
                             {/* Avatar */}
@@ -993,7 +993,7 @@ function ChatContent() {
                             <div className='flex-1 min-w-0 group'>
                               <div className='relative'>
                                 {message.sender === 'ai' ? (
-                                  <div className='prose prose-sm sm:prose dark:prose-invert max-w-none prose-p:leading-relaxed prose-pre:bg-gray-900 prose-pre:text-gray-100'>
+                                  <div className='prose prose-sm sm:prose dark:prose-invert max-w-none prose-p:leading-relaxed prose-pre:bg-gray-900 prose-pre:text-gray-100 text-gray-900 dark:text-white'>
                                     <ReactMarkdown>{message.text}</ReactMarkdown>
                                   </div>
                                 ) : (
@@ -1021,7 +1021,7 @@ function ChatContent() {
                       ))}
                       
                       {isLoading && (
-                        <div className='w-full py-6 px-4 sm:px-6 lg:px-8 bg-gray-50/50 dark:bg-gray-800/20 border-b border-gray-100/50 dark:border-gray-800/50'>
+                        <div className='w-full py-6 px-4 sm:px-6 lg:px-8 bg-gray-50/50 dark:bg-[#0E2F29]/20 border-b border-gray-100/50 dark:border-[#16423C]/50'>
                           <div className='max-w-4xl mx-auto flex gap-3 sm:gap-4'>
                             <div className='w-8 h-8 sm:w-10 sm:h-10 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center flex-shrink-0'>
                               <Sparkles className='w-4 h-4 sm:w-5 sm:h-5 text-white' />
@@ -1045,7 +1045,7 @@ function ChatContent() {
               {/* Chat Input Bar - Multi-functional (Gemini-style) */}
               <div className='flex justify-center w-full'>
                 <div className='w-full max-w-4xl'>
-                  <div className='relative flex items-end gap-2 bg-gray-100/60 dark:bg-gray-800/40 rounded-full border border-gray-300/50 dark:border-gray-700/40 p-2 focus-within:bg-gray-100 dark:focus-within:bg-gray-800/60 focus-within:border-gray-400 dark:focus-within:border-gray-600 transition-all'>
+                  <div className='relative flex items-end gap-2 bg-gray-100/60 dark:bg-[#0E2F29]/40 rounded-full border border-gray-300/50 dark:border-[#16423C]/40 p-2 focus-within:bg-gray-100 dark:focus-within:bg-[#0E2F29]/60 focus-within:border-gray-400 dark:focus-within:border-[#16423C] transition-all'>
                       {/* Attachment/Tools Menu */}
                       <div className='relative' ref={attachMenuRef}>
                         <button
@@ -1057,7 +1057,7 @@ function ChatContent() {
                         </button>
     
                         {showAttachMenu && (
-                          <div className='absolute bottom-full left-0 mb-2 w-56 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl shadow-xl py-2 z-[50]'>
+                          <div className='absolute bottom-full left-0 mb-2 w-56 bg-white dark:bg-[#16423C] border border-gray-200 dark:border-[#1a4a42] rounded-xl shadow-xl py-2 z-[50]'>
                             <button
                               onClick={() => {
                                 fileInputRef.current?.click();
@@ -1151,7 +1151,7 @@ function ChatContent() {
     
                     {/* Shorthand suggestions popup */}
                     {input.startsWith('/') && (
-                      <div className='absolute bottom-full left-0 right-0 mb-2 max-h-64 overflow-y-auto bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-lg z-50'>
+                      <div className='absolute bottom-full left-0 right-0 mb-2 max-h-64 overflow-y-auto bg-white dark:bg-[#16423C] border border-gray-200 dark:border-[#1a4a42] rounded-lg shadow-lg z-50'>
                         <div className='p-3 space-y-1'>
                           {Object.entries(shorthands).map(([shorthand, description]) => (
                             <button
@@ -1182,14 +1182,15 @@ function ChatContent() {
               <div className='fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[300] p-4'>
                 <div 
                   ref={settingsModalRef}
-                  className='bg-white dark:bg-gray-800 rounded-2xl shadow-2xl w-full max-w-md overflow-hidden'
+                  className='settings-modal-container bg-white dark:bg-[#0E2F29] rounded-2xl shadow-2xl w-full max-w-md overflow-hidden'
+                  style={{ backgroundColor: document.documentElement.classList.contains('dark') ? '#0E2F29' : '#ffffff' }}
                 >
                   {/* Modal Header */}
-                  <div className='p-6 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between'>
+                  <div className='p-6 border-b border-gray-200 dark:border-[#1a4a42] flex items-center justify-between'>
                     <h2 className='text-xl font-semibold text-gray-900 dark:text-white'>Settings</h2>
                     <button
                       onClick={() => setShowSettingsModal(false)}
-                      className='p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-full transition-colors'
+                      className='p-2 hover:bg-gray-100 dark:hover:bg-[#16423C] rounded-full transition-colors'
                       aria-label='Close settings'
                     >
                       <X className='w-5 h-5 text-gray-600 dark:text-gray-400' />
@@ -1233,7 +1234,7 @@ function ChatContent() {
                       <div className='space-y-2'>
                         <button
                           onClick={() => handleExport('word')}
-                          className='w-full p-4 bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 rounded-lg transition-colors flex items-center gap-3'
+                          className='w-full p-4 bg-gray-100 dark:bg-[#16423C] hover:bg-gray-200 dark:hover:bg-[#1a4a42] rounded-lg transition-colors flex items-center gap-3'
                         >
                           <FileText className='w-5 h-5 text-blue-600' />
                           <div className='flex-1 text-left'>
@@ -1243,7 +1244,7 @@ function ChatContent() {
                         </button>
                         <button
                           onClick={() => handleExport('pdf')}
-                          className='w-full p-4 bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 rounded-lg transition-colors flex items-center gap-3'
+                          className='w-full p-4 bg-gray-100 dark:bg-[#16423C] hover:bg-gray-200 dark:hover:bg-[#1a4a42] rounded-lg transition-colors flex items-center gap-3'
                         >
                           <FileText className='w-5 h-5 text-red-600' />
                           <div className='flex-1 text-left'>
@@ -1277,7 +1278,7 @@ function ChatContent() {
                           href='/help'
                           target='_blank'
                           rel='noopener noreferrer'
-                          className='w-full p-3 bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 rounded-lg transition-colors flex items-center gap-3 text-sm text-gray-700 dark:text-gray-300'
+                          className='w-full p-3 bg-gray-100 dark:bg-[#16423C] hover:bg-gray-200 dark:hover:bg-[#1a4a42] rounded-lg transition-colors flex items-center gap-3 text-sm text-gray-700 dark:text-gray-300'
                         >
                           <HelpCircle className='w-5 h-5' />
                           Help Center
@@ -1287,7 +1288,7 @@ function ChatContent() {
                             setShowSettingsModal(false);
                             setShowFeedbackModal(true);
                           }}
-                          className='w-full p-3 bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 rounded-lg transition-colors flex items-center gap-3 text-sm text-gray-700 dark:text-gray-300'
+                          className='w-full p-3 bg-gray-100 dark:bg-[#16423C] hover:bg-gray-200 dark:hover:bg-[#1a4a42] rounded-lg transition-colors flex items-center gap-3 text-sm text-gray-700 dark:text-gray-300'
                         >
                           <MessageSquare className='w-5 h-5' />
                           Send Feedback
@@ -1296,7 +1297,7 @@ function ChatContent() {
                           href='/terms'
                           target='_blank'
                           rel='noopener noreferrer'
-                          className='w-full p-3 bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 rounded-lg transition-colors flex items-center gap-3 text-sm text-gray-700 dark:text-gray-300'
+                          className='w-full p-3 bg-gray-100 dark:bg-[#16423C] hover:bg-gray-200 dark:hover:bg-[#1a4a42] rounded-lg transition-colors flex items-center gap-3 text-sm text-gray-700 dark:text-gray-300'
                         >
                           <FileText className='w-5 h-5' />
                           Terms of Service
@@ -1305,7 +1306,7 @@ function ChatContent() {
                           href='/privacy'
                           target='_blank'
                           rel='noopener noreferrer'
-                          className='w-full p-3 bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 rounded-lg transition-colors flex items-center gap-3 text-sm text-gray-700 dark:text-gray-300'
+                          className='w-full p-3 bg-gray-100 dark:bg-[#16423C] hover:bg-gray-200 dark:hover:bg-[#1a4a42] rounded-lg transition-colors flex items-center gap-3 text-sm text-gray-700 dark:text-gray-300'
                         >
                           <FileText className='w-5 h-5' />
                           Privacy Policy
@@ -1325,7 +1326,7 @@ function ChatContent() {
                         </p>
                       </div>
                       <div className='space-y-3'>
-                        <div className='flex items-center justify-between p-4 bg-gray-100 dark:bg-gray-700 rounded-lg'>
+                        <div className='flex items-center justify-between p-4 bg-gray-100 dark:bg-[#16423C] rounded-lg'>
                           <div className='flex-1'>
                             <p className='text-sm font-medium text-gray-900 dark:text-white'>Adaptive Responses</p>
                             <p className='text-xs text-gray-600 dark:text-gray-400'>AI learns from your activity to provide better answers</p>
@@ -1417,10 +1418,10 @@ function ChatContent() {
               <div className='fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[300] p-4'>
                 <div 
                   ref={feedbackModalRef}
-                  className='bg-white dark:bg-gray-800 rounded-2xl shadow-2xl w-full max-w-md overflow-hidden'
+                  className='bg-white dark:bg-[#16423C] rounded-2xl shadow-2xl w-full max-w-md overflow-hidden'
                 >
                   {/* Modal Header */}
-                  <div className='p-6 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between'>
+                  <div className='p-6 border-b border-gray-200 dark:border-[#1a4a42] flex items-center justify-between'>
                     <h2 className='text-xl font-semibold text-gray-900 dark:text-white'>Send Feedback</h2>
                     <button
                       onClick={() => {
@@ -1443,7 +1444,7 @@ function ChatContent() {
                       value={feedbackText}
                       onChange={(e) => setFeedbackText(e.target.value)}
                       placeholder='Type your feedback here...'
-                      className='w-full h-32 p-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-900 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none'
+                      className='w-full h-32 p-3 border border-gray-300 dark:border-[#16423C] rounded-lg bg-white dark:bg-[#0E2F29] text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none'
                     />
                     <div className='flex gap-3 mt-4'>
                       <button
