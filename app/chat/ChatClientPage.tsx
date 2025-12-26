@@ -1552,7 +1552,6 @@ function ChatContent() {
                 </div>
               </div>
             )}
-          </>
     </MainLayout>
   );
 }

@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { useParams, useSearchParams } from 'next/navigation';
+import Image from 'next/image';
 import { MainLayout } from '@/components/Layout/MainLayout';
 import ReactMarkdown from 'react-markdown';
 import { Share2, Copy, Check, Calendar, Sparkles } from 'lucide-react';
@@ -199,9 +200,11 @@ export default function SharedChatPage() {
             <div className="flex gap-4">
               <div className="flex-shrink-0">
                 {session?.user?.image ? (
-                  <img 
+                  <Image 
                     src={session.user.image} 
                     alt="User" 
+                    width={40}
+                    height={40}
                     className="w-10 h-10 rounded-full" 
                   />
                 ) : (
