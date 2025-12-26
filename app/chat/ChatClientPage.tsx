@@ -2,7 +2,6 @@
 
 import React, { useState, useEffect, useRef, Suspense } from 'react';
 import { useSession, signOut, signIn } from "next-auth/react";
-import React, { useState, useRef, useEffect, Suspense } from "react";
 import Image from "next/image";
 import { Send, Upload, Sparkles, FileText, Image as ImageIcon, X, Trash2, Plus, Settings, HelpCircle, FolderOpen, Code, Copy, Check, Brain, ToggleLeft, ToggleRight, Moon, Sun, MessageSquare, LogOut } from "lucide-react";
 import ReactMarkdown from "react-markdown";
@@ -1468,8 +1467,6 @@ function ChatContent() {
                 </div>
               </div>
             )}
-      {/* Auth Modal */}
-      </>
     </MainLayout>
   );
 }
