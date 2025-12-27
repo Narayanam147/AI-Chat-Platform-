@@ -21,7 +21,7 @@ export async function POST(request: NextRequest) {
       .insert([{
         session_token: sessionToken,
         expires_at: expiresAt.toISOString(),
-        last_activity: new Date().toISOString(),
+        user_agent: request.headers.get('user-agent') || 'Unknown',
       }])
       .select()
       .single();

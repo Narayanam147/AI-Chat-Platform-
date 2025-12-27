@@ -37,23 +37,23 @@ export async function GET(request: NextRequest, { params }: { params: { id: stri
         .eq('id', id);
     }
 
-    // Fetch the chat_history row
-    const { data: row, error: rowErr } = await supabaseClient
-      .from('chat_history')
+    // Fetch the actual chat from chats table
+    const { data: chat, error: chatErr } = await supabaseClient
+      .from('chats')
       .select('*')
       .eq('id', share.chat_id)
       .single();
 
-    if (rowErr || !row) {
+    if (chatErr || !chat) {
       return NextResponse.json({ error: 'Chat not found' }, { status: 404 });
     }
 
-    // Return a sanitized payload: prompt, response, created_at
+    // Return the full chat with messages
     const payload = {
-      id: row.id,
-      prompt: row.prompt,
-      response: row.response,
-      created_at: row.created_at,
+      id: chat.id,
+      title: chat.title || 'Shared Chat',
+      messages: chat.messages || [],
+      created_at: chat.created_at,
     };
 
     return NextResponse.json({ success: true, data: payload });

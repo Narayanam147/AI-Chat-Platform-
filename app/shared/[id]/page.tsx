@@ -10,8 +10,14 @@ import { useSession } from 'next-auth/react';
 
 interface SharedChatData {
   id: string;
-  prompt: string;
-  response: string;
+  title?: string;
+  messages?: Array<{
+    text: string;
+    sender: 'user' | 'ai';
+    timestamp: string;
+  }>;
+  prompt?: string;
+  response?: string;
   created_at: string;
 }
 
@@ -196,47 +202,99 @@ export default function SharedChatPage() {
         {/* Chat Content */}
         <div className="flex-1 overflow-y-auto px-4 py-6">
           <div className="max-w-4xl mx-auto space-y-6">
-            {/* User Message */}
-            <div className="flex gap-4">
-              <div className="flex-shrink-0">
-                {session?.user?.image ? (
-                  <Image 
-                    src={session.user.image} 
-                    alt="User" 
-                    width={40}
-                    height={40}
-                    className="w-10 h-10 rounded-full" 
-                  />
-                ) : (
-                  <div className="w-10 h-10 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center">
-                    <span className="text-white font-semibold text-sm">U</span>
+            {/* Display messages array or fallback to prompt/response */}
+            {chatData.messages && chatData.messages.length > 0 ? (
+              // New format: messages array
+              chatData.messages.map((message, index) => (
+                <div key={index} className="flex gap-4">
+                  <div className="flex-shrink-0">
+                    {message.sender === 'user' ? (
+                      session?.user?.image ? (
+                        <Image 
+                          src={session.user.image} 
+                          alt="User" 
+                          width={40}
+                          height={40}
+                          className="w-10 h-10 rounded-full" 
+                        />
+                      ) : (
+                        <div className="w-10 h-10 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center">
+                          <span className="text-white font-semibold text-sm">U</span>
+                        </div>
+                      )
+                    ) : (
+                      <div className="w-10 h-10 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center">
+                        <Sparkles className="w-5 h-5 text-white" />
+                      </div>
+                    )}
+                  </div>
+                  <div className="flex-1">
+                    <div className={`rounded-2xl px-4 py-3 ${
+                      message.sender === 'user'
+                        ? 'bg-gray-100 dark:bg-[#16423C]'
+                        : 'bg-white dark:bg-[#16423C] border border-gray-200 dark:border-[#1a4a42]'
+                    }`}>
+                      {message.sender === 'ai' ? (
+                        <div className="prose prose-sm dark:prose-invert max-w-none">
+                          <ReactMarkdown>{message.text}</ReactMarkdown>
+                        </div>
+                      ) : (
+                        <p className="text-gray-900 dark:text-white whitespace-pre-wrap">
+                          {message.text}
+                        </p>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              ))
+            ) : (
+              // Legacy format: prompt and response
+              <>
+                {chatData.prompt && (
+                  <div className="flex gap-4">
+                    <div className="flex-shrink-0">
+                      {session?.user?.image ? (
+                        <Image 
+                          src={session.user.image} 
+                          alt="User" 
+                          width={40}
+                          height={40}
+                          className="w-10 h-10 rounded-full" 
+                        />
+                      ) : (
+                        <div className="w-10 h-10 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center">
+                          <span className="text-white font-semibold text-sm">U</span>
+                        </div>
+                      )}
+                    </div>
+                    <div className="flex-1">
+                      <div className="bg-gray-100 dark:bg-[#16423C] rounded-2xl px-4 py-3">
+                        <p className="text-gray-900 dark:text-white whitespace-pre-wrap">
+                          {chatData.prompt}
+                        </p>
+                      </div>
+                    </div>
                   </div>
                 )}
-              </div>
-              <div className="flex-1">
-                <div className="bg-gray-100 dark:bg-[#16423C] rounded-2xl px-4 py-3">
-                  <p className="text-gray-900 dark:text-white whitespace-pre-wrap">
-                    {chatData.prompt}
-                  </p>
-                </div>
-              </div>
-            </div>
 
-            {/* AI Response */}
-            <div className="flex gap-4">
-              <div className="flex-shrink-0">
-                <div className="w-10 h-10 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center">
-                  <Sparkles className="w-5 h-5 text-white" />
-                </div>
-              </div>
-              <div className="flex-1">
-                <div className="bg-white dark:bg-[#16423C] rounded-2xl px-4 py-3 border border-gray-200 dark:border-[#1a4a42]">
-                  <div className="prose prose-sm dark:prose-invert max-w-none">
-                    <ReactMarkdown>{chatData.response}</ReactMarkdown>
+                {chatData.response && (
+                  <div className="flex gap-4">
+                    <div className="flex-shrink-0">
+                      <div className="w-10 h-10 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center">
+                        <Sparkles className="w-5 h-5 text-white" />
+                      </div>
+                    </div>
+                    <div className="flex-1">
+                      <div className="bg-white dark:bg-[#16423C] rounded-2xl px-4 py-3 border border-gray-200 dark:border-[#1a4a42]">
+                        <div className="prose prose-sm dark:prose-invert max-w-none">
+                          <ReactMarkdown>{chatData.response}</ReactMarkdown>
+                        </div>
+                      </div>
+                    </div>
                   </div>
-                </div>
-              </div>
-            </div>
+                )}
+              </>
+            )}
           </div>
         </div>
 

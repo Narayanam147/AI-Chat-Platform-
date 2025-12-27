@@ -88,26 +88,32 @@ export async function POST(request: NextRequest) {
       }
     }
     
-    // Fallback to Google Custom Search for other queries
+    // Fallback to Google Custom Search for other queries (always search for better context)
     if (!searchContext && process.env.GOOGLE_API_KEY && process.env.GOOGLE_SEARCH_ENGINE_ID) {
       try {
-        const searchUrl = `https://www.googleapis.com/customsearch/v1?key=${process.env.GOOGLE_API_KEY}&cx=${process.env.GOOGLE_SEARCH_ENGINE_ID}&q=${encodeURIComponent(prompt)}&num=5`;
-        console.log('🔍 Searching for:', prompt);
+        const searchUrl = `https://www.googleapis.com/customsearch/v1?key=${process.env.GOOGLE_API_KEY}&cx=${process.env.GOOGLE_SEARCH_ENGINE_ID}&q=${encodeURIComponent(prompt)}&num=8`;
+        console.log('🔍 Google Search activated for:', prompt.substring(0, 50));
         const searchResponse = await fetch(searchUrl);
         
         if (searchResponse.ok) {
           const searchData = await searchResponse.json();
-          console.log('🔍 Search results count:', searchData.items?.length || 0);
+          console.log('✅ Google Search results:', searchData.items?.length || 0);
           if (searchData.items && searchData.items.length > 0) {
-            searchContext = '\n\n[LIVE WEB SEARCH RESULTS - Use this information to answer:]\n' + 
+            searchContext = '\n\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n📊 LIVE WEB SEARCH RESULTS (Google)\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n' + 
+              'Use the following verified information to provide accurate, up-to-date answers:\n\n' +
               searchData.items.map((item: any, index: number) => 
-                `${index + 1}. **${item.title}**\n${item.snippet}\nSource: ${item.link}`
-              ).join('\n\n');
-            console.log('✅ Search context added');
+                `🔹 Result ${index + 1}: **${item.title}**\n` +
+                `   📝 ${item.snippet}\n` +
+                `   🔗 Source: ${item.displayLink}\n` +
+                `   🌐 URL: ${item.link}\n`
+              ).join('\n');
+            console.log('✅ Enhanced search context added with formatting');
+          } else {
+            console.log('⚠️ No search results found for query');
           }
         } else {
           const errorText = await searchResponse.text();
-          console.error('❌ Search API error:', errorText);
+          console.error('❌ Google Search API error:', errorText);
         }
       } catch (searchError) {
         console.error('❌ Search error:', searchError);
@@ -126,7 +132,43 @@ export async function POST(request: NextRequest) {
     const enhancedPrompt = prompt + searchContext;
 
     // Build system prompt with personalization if enabled
-    let systemPrompt = 'You are a helpful AI assistant with access to real-time web search. When web search results are provided, USE them to give accurate, up-to-date information. Always cite sources when using search results. Provide clear, accurate, and helpful responses.';
+    let systemPrompt = `You are ACE (AI Chat Engineer), an advanced AI assistant combining the best features of Google Gemini, ChatGPT, and Perplexity AI, with access to real-time web search and continuous learning capabilities.
+
+IMPORTANT IDENTITY INFORMATION:
+- Your name is "ACE" (AI Chat Engineer)
+- You were created on December 15, 2025
+- Your creator and owner is Narayanam Dubey
+- You are designed with architecture inspired by Google Gemini, ChatGPT, and Perplexity AI
+- You combine ChatGPT's conversational abilities, Gemini's multimodal understanding, and Perplexity's web search integration
+- You can learn and improve from user interactions
+
+CAPABILITIES:
+- Real-time web search integration for up-to-date information
+- Continuous learning from conversations (with user consent)
+- Support for feedback, privacy concerns, and terms of service inquiries
+- Code generation, explanations, and technical assistance
+- Creative writing and problem-solving
+
+BEHAVIOR GUIDELINES:
+- When asked about your identity, creator, or capabilities, provide the above information
+- If users ask about privacy: Inform them they can check the Privacy Policy and that conversations may be used to improve the service
+- If users want to provide feedback: Direct them to the feedback feature in Settings
+- If asked about terms of service: Direct them to the Terms of Service page
+- Be helpful, accurate, and cite sources when using search results
+- Respect user privacy and be transparent about data usage
+
+RESPONSE QUALITY STANDARDS:
+✅ Always structure responses with clear sections and formatting
+✅ Use bullet points, numbered lists, and headings for better readability
+✅ When search results are provided, SYNTHESIZE the information (don't just copy)
+✅ Cite sources with proper attribution: "According to [Source]..." or "Based on [Website]..."
+✅ Provide comprehensive answers that cover multiple aspects of the question
+✅ Use examples, analogies, and explanations to make complex topics understandable
+✅ If search results are available, integrate them naturally into your response
+✅ For technical topics, include code examples when relevant
+✅ End with a helpful summary or next steps when appropriate
+
+When web search results are provided in the prompt, they appear with 🔹 markers and source URLs. USE this verified information to provide accurate, up-to-date, and comprehensive responses. Always cite these sources in your answer.`;
     
     if (personalization?.enabled) {
       const personalizationContext = [];
@@ -231,7 +273,11 @@ export async function POST(request: NextRequest) {
           }
         ],
         temperature: 0.7,
-        max_tokens: 2048,
+        max_tokens: 4096,  // Increased for longer, comprehensive responses
+        top_p: 0.9,
+        frequency_penalty: 1.0,  // Penalize repetition
+        presence_penalty: 0.6,   // Encourage diverse responses
+        stop: ['bach bach bach', 'imir imir imir', '\n\n\n\n'],  // Stop on repetition
       }),
     });
 
@@ -245,7 +291,26 @@ export async function POST(request: NextRequest) {
     }
 
     const data = await response.json();
-    const aiResponse = data.choices?.[0]?.message?.content || 'No response generated';
+    let aiResponse = data.choices?.[0]?.message?.content || 'No response generated';
+
+    // Validate response for repetition/corruption
+    const isCorrupted = (text: string) => {
+      // Check for excessive repetition of same words
+      const words = text.split(' ');
+      if (words.length > 50) {
+        const uniqueWords = new Set(words);
+        const repetitionRatio = words.length / uniqueWords.size;
+        if (repetitionRatio > 10) return true; // More than 10x repetition
+      }
+      // Check for specific repetitive patterns
+      if (/(.{10,})\1{5,}/.test(text)) return true; // Same pattern repeated 5+ times
+      return false;
+    };
+
+    if (isCorrupted(aiResponse)) {
+      console.warn('⚠️ Corrupted response detected, regenerating...');
+      aiResponse = 'I apologize, but I encountered an error generating that response. Could you please rephrase your question?';
+    }
 
     let savedChatId = chatId;
 
@@ -283,6 +348,20 @@ export async function POST(request: NextRequest) {
           });
           savedChatId = newChat?.id || null;
           console.log('✅ New chat created:', savedChatId, userId ? '(user)' : '(guest)');
+        }
+
+        // ALSO save to chat_history table for backward compatibility
+        if (supabaseAdmin) {
+          await supabaseAdmin
+            .from('chat_history')
+            .insert([{
+              user_id: userId || null,
+              guest_session_id: guestSessionId || null,
+              prompt: prompt,
+              response: aiResponse,
+              title: prompt.substring(0, 50),
+            }]);
+          console.log('✅ Also saved to chat_history table');
         }
         
       } catch (dbError) {
