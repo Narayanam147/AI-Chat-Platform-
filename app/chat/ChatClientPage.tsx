@@ -244,8 +244,22 @@ function ChatContent() {
 
       const response = await fetch(url);
       if (response.ok) {
-        const data = await response.json();
-        setChatHistory(data);
+        const json = await response.json();
+        // Handle both array response and {data: array} response
+        const data = Array.isArray(json) ? json : json?.data;
+        if (data && data.length > 0) {
+          // Map API shape to ChatHistory expected shape
+          const mapped = data.map((c: any) => ({
+            id: String(c.id),
+            title: c.title,
+            timestamp: new Date(c.lastMessageAt),
+            preview: c.snippet,
+            messages: c.messages || [],
+            pinned: c.pinned || false,
+          }));
+          setChatHistory(mapped);
+          console.log(`✅ Loaded ${mapped.length} chats for ${session?.user?.email ? 'user' : 'guest'}`);
+        }
       }
     } catch (error) {
       console.error('Failed to load chat history:', error);
@@ -621,13 +635,61 @@ function ChatContent() {
   // Share chat by copying a link to clipboard
   const handleShare = async (chatId?: string) => {
     // determine effective id
-    const id = chatId || selectedChatId || currentChatId;
+    let id = chatId || selectedChatId || currentChatId;
     if (!id) {
       alert('No chat selected to share');
       return;
     }
 
     try {
+      // If this is a temporary chat, we need to save it to the database first
+      if (id.startsWith('temp-')) {
+        if (messages.length === 0) {
+          alert('Cannot share an empty chat');
+          return;
+        }
+
+        // Save the chat to database
+        const chatToSave = {
+          user_id: session?.user?.email || null,
+          guest_session_id: guestToken ? guestToken : null,
+          messages: messages.map(m => ({
+            text: m.text,
+            sender: m.sender,
+            timestamp: typeof m.timestamp === 'string' ? m.timestamp : m.timestamp.toISOString(),
+          })),
+          title: chatHistory.find(ch => ch.id === id)?.title || messages[0]?.text.substring(0, 50) || 'Untitled Chat',
+        };
+
+        // Use the chat API to save it properly
+        const saveResponse = await fetch('/api/history', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(chatToSave),
+        });
+
+        if (!saveResponse.ok) {
+          throw new Error('Failed to save chat before sharing');
+        }
+
+        const savedData = await saveResponse.json();
+        const newId = savedData.data?.id;
+        
+        if (!newId) {
+          throw new Error('Failed to get saved chat ID');
+        }
+
+        // Update local state with the new ID
+        id = newId;
+        setCurrentChatId(newId);
+        setSelectedChatId(newId);
+        
+        // Update chat history to replace temp ID with real ID
+        setChatHistory(prev => prev.map(ch => 
+          ch.id === chatId ? { ...ch, id: newId } : ch
+        ));
+      }
+
       // Create a shareable link using the API
       const response = await fetch('/api/share', {
         method: 'POST',
@@ -640,7 +702,8 @@ function ChatContent() {
       });
 
       if (!response.ok) {
-        throw new Error('Failed to create share link');
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to create share link');
       }
 
       const data = await response.json();
@@ -667,7 +730,7 @@ function ChatContent() {
       prompt('Copy this shareable link:', shareUrl);
     } catch (e) {
       console.error('Failed to create share link', e);
-      alert('Failed to create shareable link. Please try again.');
+      alert(`Failed to create shareable link: ${e instanceof Error ? e.message : 'Please try again.'}`);
     }
   };
 
@@ -774,39 +837,6 @@ function ChatContent() {
       return () => document.removeEventListener('mousedown', handleClickOutside);
     }
   }, [showAttachMenu, showSettingsModal, showFeedbackModal, openDropdownId, headingMenuOpen]);
-
-  // Load history from backend for signed-in user
-  useEffect(() => {
-    const load = async () => {
-      if (!session?.user?.email) return;
-      try {
-        const res = await fetch(`/api/history?userId=${encodeURIComponent(session.user.email)}`);
-        if (!res.ok) {
-          console.error('Failed to fetch history', await res.text());
-          return;
-        }
-        const json = await res.json();
-        // Handle both array response and {data: array} response
-        const data = Array.isArray(json) ? json : json?.data;
-        if (data && data.length > 0) {
-          // Map API shape to ChatHistory expected shape
-          const mapped = data.map((c: any) => ({
-            id: String(c.id),
-            title: c.title,
-            timestamp: new Date(c.lastMessageAt),
-            preview: c.snippet,
-            messages: c.messages || [],
-            pinned: c.pinned || false,
-          }));
-          setChatHistory(mapped);
-        }
-      } catch (e) {
-        console.error('Error loading history', e);
-      }
-    };
-
-    load();
-  }, [session?.user?.email]);
 
   const handleSend = async () => {
     if ((!input.trim() && attachedFiles.length === 0) || isLoading) return;

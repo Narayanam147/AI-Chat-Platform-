@@ -537,41 +537,102 @@ export default function ChatPage() {
   // Share chat by copying a link to clipboard
   const handleShare = async (chatId?: string) => {
     // determine effective id
-    const id = chatId || selectedChatId || currentChatId;
+    let id = chatId || selectedChatId || currentChatId;
     if (!id) {
       alert('No chat selected to share');
       return;
     }
-    const url = `${window.location.origin}/chat?chatId=${encodeURIComponent(id)}`;
+
     try {
+      // If this is a temporary chat, we need to save it to the database first
+      if (id.startsWith('temp-')) {
+        if (messages.length === 0) {
+          alert('Cannot share an empty chat');
+          return;
+        }
+
+        // Save the chat to database
+        const chatToSave = {
+          user_id: session?.user?.email || null,
+          guest_session_id: guestToken ? guestToken : null,
+          messages: messages.map(m => ({
+            text: m.text,
+            sender: m.sender,
+            timestamp: typeof m.timestamp === 'string' ? m.timestamp : m.timestamp.toISOString(),
+          })),
+          title: chatHistory.find(ch => ch.id === id)?.title || messages[0]?.text.substring(0, 50) || 'Untitled Chat',
+        };
+
+        // Use the chat API to save it properly
+        const saveResponse = await fetch('/api/history', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(chatToSave),
+        });
+
+        if (!saveResponse.ok) {
+          throw new Error('Failed to save chat before sharing');
+        }
+
+        const savedData = await saveResponse.json();
+        const newId = savedData.data?.id;
+        
+        if (!newId) {
+          throw new Error('Failed to get saved chat ID');
+        }
+
+        // Update local state with the new ID
+        id = newId;
+        setCurrentChatId(newId);
+        setSelectedChatId(newId);
+        
+        // Update chat history to replace temp ID with real ID
+        setChatHistory(prev => prev.map(ch => 
+          ch.id === chatId ? { ...ch, id: newId } : ch
+        ));
+      }
+
+      // Create a shareable link using the API
+      const response = await fetch('/api/share', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ 
+          id, 
+          expiresDays: 30,
+          isPublic: true 
+        }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to create share link');
+      }
+
+      const data = await response.json();
+      const shareUrl = `${window.location.origin}/shared/${data.id}?t=${data.token}`;
+
       // Prefer Web Share API on mobile
       if (navigator.share) {
         await navigator.share({
-          title: 'Chat from Ace',
-            text: 'Open this chat in Ace',
-          url,
+          title: 'Shared Chat from Ace',
+          text: 'Check out this conversation',
+          url: shareUrl,
         });
         return;
       }
 
       // Fallback: try clipboard
       if (navigator.clipboard && navigator.clipboard.writeText) {
-        await navigator.clipboard.writeText(url);
-        alert('Shareable link copied to clipboard');
+        await navigator.clipboard.writeText(shareUrl);
+        alert('Shareable link copied to clipboard! Anyone with the link can view this chat.');
         return;
       }
 
       // Last resort: show prompt so user can copy manually
-      prompt('Copy this link:', url);
+      prompt('Copy this shareable link:', shareUrl);
     } catch (e) {
-      console.error('Failed to share link', e);
-      try {
-        prompt('Copy this link:', url);
-      } catch (_) {
-        // swallow
-      }
-    }
-  };
+      console.error('Failed to create share link', e);
+      alert(`Failed to create shareable link: ${e instanceof Error ? e.message : 'Please try again.'}`);
 
   // Persist chat title change to backend
   const persistChatTitle = async (chatId: string, title: string) => {

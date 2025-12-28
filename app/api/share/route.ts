@@ -13,12 +13,33 @@ export async function POST(request: NextRequest) {
     
     if (!chatId) return NextResponse.json({ error: 'Missing chat id' }, { status: 400 });
 
+    // Check if chatId is temporary
+    if (chatId.startsWith('temp-')) {
+      return NextResponse.json({ 
+        error: 'Cannot share temporary chat. Please save the chat first.' 
+      }, { status: 400 });
+    }
+
     const session = await getServerSession(authOptions);
     const createdBy = session?.user?.email ?? null;
 
     if (!supabaseAdmin) {
       console.error('supabaseAdmin not configured');
       return NextResponse.json({ error: 'Server misconfiguration' }, { status: 500 });
+    }
+
+    // Verify that the chat exists in the database before creating a share link
+    const { data: chatExists, error: chatCheckError } = await supabaseAdmin
+      .from('chats')
+      .select('id')
+      .eq('id', chatId)
+      .single();
+
+    if (chatCheckError || !chatExists) {
+      console.error('Chat not found in database:', chatId, chatCheckError);
+      return NextResponse.json({ 
+        error: 'Chat not found. Please make sure the chat is saved before sharing.' 
+      }, { status: 404 });
     }
 
     const token = crypto.randomBytes(16).toString('hex');
