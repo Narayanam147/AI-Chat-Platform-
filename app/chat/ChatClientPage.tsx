@@ -645,59 +645,17 @@ function ChatContent() {
     // determine effective id
     let id = chatId || selectedChatId || currentChatId;
     if (!id) {
-      alert('No chat selected to share');
+      alert('No chat selected to share. Please send at least one message first.');
+      return;
+    }
+
+    // If this is a temporary chat that hasn't been saved yet, alert the user
+    if (id.startsWith('temp-')) {
+      alert('This chat is still being processed. Please wait a moment and try again.');
       return;
     }
 
     try {
-      // If this is a temporary chat, we need to save it to the database first
-      if (id.startsWith('temp-')) {
-        if (messages.length === 0) {
-          alert('Cannot share an empty chat');
-          return;
-        }
-
-        // Save the chat to database
-        const chatToSave = {
-          user_id: session?.user?.email || null,
-          guest_session_id: guestToken ? guestToken : null,
-          messages: messages.map(m => ({
-            text: m.text,
-            sender: m.sender,
-            timestamp: typeof m.timestamp === 'string' ? m.timestamp : m.timestamp.toISOString(),
-          })),
-          title: chatHistory.find(ch => ch.id === id)?.title || messages[0]?.text.substring(0, 50) || 'Untitled Chat',
-        };
-
-        // Use the chat API to save it properly
-        const saveResponse = await fetch('/api/history', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(chatToSave),
-        });
-
-        if (!saveResponse.ok) {
-          throw new Error('Failed to save chat before sharing');
-        }
-
-        const savedData = await saveResponse.json();
-        const newId = savedData.data?.id;
-        
-        if (!newId) {
-          throw new Error('Failed to get saved chat ID');
-        }
-
-        // Update local state with the new ID
-        id = newId;
-        setCurrentChatId(newId);
-        setSelectedChatId(newId);
-        
-        // Update chat history to replace temp ID with real ID
-        setChatHistory(prev => prev.map(ch => 
-          ch.id === chatId ? { ...ch, id: newId } : ch
-        ));
-      }
-
       // Create a shareable link using the API
       const response = await fetch('/api/share', {
         method: 'POST',
@@ -967,9 +925,18 @@ function ChatContent() {
         throw new Error(data.error || 'No response from AI');
       }
 
-      // Update currentChatId if a new chat was created
-      if (data.chatId && !currentChatId) {
+      // Update currentChatId with the database ID
+      if (data.chatId) {
+        const oldChatId = currentChatId;
         setCurrentChatId(data.chatId);
+        setSelectedChatId(data.chatId);
+        
+        // If we had a temp ID, update the chat history with the real database ID
+        if (oldChatId && oldChatId.startsWith('temp-')) {
+          setChatHistory(prev => prev.map(ch => 
+            ch.id === oldChatId ? { ...ch, id: data.chatId } : ch
+          ));
+        }
       }
 
       const aiMessage: Message = {
