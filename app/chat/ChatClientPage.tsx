@@ -642,29 +642,48 @@ function ChatContent() {
 
   // Share chat by copying a link to clipboard (snapshot approach - like Gemini)
   const handleShare = async (chatId?: string) => {
-    console.log('🔗 Share button clicked');
+    console.log('🔗 Share button clicked:', { chatId, selectedChatId, currentChatId });
+    
+    // Determine which chat to share
+    const id = chatId || selectedChatId || currentChatId;
+    
+    // Get messages - either from current state or from chatHistory
+    let messagesToShare = messages;
+    
+    // If sharing a specific chat from history, get its messages
+    if (chatId && chatId !== currentChatId) {
+      const historyChat = chatHistory.find(ch => ch.id === chatId);
+      if (historyChat?.messages && historyChat.messages.length > 0) {
+        messagesToShare = historyChat.messages.map((m: any, i: number) => ({
+          id: `${chatId}-${i}`,
+          text: m.text,
+          sender: m.sender as 'user' | 'ai',
+          timestamp: new Date(m.timestamp || new Date()),
+        }));
+        console.log('📋 Using messages from history:', messagesToShare.length);
+      }
+    }
     
     // Check if there are messages to share
-    if (!messages || messages.length === 0) {
+    if (!messagesToShare || messagesToShare.length === 0) {
       alert('Cannot share an empty chat. Please send at least one message first.');
       return;
     }
 
     try {
       // Get the chat title
-      const id = chatId || selectedChatId || currentChatId;
       const title = chatHistory.find(ch => ch.id === id)?.title 
-        || messages[0]?.text.substring(0, 50) 
+        || messagesToShare[0]?.text.substring(0, 50) 
         || 'Shared Chat';
 
-      console.log('📤 Sending share request with messages:', messages.length);
+      console.log('📤 Sending share request with messages:', messagesToShare.length);
       
       // Send messages directly to create a snapshot (no database lookup needed)
       const response = await fetch('/api/share', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ 
-          messages: messages.map(m => ({
+          messages: messagesToShare.map(m => ({
             text: m.text,
             sender: m.sender,
             timestamp: typeof m.timestamp === 'string' ? m.timestamp : m.timestamp.toISOString(),

@@ -81,12 +81,14 @@ CREATE TABLE public.chat_history (
 
 -- ============================================
 -- CHAT SHARES TABLE
--- For shareable chat links
+-- For shareable chat links (snapshot approach - like Gemini)
 -- ============================================
 CREATE TABLE public.chat_shares (
   id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
-  chat_id UUID NOT NULL,
+  chat_id UUID,  -- Optional: legacy support for linking to chats table
   token TEXT UNIQUE NOT NULL,
+  title TEXT DEFAULT 'Shared Chat',
+  messages JSONB,  -- Embedded messages snapshot
   created_by TEXT,  -- Email of creator
   expires_at TIMESTAMPTZ,
   is_public BOOLEAN DEFAULT TRUE,
