@@ -554,7 +554,7 @@ export default function ChatPage() {
         // Save the chat to database
         const chatToSave = {
           user_id: session?.user?.email || null,
-          guest_session_id: guestToken ? guestToken : null,
+          guest_session_id: null,
           messages: messages.map(m => ({
             text: m.text,
             sender: m.sender,
@@ -633,6 +633,8 @@ export default function ChatPage() {
     } catch (e) {
       console.error('Failed to create share link', e);
       alert(`Failed to create shareable link: ${e instanceof Error ? e.message : 'Please try again.'}`);
+    }
+  };
 
   // Persist chat title change to backend
   const persistChatTitle = async (chatId: string, title: string) => {
