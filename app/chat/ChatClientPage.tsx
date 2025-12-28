@@ -644,6 +644,14 @@ function ChatContent() {
   const handleShare = async (chatId?: string) => {
     // determine effective id
     let id = chatId || selectedChatId || currentChatId;
+    
+    console.log('🔗 Share button clicked:', { 
+      providedId: chatId, 
+      selectedChatId, 
+      currentChatId, 
+      effectiveId: id 
+    });
+    
     if (!id) {
       alert('No chat selected to share. Please send at least one message first.');
       return;
@@ -651,11 +659,14 @@ function ChatContent() {
 
     // If this is a temporary chat that hasn't been saved yet, alert the user
     if (id.startsWith('temp-')) {
+      console.log('⚠️ Cannot share temporary chat:', id);
       alert('This chat is still being processed. Please wait a moment and try again.');
       return;
     }
 
     try {
+      console.log('📤 Sending share request with ID:', id);
+      
       // Create a shareable link using the API
       const response = await fetch('/api/share', {
         method: 'POST',
@@ -695,8 +706,9 @@ function ChatContent() {
       // Last resort: show prompt so user can copy manually
       prompt('Copy this shareable link:', shareUrl);
     } catch (e) {
-      console.error('Failed to create share link', e);
-      alert(`Failed to create shareable link: ${e instanceof Error ? e.message : 'Please try again.'}`);
+      console.error('❌ Failed to create share link:', e);
+      const errorMessage = e instanceof Error ? e.message : 'Unknown error';
+      alert(`Failed to create shareable link: ${errorMessage}\n\nPlease check the console for details.`);
     }
   };
 
