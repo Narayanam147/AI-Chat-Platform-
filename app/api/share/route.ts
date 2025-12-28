@@ -47,6 +47,15 @@ export async function POST(request: NextRequest) {
     const token = crypto.randomBytes(16).toString('hex');
     const expiresAt = new Date(Date.now() + expiresDays * 24 * 60 * 60 * 1000).toISOString();
 
+    console.log('📝 Inserting share with:', {
+      token: token.substring(0, 8) + '...',
+      title,
+      messageCount: messages.length,
+      createdBy,
+      expiresAt,
+      isPublic
+    });
+
     // Store the shared chat with embedded messages (snapshot approach)
     const { data, error } = await supabaseAdmin
       .from('chat_shares')
@@ -63,8 +72,17 @@ export async function POST(request: NextRequest) {
       .single();
 
     if (error) {
-      console.error('❌ Failed to create share:', error);
-      return NextResponse.json({ error: 'Failed to create share: ' + error.message }, { status: 500 });
+      console.error('❌ Failed to create share:', {
+        error: error.message,
+        code: error.code,
+        details: error.details,
+        hint: error.hint
+      });
+      return NextResponse.json({ 
+        error: 'Failed to create share: ' + error.message,
+        code: error.code,
+        hint: error.hint 
+      }, { status: 500 });
     }
 
     console.log('✅ Share created successfully:', data.id);
@@ -75,8 +93,14 @@ export async function POST(request: NextRequest) {
       expires_at: data.expires_at,
       is_public: data.is_public 
     });
-  } catch (err) {
-    console.error('POST /api/share error:', err);
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
+  } catch (err: any) {
+    console.error('POST /api/share error:', {
+      message: err?.message,
+      stack: err?.stack,
+      name: err?.name
+    });
+    return NextResponse.json({ 
+      error: 'Internal server error: ' + (err?.message || 'Unknown error')
+    }, { status: 500 });
   }
 }

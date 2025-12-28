@@ -72,15 +72,34 @@ export async function PATCH(request: NextRequest, { params }: { params: { id: st
     }
 
     console.log('💾 Applying updates:', updates);
-    const updated = await ChatModel.update(id, updates);
     
-    if (!updated) {
-      console.log('❌ Update failed');
-      return NextResponse.json({ error: 'Failed to update' }, { status: 500 });
-    }
+    try {
+      const updated = await ChatModel.update(id, updates);
+      
+      if (!updated) {
+        console.log('❌ Update failed - null returned');
+        return NextResponse.json({ 
+          error: 'Failed to update. The database may be missing required columns. Please run the fix-production-database.sql script.',
+          hint: 'If updating pinned status, ensure the "pinned" column exists in the chats table.'
+        }, { status: 500 });
+      }
 
-    console.log('✅ Update successful');
-    return NextResponse.json({ success: true, data: updated });
+      console.log('✅ Update successful');
+      return NextResponse.json({ success: true, data: updated });
+    } catch (updateError: any) {
+      console.error('❌ Database update error:', updateError);
+      
+      // Check if it's a missing column error
+      if (updateError?.message?.includes('column') || updateError?.code === '42703') {
+        return NextResponse.json({ 
+          error: 'Database schema error: A required column is missing. Please run the database migration script.',
+          details: updateError?.message,
+          hint: 'Run fix-production-database.sql in your Supabase SQL Editor'
+        }, { status: 500 });
+      }
+      
+      throw updateError;
+    }
   } catch (error) {
     console.error('❌ PATCH /api/history/:id error:', error);
     return NextResponse.json({ 
