@@ -67,3 +67,77 @@ export async function GET(request: NextRequest) {
     );
   }
 }
+
+export async function POST(request: NextRequest) {
+  try {
+    const session = await getServerSession(authOptions);
+    const userId = session?.user?.email ?? null;
+    
+    const body = await request.json();
+    const { user_id, guest_session_id, messages, title } = body;
+
+    // Determine which ID to use
+    const effectiveUserId = user_id || userId;
+    
+    // Validate we have either a user or guest session
+    if (!effectiveUserId && !guest_session_id) {
+      return NextResponse.json(
+        { error: 'User ID or guest session ID required' },
+        { status: 400 }
+      );
+    }
+
+    // For guest sessions, validate the guest token exists
+    let guestSessionIdToUse = guest_session_id;
+    if (guest_session_id && supabaseAdmin) {
+      const { data: guestSession } = await supabaseAdmin
+        .from('guest_sessions')
+        .select('id')
+        .eq('session_token', guest_session_id)
+        .single();
+      
+      if (guestSession) {
+        guestSessionIdToUse = guestSession.id;
+      } else {
+        return NextResponse.json(
+          { error: 'Invalid guest session' },
+          { status: 400 }
+        );
+      }
+    }
+
+    // Create the chat
+    const chat = await ChatModel.create({
+      user_id: effectiveUserId,
+      guest_session_id: guestSessionIdToUse,
+      messages: messages || [],
+      title: title || 'New Chat',
+    });
+
+    if (!chat) {
+      return NextResponse.json(
+        { error: 'Failed to create chat' },
+        { status: 500 }
+      );
+    }
+
+    console.log('✅ Chat created successfully:', chat.id);
+
+    return NextResponse.json({
+      success: true,
+      data: {
+        id: chat.id,
+        title: chat.title,
+        messages: chat.messages,
+        created_at: chat.created_at,
+      }
+    });
+
+  } catch (error) {
+    console.error('❌ POST History API error:', error);
+    return NextResponse.json(
+      { error: 'Internal server error' },
+      { status: 500 }
+    );
+  }
+}
