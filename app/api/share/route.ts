@@ -40,36 +40,67 @@ export async function POST(request: NextRequest) {
     console.log('👤 User:', createdBy || 'guest');
 
     if (!supabaseAdmin) {
-      console.error('❌ supabaseAdmin not configured');
-      return NextResponse.json({ error: 'Server misconfiguration' }, { status: 500 });
+      console.error('❌ supabaseAdmin not configured - SUPABASE_SERVICE_ROLE_KEY may be missing');
+      return NextResponse.json({ 
+        error: 'Server misconfiguration: Database admin client not available',
+        hint: 'Check SUPABASE_SERVICE_ROLE_KEY environment variable'
+      }, { status: 500 });
     }
 
     const token = crypto.randomBytes(16).toString('hex');
     const expiresAt = new Date(Date.now() + expiresDays * 24 * 60 * 60 * 1000).toISOString();
 
+    // Validate and prepare messages
+    if (!Array.isArray(messages)) {
+      console.error('❌ Messages is not an array:', typeof messages);
+      return NextResponse.json({ error: 'Invalid messages format' }, { status: 400 });
+    }
+    
+    // Ensure each message has required fields
+    const cleanMessages = messages.map((m: any, i: number) => ({
+      text: String(m.text || ''),
+      sender: String(m.sender || 'user'),
+      timestamp: String(m.timestamp || new Date().toISOString())
+    }));
+    
     console.log('📝 Inserting share with:', {
       token: token.substring(0, 8) + '...',
       title,
-      messageCount: messages.length,
+      messageCount: cleanMessages.length,
+      firstMessage: cleanMessages[0],
+      messagesType: typeof cleanMessages,
+      isArray: Array.isArray(cleanMessages),
       createdBy,
       expiresAt,
       isPublic
     });
 
+    // Build the insert object explicitly
+    const insertData = {
+      token,
+      title,
+      messages: cleanMessages,
+      created_by: createdBy,
+      expires_at: expiresAt,
+      is_public: isPublic,
+      view_count: 0,
+    };
+    
+    console.log('📦 Full insert data:', JSON.stringify(insertData, null, 2));
+
     // Store the shared chat with embedded messages (snapshot approach)
     const { data, error } = await supabaseAdmin
       .from('chat_shares')
-      .insert([{
-        token,
-        title,
-        messages, // Store messages directly in the share
-        created_by: createdBy,
-        expires_at: expiresAt,
-        is_public: isPublic,
-        view_count: 0,
-      }])
+      .insert([insertData])
       .select()
       .single();
+
+    console.log('📊 Insert result:', {
+      success: !error,
+      dataId: data?.id,
+      hasMessages: data?.messages ? 'yes' : 'no',
+      messagesCount: data?.messages?.length || 0
+    });
 
     if (error) {
       console.error('❌ Failed to create share:', {
