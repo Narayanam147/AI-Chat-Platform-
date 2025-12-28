@@ -819,28 +819,44 @@ function ChatContent() {
 
       if (!response.ok) {
         const errorData = await response.json();
+        console.error('❌ Share API error response:', errorData);
         throw new Error(errorData.error || 'Failed to create share link');
       }
 
       const data = await response.json();
+      console.log('📬 Share API response:', data);
+      
+      if (!data.id || !data.token) {
+        console.error('❌ Invalid share response - missing id or token:', data);
+        throw new Error('Invalid response from share API');
+      }
+      
       const shareUrl = `${window.location.origin}/shared/${data.id}?t=${data.token}`;
       console.log('✅ Share link created:', shareUrl);
 
-      // Prefer Web Share API on mobile
-      if (navigator.share) {
-        await navigator.share({
-          title: 'Shared Chat from Ace',
-          text: 'Check out this conversation',
-          url: shareUrl,
-        });
-        return;
+      // Try clipboard first (most reliable)
+      try {
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+          await navigator.clipboard.writeText(shareUrl);
+          alert('✅ Shareable link copied to clipboard!\n\nAnyone with the link can view this chat.');
+          return;
+        }
+      } catch (clipErr) {
+        console.warn('Clipboard API failed:', clipErr);
       }
 
-      // Fallback: try clipboard
-      if (navigator.clipboard && navigator.clipboard.writeText) {
-        await navigator.clipboard.writeText(shareUrl);
-        alert('Shareable link copied to clipboard! Anyone with the link can view this chat.');
-        return;
+      // Try Web Share API on mobile
+      try {
+        if (navigator.share) {
+          await navigator.share({
+            title: 'Shared Chat from Ace',
+            text: 'Check out this conversation',
+            url: shareUrl,
+          });
+          return;
+        }
+      } catch (shareErr) {
+        console.warn('Web Share API failed:', shareErr);
       }
 
       // Last resort: show prompt so user can copy manually
