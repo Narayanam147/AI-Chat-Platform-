@@ -13,7 +13,7 @@ export async function GET(request: NextRequest, { params }: { params: { id: stri
     // Use supabaseAdmin for better access
     const supabaseClient = supabaseAdmin || supabase;
 
-    // Validate share entry and expiry
+    // Validate share entry and expiry - messages are now embedded in share
     const { data: share, error: shareErr } = await supabaseClient
       .from('chat_shares')
       .select('*')
@@ -22,6 +22,7 @@ export async function GET(request: NextRequest, { params }: { params: { id: stri
       .single();
 
     if (shareErr || !share) {
+      console.log('❌ Share not found:', { id, shareErr });
       return NextResponse.json({ error: 'Not found or invalid token' }, { status: 404 });
     }
 
@@ -37,24 +38,15 @@ export async function GET(request: NextRequest, { params }: { params: { id: stri
         .eq('id', id);
     }
 
-    // Fetch the actual chat from chats table
-    const { data: chat, error: chatErr } = await supabaseClient
-      .from('chats')
-      .select('*')
-      .eq('id', share.chat_id)
-      .single();
-
-    if (chatErr || !chat) {
-      return NextResponse.json({ error: 'Chat not found' }, { status: 404 });
-    }
-
-    // Return the full chat with messages
+    // Messages are now embedded directly in chat_shares (snapshot approach)
     const payload = {
-      id: chat.id,
-      title: chat.title || 'Shared Chat',
-      messages: chat.messages || [],
-      created_at: chat.created_at,
+      id: share.id,
+      title: share.title || 'Shared Chat',
+      messages: share.messages || [],
+      created_at: share.created_at,
     };
+
+    console.log('✅ Share retrieved:', { id: share.id, messageCount: payload.messages.length });
 
     return NextResponse.json({ success: true, data: payload });
   } catch (err) {

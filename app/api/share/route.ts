@@ -7,19 +7,22 @@ import crypto from 'crypto';
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const chatId = body?.id;
-    const expiresDays = Number(body?.expiresDays ?? 7);
-    const isPublic = body?.isPublic !== false; // default to true
+    const messages = body?.messages; // Accept messages directly
+    const title = body?.title || 'Shared Chat';
+    const expiresDays = Number(body?.expiresDays ?? 30);
+    const isPublic = body?.isPublic !== false;
     
-    console.log('🔗 Share request received:', { chatId, expiresDays, isPublic });
-    
-    if (!chatId) return NextResponse.json({ error: 'Missing chat id' }, { status: 400 });
+    console.log('🔗 Share request received:', { 
+      hasMessages: !!messages, 
+      messageCount: messages?.length,
+      title,
+      expiresDays 
+    });
 
-    // Check if chatId is temporary
-    if (chatId.startsWith('temp-')) {
-      console.log('⚠️ Attempted to share temporary chat:', chatId);
+    // Validate messages
+    if (!messages || !Array.isArray(messages) || messages.length === 0) {
       return NextResponse.json({ 
-        error: 'Cannot share temporary chat. Please save the chat first.' 
+        error: 'No messages to share. Please send at least one message first.' 
       }, { status: 400 });
     }
 
@@ -32,42 +35,16 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Server misconfiguration' }, { status: 500 });
     }
 
-    // Verify that the chat exists in the database before creating a share link
-    console.log('🔍 Checking if chat exists in database:', chatId);
-    const { data: chatExists, error: chatCheckError } = await supabaseAdmin
-      .from('chats')
-      .select('id, user_id, guest_session_id')
-      .eq('id', chatId)
-      .single();
-
-    console.log('📊 Chat check result:', { 
-      found: !!chatExists, 
-      error: chatCheckError?.message,
-      data: chatExists 
-    });
-
-    if (chatCheckError || !chatExists) {
-      console.error('❌ Chat not found in database:', { 
-        chatId, 
-        error: chatCheckError?.message,
-        code: chatCheckError?.code,
-        details: chatCheckError?.details 
-      });
-      return NextResponse.json({ 
-        error: 'Chat not found. Please make sure the chat is saved before sharing.' 
-      }, { status: 404 });
-    }
-    
-    console.log('✅ Chat found, creating share link...');
-
     const token = crypto.randomBytes(16).toString('hex');
     const expiresAt = new Date(Date.now() + expiresDays * 24 * 60 * 60 * 1000).toISOString();
 
+    // Store the shared chat with embedded messages (snapshot approach)
     const { data, error } = await supabaseAdmin
       .from('chat_shares')
       .insert([{
-        chat_id: chatId,
         token,
+        title,
+        messages, // Store messages directly in the share
         created_by: createdBy,
         expires_at: expiresAt,
         is_public: isPublic,
@@ -77,11 +54,12 @@ export async function POST(request: NextRequest) {
       .single();
 
     if (error) {
-      console.error('Failed to create share:', error);
-      return NextResponse.json({ error: 'Failed to create share' }, { status: 500 });
+      console.error('❌ Failed to create share:', error);
+      return NextResponse.json({ error: 'Failed to create share: ' + error.message }, { status: 500 });
     }
 
-    // Return id and token; client will compose origin
+    console.log('✅ Share created successfully:', data.id);
+
     return NextResponse.json({ 
       id: data.id, 
       token, 
