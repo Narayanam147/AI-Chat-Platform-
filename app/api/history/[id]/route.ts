@@ -6,9 +6,13 @@ import { authOptions } from '@/lib/auth';
 export async function GET(request: NextRequest, { params }: { params: { id: string } }) {
   try {
     const id = params.id;
+    console.log('📖 GET /api/history/:id called with id:', id);
+    
     if (!id) return NextResponse.json({ error: 'Missing id' }, { status: 400 });
 
     const chat = await ChatModel.findById(id);
+    console.log('📊 Chat lookup result:', { found: !!chat, hasMessages: !!chat?.messages, messageCount: chat?.messages?.length || 0 });
+    
     if (!chat) return NextResponse.json({ error: 'Not found' }, { status: 404 });
 
     // Public GET: return chat messages but redact sensitive fields
@@ -21,9 +25,10 @@ export async function GET(request: NextRequest, { params }: { params: { id: stri
       owner: chat.user_id ? undefined : undefined, // do not expose owner
     };
 
+    console.log('✅ Returning chat with', safe.messages.length, 'messages');
     return NextResponse.json(safe);
   } catch (error) {
-    console.error('GET /api/history/:id error:', error);
+    console.error('❌ GET /api/history/:id error:', error);
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }
