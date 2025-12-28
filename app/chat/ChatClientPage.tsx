@@ -664,15 +664,19 @@ function ChatContent() {
     
     // If we don't have messages in current state, fetch from database
     if (!messagesToShare || messagesToShare.length === 0 || (chatId && chatId !== currentChatId)) {
-      console.log('🔍 Fetching chat from database...');
+      console.log('🔍 Fetching chat from database...', { id });
       
       try {
         const response = await fetch(`/api/history/${id}`);
+        console.log('📡 Fetch response:', { status: response.status, ok: response.ok });
+        
         if (response.ok) {
           const data = await response.json();
           console.log('📦 Fetched chat data:', {
+            hasData: !!data,
             hasMessages: !!data?.messages,
-            messageCount: data?.messages?.length || 0
+            messageCount: data?.messages?.length || 0,
+            title: data?.title
           });
           
           if (data?.messages && data.messages.length > 0) {
@@ -684,12 +688,19 @@ function ChatContent() {
             }));
             chatTitle = data.title || 'Shared Chat';
             console.log('✅ Loaded messages from database:', messagesToShare.length);
+          } else {
+            console.warn('⚠️ No messages in fetched data');
           }
         } else {
-          console.error('❌ Failed to fetch chat:', response.status);
+          const errorText = await response.text();
+          console.error('❌ Failed to fetch chat:', response.status, errorText);
+          alert(`Failed to load chat: ${response.status} ${errorText}`);
+          return;
         }
       } catch (error) {
         console.error('❌ Error fetching chat:', error);
+        alert(`Error loading chat: ${error}`);
+        return;
       }
     } else {
       // Use title from chatHistory if available
