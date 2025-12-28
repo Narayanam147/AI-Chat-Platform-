@@ -642,17 +642,31 @@ function ChatContent() {
 
   // Share chat by copying a link to clipboard (snapshot approach - like Gemini)
   const handleShare = async (chatId?: string) => {
-    console.log('🔗 Share button clicked:', { chatId, selectedChatId, currentChatId });
+    console.log('🔗 Share button clicked:', { 
+      chatId, 
+      selectedChatId, 
+      currentChatId,
+      currentMessagesCount: messages.length,
+      chatHistoryCount: chatHistory.length
+    });
     
     // Determine which chat to share
     const id = chatId || selectedChatId || currentChatId;
+    console.log('📋 Target chat ID:', id);
     
     // Get messages - either from current state or from chatHistory
     let messagesToShare = messages;
     
     // If sharing a specific chat from history, get its messages
-    if (chatId && chatId !== currentChatId) {
+    if (chatId) {
+      console.log('🔍 Looking for chat in history...');
       const historyChat = chatHistory.find(ch => ch.id === chatId);
+      console.log('📦 Found history chat:', {
+        found: !!historyChat,
+        hasMessages: !!historyChat?.messages,
+        messageCount: historyChat?.messages?.length || 0
+      });
+      
       if (historyChat?.messages && historyChat.messages.length > 0) {
         messagesToShare = historyChat.messages.map((m: any, i: number) => ({
           id: `${chatId}-${i}`,
@@ -660,12 +674,15 @@ function ChatContent() {
           sender: m.sender as 'user' | 'ai',
           timestamp: new Date(m.timestamp || new Date()),
         }));
-        console.log('📋 Using messages from history:', messagesToShare.length);
+        console.log('✅ Using messages from history:', messagesToShare.length);
       }
+    } else {
+      console.log('📝 Using current messages state:', messagesToShare.length);
     }
     
     // Check if there are messages to share
     if (!messagesToShare || messagesToShare.length === 0) {
+      console.error('❌ No messages to share');
       alert('Cannot share an empty chat. Please send at least one message first.');
       return;
     }
