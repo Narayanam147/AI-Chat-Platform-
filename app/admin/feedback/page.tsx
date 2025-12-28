@@ -56,7 +56,7 @@ export default function AdminFeedbackPage() {
 
   if (status === 'loading' || loading) {
     return (
-      <div className="min-h-screen bg-gray-50 dark:bg-[#0E2F29] flex items-center justify-center">
+      <div className="min-h-screen bg-gray-50 dark:bg-[#131314] flex items-center justify-center">
         <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
       </div>
     );
@@ -64,10 +64,10 @@ export default function AdminFeedbackPage() {
 
   if (!session) {
     return (
-      <div className="min-h-screen bg-gray-50 dark:bg-[#0E2F29] flex items-center justify-center">
+      <div className="min-h-screen bg-gray-50 dark:bg-[#131314] flex items-center justify-center">
         <div className="text-center">
-          <h1 className="text-2xl font-bold text-gray-900 dark:text-white mb-4">Access Denied</h1>
-          <p className="text-gray-600 dark:text-gray-400 mb-4">Please sign in to access this page.</p>
+          <h1 className="text-2xl font-bold text-gray-900 dark:text-[#E3E3E3] mb-4">Access Denied</h1>
+          <p className="text-gray-600 dark:text-[#C4C7C5] mb-4">Please sign in to access this page.</p>
           <Link href="/" className="text-blue-600 hover:underline">Go to Home</Link>
         </div>
       </div>
@@ -76,10 +76,10 @@ export default function AdminFeedbackPage() {
 
   if (!isAdmin) {
     return (
-      <div className="min-h-screen bg-gray-50 dark:bg-[#0E2F29] flex items-center justify-center">
+      <div className="min-h-screen bg-gray-50 dark:bg-[#131314] flex items-center justify-center">
         <div className="text-center">
-          <h1 className="text-2xl font-bold text-gray-900 dark:text-white mb-4">Admin Access Required</h1>
-          <p className="text-gray-600 dark:text-gray-400 mb-4">You do not have permission to view this page.</p>
+          <h1 className="text-2xl font-bold text-gray-900 dark:text-[#E3E3E3] mb-4">Admin Access Required</h1>
+          <p className="text-gray-600 dark:text-[#C4C7C5] mb-4">You do not have permission to view this page.</p>
           <Link href="/chat" className="text-blue-600 hover:underline">Go to Chat</Link>
         </div>
       </div>
@@ -109,18 +109,18 @@ export default function AdminFeedbackPage() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-[#0E2F29]">
+    <div className="min-h-screen bg-gray-50 dark:bg-[#131314]">
       {/* Header */}
-      <header className="bg-white dark:bg-[#16423C] shadow-sm border-b border-gray-200 dark:border-[#1a4a42]">
+      <header className="bg-white dark:bg-[#1E1E1E] shadow-sm border-b border-gray-200 dark:border-[#333537]">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-4">
-              <Link href="/chat" className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors">
-                <ArrowLeft className="w-5 h-5 text-gray-600 dark:text-gray-400" />
+              <Link href="/chat" className="p-2 hover:bg-gray-100 dark:hover:bg-[#333537] rounded-lg transition-colors">
+                <ArrowLeft className="w-5 h-5 text-gray-600 dark:text-[#C4C7C5]" />
               </Link>
-              <h1 className="text-xl font-semibold text-gray-900 dark:text-white">Admin - User Feedback</h1>
+              <h1 className="text-xl font-semibold text-gray-900 dark:text-[#E3E3E3]">Admin - User Feedback</h1>
             </div>
-            <span className="text-sm text-gray-500 dark:text-gray-400">
+            <span className="text-sm text-gray-500 dark:text-[#C4C7C5]">
               {feedbacks.length} feedback{feedbacks.length !== 1 ? 's' : ''}
             </span>
           </div>
@@ -136,15 +136,15 @@ export default function AdminFeedbackPage() {
         ) : feedbacks.length === 0 ? (
           <div className="text-center py-12">
             <Mail className="w-12 h-12 text-gray-400 mx-auto mb-4" />
-            <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-2">No feedback yet</h3>
-            <p className="text-gray-500 dark:text-gray-400">User feedback will appear here.</p>
+            <h3 className="text-lg font-medium text-gray-900 dark:text-[#E3E3E3] mb-2">No feedback yet</h3>
+            <p className="text-gray-500 dark:text-[#C4C7C5]">User feedback will appear here.</p>
           </div>
         ) : (
           <div className="space-y-4">
             {feedbacks.map((fb) => (
               <div 
                 key={fb.id} 
-                className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-6"
+                className="bg-white dark:bg-[#1E1E1E] rounded-xl shadow-sm border border-gray-200 dark:border-[#333537] p-6"
               >
                 <div className="flex items-start justify-between mb-4">
                   <div className="flex items-center gap-3">
@@ -154,8 +154,8 @@ export default function AdminFeedbackPage() {
                       </span>
                     </div>
                     <div>
-                      <p className="font-medium text-gray-900 dark:text-white">{fb.user_email}</p>
-                      <div className="flex items-center gap-1 text-sm text-gray-500 dark:text-gray-400">
+                      <p className="font-medium text-gray-900 dark:text-[#E3E3E3]">{fb.user_email}</p>
+                      <div className="flex items-center gap-1 text-sm text-gray-500 dark:text-[#C4C7C5]">
                         <Clock className="w-3 h-3" />
                         {new Date(fb.created_at || fb.timestamp).toLocaleString()}
                       </div>
@@ -168,7 +168,7 @@ export default function AdminFeedbackPage() {
                     </span>
                   </div>
                 </div>
-                <p className="text-gray-700 dark:text-gray-300 whitespace-pre-wrap">{fb.feedback}</p>
+                <p className="text-gray-700 dark:text-[#E3E3E3] whitespace-pre-wrap">{fb.feedback}</p>
               </div>
             ))}
           </div>
@@ -177,3 +177,5 @@ export default function AdminFeedbackPage() {
     </div>
   );
 }
+
+

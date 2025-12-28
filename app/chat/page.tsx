@@ -1001,14 +1001,14 @@ export default function ChatPage() {
       onOpenSettings={() => setShowSettingsModal(true)}
         isMobile={isMobile}
     >
-      <div className="flex flex-col h-full bg-white dark:bg-[#0E2F29] relative">
+      <div className="flex flex-col h-full bg-white dark:bg-[#131314] relative">
         {/* Chat heading removed: title is shown in top header center (MainLayout)
             Show a centered modal for renaming when `renameMode` is active */}
         {renameMode && (
           <div className="fixed inset-0 z-[60] flex items-center justify-center">
             <div className="absolute inset-0 bg-black/40" onClick={cancelRename} />
             <div className="relative w-full max-w-lg mx-4">
-              <div className="bg-white dark:bg-[#16423C] rounded-2xl p-6 shadow-xl">
+              <div className="bg-white dark:bg-[#1E1E1E] rounded-2xl p-6 shadow-xl">
                 <h3 className="text-xl font-semibold text-gray-900 dark:text-gray-100 mb-4">Rename this chat</h3>
                 <div className="mb-4">
                   <input
@@ -1019,7 +1019,7 @@ export default function ChatPage() {
                       if (e.key === 'Enter') { e.preventDefault(); saveRename(); }
                       if (e.key === 'Escape') { cancelRename(); }
                     }}
-                    className="w-full px-4 py-3 border border-gray-300 dark:border-[#16423C] rounded-md bg-white dark:bg-[#0E2F29] text-gray-900 dark:text-white focus:outline-none"
+                    className="w-full px-4 py-3 border border-gray-300 dark:border-[#333537] rounded-md bg-white dark:bg-[#131314] text-gray-900 dark:text-[#E3E3E3] focus:outline-none"
                     placeholder="Enter chat title"
                     aria-label="Rename chat"
                   />
@@ -1040,22 +1040,22 @@ export default function ChatPage() {
         )}
 
         {/* Conversation View - Messages */}
-        <div className="flex-1 overflow-y-auto overflow-x-hidden bg-gradient-to-b from-white/50 dark:from-[#0E2F29]/30 to-white dark:to-[#0E2F29] transition-all duration-300 scroll-smooth">
+        <div className="flex-1 overflow-y-auto overflow-x-hidden bg-gradient-to-b from-white/50 dark:from-[#131314]/30 to-white dark:to-[#131314] transition-all duration-300 scroll-smooth">
           {/* Greeting State - ONLY when no messages */}
           {messages.length === 0 && (
             <div className="flex items-center justify-center h-full animate-fadeIn px-4 py-8">
               <div className="text-center w-full max-w-3xl">
                 {/* App name removed from greeting to avoid duplicating top header title */}
-                <p className="text-sm sm:text-lg text-gray-600 dark:text-gray-400 mb-1">
+                <p className="text-sm sm:text-lg text-gray-600 dark:text-[#C4C7C5] mb-1">
                   Hello, {session?.user?.name?.split(' ')[0] || 'there'}
                 </p>
-                <p className="text-sm sm:text-lg text-gray-600 dark:text-gray-400 mb-6">
+                <p className="text-sm sm:text-lg text-gray-600 dark:text-[#C4C7C5] mb-6">
                   How can I help you today?
                 </p>
 
                 {/* Centered input like Gemini */}
                 <div className="mx-auto max-w-2xl px-3">
-                  <div className="relative flex items-center gap-3 bg-gray-100/60 dark:bg-[#0E2F29]/40 rounded-3xl border border-gray-300/50 dark:border-[#16423C]/40 p-3">
+                  <div className="relative flex items-center gap-3 bg-gray-100/60 dark:bg-[#131314]/40 rounded-3xl border border-gray-300/50 dark:border-[#333537]/40 p-3">
                     <textarea
                       value={input}
                       onChange={(e) => setInput(e.target.value)}
@@ -1066,7 +1066,7 @@ export default function ChatPage() {
                         }
                       }}
                       placeholder="Ask Ace"
-                      className="flex-1 px-3 py-2 bg-transparent border-none focus:outline-none resize-none text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 text-[15px] min-h-[48px] max-h-[180px]"
+                      className="flex-1 px-3 py-2 bg-transparent border-none focus:outline-none resize-none text-gray-900 dark:text-[#E3E3E3] placeholder-gray-500 dark:placeholder-gray-400 text-[15px] min-h-[48px] max-h-[180px]"
                       rows={1}
                       disabled={isLoading}
                       style={{ height: 'auto', overflowY: input.split('\n').length > 3 ? 'auto' : 'hidden' }}
@@ -1096,8 +1096,8 @@ export default function ChatPage() {
                   className={`w-full py-4 sm:py-6 px-4 sm:px-6 lg:px-8 ${
                     message.sender === 'user' 
                       ? 'bg-transparent' 
-                      : 'bg-gray-50/50 dark:bg-gray-800/20'
-                  } border-b border-gray-100/50 dark:border-gray-800/50`}
+                      : 'bg-gray-50/50 dark:bg-[#1E1E1E]/20'
+                  } border-b border-gray-100/50 dark:border-[#333537]/50`}
                 >
                   <div className="max-w-4xl mx-auto flex gap-2 sm:gap-4">
                     {/* Avatar */}
@@ -1130,13 +1130,13 @@ export default function ChatPage() {
                         {/* Copy Button */}
                         <button
                           onClick={() => handleCopyMessage(message.id, message.text)}
-                          className="mt-2 p-1.5 rounded-md opacity-0 group-hover:opacity-100 transition-opacity bg-gray-200/70 dark:bg-gray-700/50 hover:bg-gray-300 dark:hover:bg-gray-600"
+                          className="mt-2 p-1.5 rounded-md opacity-0 group-hover:opacity-100 transition-opacity bg-gray-200/70 dark:bg-[#333537]/50 hover:bg-gray-300 dark:hover:bg-gray-600"
                           title="Copy message"
                         >
                           {copiedMessageId === message.id ? (
                             <Check className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-green-500" />
                           ) : (
-                            <Copy className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-gray-600 dark:text-gray-400" />
+                            <Copy className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-gray-600 dark:text-[#C4C7C5]" />
                           )}
                         </button>
                         <p className="text-xs text-gray-400 dark:text-gray-500 mt-2">
@@ -1149,7 +1149,7 @@ export default function ChatPage() {
               ))}
               
               {isLoading && (
-                <div className="w-full py-6 px-4 sm:px-6 lg:px-8 bg-gray-50/50 dark:bg-gray-800/20 border-b border-gray-100/50 dark:border-gray-800/50">
+                <div className="w-full py-6 px-4 sm:px-6 lg:px-8 bg-gray-50/50 dark:bg-[#1E1E1E]/20 border-b border-gray-100/50 dark:border-[#333537]/50">
                   <div className="max-w-4xl mx-auto flex gap-3 sm:gap-4">
                     <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center flex-shrink-0">
                       <Sparkles className="w-4 h-4 sm:w-5 sm:h-5 text-white" />
@@ -1171,36 +1171,36 @@ export default function ChatPage() {
 
         {/* Chat Input Bar - Multi-functional (Gemini-style) - shown when conversation exists */}
         {messages.length > 0 && (
-        <div className="border-t border-gray-200/50 dark:border-[#16423C]/50 bg-white dark:bg-[#0E2F29] p-2 sm:p-3 -mb-2">
+        <div className="border-t border-gray-200/50 dark:border-[#333537]/50 bg-white dark:bg-[#131314] p-2 sm:p-3 -mb-2">
           <div className="max-w-4xl mx-auto px-1 sm:px-0">
-            <div className="relative flex items-end gap-2 bg-gray-100/60 dark:bg-[#0E2F29]/40 rounded-full border border-gray-300/50 dark:border-[#16423C]/40 p-2 focus-within:bg-gray-100 dark:focus-within:bg-[#0E2F29]/60 focus-within:border-gray-400 dark:focus-within:border-[#16423C] transition-all">
+            <div className="relative flex items-end gap-2 bg-gray-100/60 dark:bg-[#131314]/40 rounded-full border border-gray-300/50 dark:border-[#333537]/40 p-2 focus-within:bg-gray-100 dark:focus-within:bg-[#131314]/60 focus-within:border-gray-400 dark:focus-within:border-[#333537] transition-all">
               {/* Attachment/Tools Menu */}
               <div className="relative" ref={attachMenuRef}>
                 <button
                   onClick={() => setShowAttachMenu(!showAttachMenu)}
-                  className="p-2.5 hover:bg-gray-200/60 dark:hover:bg-gray-700/40 rounded-full transition-colors"
+                  className="p-2.5 hover:bg-gray-200/60 dark:hover:bg-[#333537]/40 rounded-full transition-colors"
                   title="Add attachments"
                 >
-                  <Plus className="w-5 h-5 text-gray-600 dark:text-gray-400" />
+                  <Plus className="w-5 h-5 text-gray-600 dark:text-[#C4C7C5]" />
                 </button>
 
                 {showAttachMenu && (
-                  <div className="absolute bottom-full left-0 mb-2 w-56 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl shadow-xl py-2 z-[50]">
+                  <div className="absolute bottom-full left-0 mb-2 w-56 bg-white dark:bg-[#1E1E1E] border border-gray-200 dark:border-[#333537] rounded-xl shadow-xl py-2 z-[50]">
                     <button
                       onClick={() => {
                         fileInputRef.current?.click();
                         setShowAttachMenu(false);
                       }}
-                      className="w-full px-4 py-3 text-left text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors flex items-center gap-3"
+                      className="w-full px-4 py-3 text-left text-sm text-gray-700 dark:text-[#E3E3E3] hover:bg-gray-100 dark:hover:bg-[#333537] transition-colors flex items-center gap-3"
                     >
                       <Upload className="w-4 h-4" />
                       Upload files
                     </button>
-                    <button className="w-full px-4 py-3 text-left text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors flex items-center gap-3">
+                    <button className="w-full px-4 py-3 text-left text-sm text-gray-700 dark:text-[#E3E3E3] hover:bg-gray-100 dark:hover:bg-[#333537] transition-colors flex items-center gap-3">
                       <FolderOpen className="w-4 h-4" />
                       Add from Drive
                     </button>
-                    <button className="w-full px-4 py-3 text-left text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors flex items-center gap-3">
+                    <button className="w-full px-4 py-3 text-left text-sm text-gray-700 dark:text-[#E3E3E3] hover:bg-gray-100 dark:hover:bg-[#333537] transition-colors flex items-center gap-3">
                       <Code className="w-4 h-4" />
                       Import code
                     </button>
@@ -1222,13 +1222,13 @@ export default function ChatPage() {
               {attachedFiles.length > 0 && (
                 <div className="flex flex-wrap gap-2 px-2">
                   {attachedFiles.map((file, index) => (
-                    <div key={index} className="flex items-center gap-2 bg-gray-200/60 dark:bg-gray-700/50 rounded-lg px-3 py-1.5">
+                    <div key={index} className="flex items-center gap-2 bg-gray-200/60 dark:bg-[#333537]/50 rounded-lg px-3 py-1.5">
                       {file.type.startsWith('image/') ? (
                         <ImageIcon className="w-4 h-4 text-blue-500" />
                       ) : (
                         <FileText className="w-4 h-4 text-blue-500" />
                       )}
-                      <span className="text-xs text-gray-700 dark:text-gray-300 max-w-[100px] truncate">
+                      <span className="text-xs text-gray-700 dark:text-[#E3E3E3] max-w-[100px] truncate">
                         {file.name}
                       </span>
                       <button
@@ -1253,7 +1253,7 @@ export default function ChatPage() {
                   }
                 }}
                 placeholder="Ask Ace"
-                className="flex-1 px-3 py-2.5 bg-transparent border-none focus:outline-none resize-none text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 text-[15px] min-h-[40px] max-h-[200px]"
+                className="flex-1 px-3 py-2.5 bg-transparent border-none focus:outline-none resize-none text-gray-900 dark:text-[#E3E3E3] placeholder-gray-500 dark:placeholder-gray-400 text-[15px] min-h-[40px] max-h-[200px]"
                 rows={1}
                 disabled={isLoading}
                 style={{
@@ -1280,19 +1280,19 @@ export default function ChatPage() {
 
             {/* Shorthand suggestions popup */}
             {input.startsWith('/') && (
-              <div className="absolute bottom-full left-0 right-0 mb-2 max-h-64 overflow-y-auto bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-lg z-50">
+              <div className="absolute bottom-full left-0 right-0 mb-2 max-h-64 overflow-y-auto bg-white dark:bg-[#1E1E1E] border border-gray-200 dark:border-[#333537] rounded-lg shadow-lg z-50">
                 <div className="p-3 space-y-1">
                   {Object.entries(shorthands).map(([shorthand, description]) => (
                     <button
                       key={shorthand}
                       onClick={() => setInput(shorthand)}
-                      className="w-full text-left px-3 py-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded transition-colors group"
+                      className="w-full text-left px-3 py-2 hover:bg-gray-100 dark:hover:bg-[#333537] rounded transition-colors group"
                     >
                       <div className="flex items-start gap-2">
                         <code className="text-blue-600 dark:text-blue-400 font-semibold text-sm flex-shrink-0">
                           {shorthand}
                         </code>
-                        <span className="text-xs text-gray-600 dark:text-gray-400 group-hover:text-gray-900 dark:group-hover:text-white transition-colors">
+                        <span className="text-xs text-gray-600 dark:text-[#C4C7C5] group-hover:text-gray-900 dark:group-hover:text-white transition-colors">
                           {description}
                         </span>
                       </div>
@@ -1311,17 +1311,17 @@ export default function ChatPage() {
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[300] p-4">
           <div 
             ref={settingsModalRef}
-            className="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl w-full max-w-md overflow-hidden"
+            className="bg-white dark:bg-[#1E1E1E] rounded-2xl shadow-2xl w-full max-w-md overflow-hidden"
           >
             {/* Modal Header */}
-            <div className="p-6 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between">
-              <h2 className="text-xl font-semibold text-gray-900 dark:text-white">Settings</h2>
+            <div className="p-6 border-b border-gray-200 dark:border-[#333537] flex items-center justify-between">
+              <h2 className="text-xl font-semibold text-gray-900 dark:text-[#E3E3E3]">Settings</h2>
               <button
                 onClick={() => setShowSettingsModal(false)}
-                className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-full transition-colors"
+                className="p-2 hover:bg-gray-100 dark:hover:bg-[#333537] rounded-full transition-colors"
                 aria-label="Close settings"
               >
-                <X className="w-5 h-5 text-gray-600 dark:text-gray-400" />
+                <X className="w-5 h-5 text-gray-600 dark:text-[#C4C7C5]" />
               </button>
             </div>
 
@@ -1329,7 +1329,7 @@ export default function ChatPage() {
             <div className="p-6 space-y-6 max-h-[70vh] overflow-y-auto">
               {/* Theme Selection */}
               <div>
-                <h3 className="text-sm font-semibold text-gray-900 dark:text-white mb-3">Theme</h3>
+                <h3 className="text-sm font-semibold text-gray-900 dark:text-[#E3E3E3] mb-3">Theme</h3>
                 <div className="flex gap-3">
                   <button
                     onClick={() => handleThemeChange('light')}
@@ -1339,8 +1339,8 @@ export default function ChatPage() {
                         : 'border-gray-300 dark:border-gray-600 hover:border-gray-400'
                     }`}
                   >
-                    <Sun className="w-6 h-6 mx-auto mb-2 text-gray-700 dark:text-gray-300" />
-                    <span className="text-sm font-medium text-gray-900 dark:text-white">Light</span>
+                    <Sun className="w-6 h-6 mx-auto mb-2 text-gray-700 dark:text-[#E3E3E3]" />
+                    <span className="text-sm font-medium text-gray-900 dark:text-[#E3E3E3]">Light</span>
                   </button>
                   <button
                     onClick={() => handleThemeChange('dark')}
@@ -1350,34 +1350,34 @@ export default function ChatPage() {
                         : 'border-gray-300 dark:border-gray-600 hover:border-gray-400'
                     }`}
                   >
-                    <Moon className="w-6 h-6 mx-auto mb-2 text-gray-700 dark:text-gray-300" />
-                    <span className="text-sm font-medium text-gray-900 dark:text-white">Dark</span>
+                    <Moon className="w-6 h-6 mx-auto mb-2 text-gray-700 dark:text-[#E3E3E3]" />
+                    <span className="text-sm font-medium text-gray-900 dark:text-[#E3E3E3]">Dark</span>
                   </button>
                 </div>
               </div>
 
               {/* Export Chat */}
               <div>
-                <h3 className="text-sm font-semibold text-gray-900 dark:text-white mb-3">Export Chat</h3>
+                <h3 className="text-sm font-semibold text-gray-900 dark:text-[#E3E3E3] mb-3">Export Chat</h3>
                 <div className="space-y-2">
                   <button
                     onClick={() => handleExport('word')}
-                    className="w-full p-4 bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 rounded-lg transition-colors flex items-center gap-3"
+                    className="w-full p-4 bg-gray-100 dark:bg-[#333537] hover:bg-gray-200 dark:hover:bg-gray-600 rounded-lg transition-colors flex items-center gap-3"
                   >
                     <FileText className="w-5 h-5 text-blue-600" />
                     <div className="flex-1 text-left">
-                      <p className="text-sm font-medium text-gray-900 dark:text-white">Export as DOC</p>
-                      <p className="text-xs text-gray-600 dark:text-gray-400">Download chat as Word document</p>
+                      <p className="text-sm font-medium text-gray-900 dark:text-[#E3E3E3]">Export as DOC</p>
+                      <p className="text-xs text-gray-600 dark:text-[#C4C7C5]">Download chat as Word document</p>
                     </div>
                   </button>
                   <button
                     onClick={() => handleExport('pdf')}
-                    className="w-full p-4 bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 rounded-lg transition-colors flex items-center gap-3"
+                    className="w-full p-4 bg-gray-100 dark:bg-[#333537] hover:bg-gray-200 dark:hover:bg-gray-600 rounded-lg transition-colors flex items-center gap-3"
                   >
                     <FileText className="w-5 h-5 text-red-600" />
                     <div className="flex-1 text-left">
-                      <p className="text-sm font-medium text-gray-900 dark:text-white">Export as PDF</p>
-                      <p className="text-xs text-gray-600 dark:text-gray-400">Download chat as PDF file</p>
+                      <p className="text-sm font-medium text-gray-900 dark:text-[#E3E3E3]">Export as PDF</p>
+                      <p className="text-xs text-gray-600 dark:text-[#C4C7C5]">Download chat as PDF file</p>
                     </div>
                   </button>
                 </div>
@@ -1385,7 +1385,7 @@ export default function ChatPage() {
 
               {/* Clear History */}
               <div>
-                <h3 className="text-sm font-semibold text-gray-900 dark:text-white mb-3">Clear History</h3>
+                <h3 className="text-sm font-semibold text-gray-900 dark:text-[#E3E3E3] mb-3">Clear History</h3>
                 <button
                   onClick={handleClearAllChats}
                   className="w-full p-4 bg-red-50 dark:bg-red-900/20 hover:bg-red-100 dark:hover:bg-red-900/30 border border-red-200 dark:border-red-800 rounded-lg transition-colors flex items-center gap-3"
@@ -1400,13 +1400,13 @@ export default function ChatPage() {
 
               {/* Help & Support */}
               <div>
-                <h3 className="text-sm font-semibold text-gray-900 dark:text-white mb-3">Help & Support</h3>
+                <h3 className="text-sm font-semibold text-gray-900 dark:text-[#E3E3E3] mb-3">Help & Support</h3>
                 <div className="space-y-2">
                   <a
                     href="/help"
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="w-full p-3 bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 rounded-lg transition-colors flex items-center gap-3 text-sm text-gray-700 dark:text-gray-300"
+                    className="w-full p-3 bg-gray-100 dark:bg-[#333537] hover:bg-gray-200 dark:hover:bg-gray-600 rounded-lg transition-colors flex items-center gap-3 text-sm text-gray-700 dark:text-[#E3E3E3]"
                   >
                     <HelpCircle className="w-5 h-5" />
                     Help Center
@@ -1416,7 +1416,7 @@ export default function ChatPage() {
                       setShowSettingsModal(false);
                       setShowFeedbackModal(true);
                     }}
-                    className="w-full p-3 bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 rounded-lg transition-colors flex items-center gap-3 text-sm text-gray-700 dark:text-gray-300"
+                    className="w-full p-3 bg-gray-100 dark:bg-[#333537] hover:bg-gray-200 dark:hover:bg-gray-600 rounded-lg transition-colors flex items-center gap-3 text-sm text-gray-700 dark:text-[#E3E3E3]"
                   >
                     <MessageSquare className="w-5 h-5" />
                     Send Feedback
@@ -1425,7 +1425,7 @@ export default function ChatPage() {
                     href="/terms"
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="w-full p-3 bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 rounded-lg transition-colors flex items-center gap-3 text-sm text-gray-700 dark:text-gray-300"
+                    className="w-full p-3 bg-gray-100 dark:bg-[#333537] hover:bg-gray-200 dark:hover:bg-gray-600 rounded-lg transition-colors flex items-center gap-3 text-sm text-gray-700 dark:text-[#E3E3E3]"
                   >
                     <FileText className="w-5 h-5" />
                     Terms of Service
@@ -1434,7 +1434,7 @@ export default function ChatPage() {
                     href="/privacy"
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="w-full p-3 bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 rounded-lg transition-colors flex items-center gap-3 text-sm text-gray-700 dark:text-gray-300"
+                    className="w-full p-3 bg-gray-100 dark:bg-[#333537] hover:bg-gray-200 dark:hover:bg-gray-600 rounded-lg transition-colors flex items-center gap-3 text-sm text-gray-700 dark:text-[#E3E3E3]"
                   >
                     <FileText className="w-5 h-5" />
                     Privacy Policy
@@ -1444,7 +1444,7 @@ export default function ChatPage() {
 
               {/* Personalization / User Activity - At Bottom */}
               <div>
-                <h3 className="text-sm font-semibold text-gray-900 dark:text-white mb-3 flex items-center gap-2">
+                <h3 className="text-sm font-semibold text-gray-900 dark:text-[#E3E3E3] mb-3 flex items-center gap-2">
                   <Brain className="w-4 h-4" />
                   Your Past Chats with AI
                 </h3>
@@ -1454,10 +1454,10 @@ export default function ChatPage() {
                   </p>
                 </div>
                 <div className="space-y-3">
-                  <div className="flex items-center justify-between p-4 bg-gray-100 dark:bg-gray-700 rounded-lg">
+                  <div className="flex items-center justify-between p-4 bg-gray-100 dark:bg-[#333537] rounded-lg">
                     <div className="flex-1">
-                      <p className="text-sm font-medium text-gray-900 dark:text-white">Adaptive Responses</p>
-                      <p className="text-xs text-gray-600 dark:text-gray-400">AI learns from your activity to provide better answers</p>
+                      <p className="text-sm font-medium text-gray-900 dark:text-[#E3E3E3]">Adaptive Responses</p>
+                      <p className="text-xs text-gray-600 dark:text-[#C4C7C5]">AI learns from your activity to provide better answers</p>
                     </div>
                     <button
                       onClick={togglePersonalization}
@@ -1546,33 +1546,33 @@ export default function ChatPage() {
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[300] p-4">
           <div 
             ref={feedbackModalRef}
-            className="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl w-full max-w-md overflow-hidden"
+            className="bg-white dark:bg-[#1E1E1E] rounded-2xl shadow-2xl w-full max-w-md overflow-hidden"
           >
             {/* Modal Header */}
-            <div className="p-6 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between">
-              <h2 className="text-xl font-semibold text-gray-900 dark:text-white">Send Feedback</h2>
+            <div className="p-6 border-b border-gray-200 dark:border-[#333537] flex items-center justify-between">
+              <h2 className="text-xl font-semibold text-gray-900 dark:text-[#E3E3E3]">Send Feedback</h2>
               <button
                 onClick={() => {
                   setShowFeedbackModal(false);
                   setFeedbackText('');
                 }}
-                className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-full transition-colors"
+                className="p-2 hover:bg-gray-100 dark:hover:bg-[#333537] rounded-full transition-colors"
                 aria-label="Close feedback"
               >
-                <X className="w-5 h-5 text-gray-600 dark:text-gray-400" />
+                <X className="w-5 h-5 text-gray-600 dark:text-[#C4C7C5]" />
               </button>
             </div>
 
             {/* Modal Content */}
             <div className="p-6">
-                <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">
+                <p className="text-sm text-gray-600 dark:text-[#C4C7C5] mb-4">
                 Help us improve Ace by sharing your thoughts, suggestions, or reporting issues.
               </p>
               <textarea
                 value={feedbackText}
                 onChange={(e) => setFeedbackText(e.target.value)}
                 placeholder="Type your feedback here..."
-                className="w-full h-32 p-3 border border-gray-300 dark:border-[#16423C] rounded-lg bg-white dark:bg-[#0E2F29] text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none"
+                className="w-full h-32 p-3 border border-gray-300 dark:border-[#333537] rounded-lg bg-white dark:bg-[#131314] text-gray-900 dark:text-[#E3E3E3] placeholder-gray-500 dark:placeholder-gray-400 focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none"
               />
               <div className="flex gap-3 mt-4">
                 <button
@@ -1580,7 +1580,7 @@ export default function ChatPage() {
                     setShowFeedbackModal(false);
                     setFeedbackText('');
                   }}
-                  className="flex-1 px-4 py-2.5 bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors font-medium"
+                  className="flex-1 px-4 py-2.5 bg-gray-200 dark:bg-[#333537] text-gray-700 dark:text-[#E3E3E3] rounded-lg hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors font-medium"
                 >
                   Cancel
                 </button>
@@ -1601,3 +1601,5 @@ export default function ChatPage() {
     </MainLayout>
   );
 }
+
+

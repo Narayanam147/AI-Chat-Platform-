@@ -15,15 +15,25 @@ export async function POST(request: NextRequest) {
 
     // Determine guest session ID if guestToken is provided
     let guestSessionId = null;
+    console.log('🔍 Guest token check:', { hasUserId: !!userId, hasGuestToken: !!guestToken, hasSupabase: !!supabaseAdmin });
+    
     if (!userId && guestToken && supabaseAdmin) {
-      const { data: guestSession } = await supabaseAdmin
+      console.log('🔍 Looking up guest session for token:', guestToken.substring(0, 10) + '...');
+      const { data: guestSession, error: guestError } = await supabaseAdmin
         .from('guest_sessions')
         .select('id')
         .eq('session_token', guestToken)
         .single();
       
+      if (guestError) {
+        console.error('❌ Guest session lookup error:', guestError);
+      }
+      
       if (guestSession) {
         guestSessionId = guestSession.id;
+        console.log('✅ Found guest session ID:', guestSessionId);
+      } else {
+        console.warn('⚠️ No guest session found for token');
       }
     }
 
@@ -315,6 +325,8 @@ When web search results are provided in the prompt, they appear with 🔹 marker
     let savedChatId = chatId;
 
     // Save to database if userId or guestSessionId is provided
+    console.log('💾 Attempting to save chat:', { hasUserId: !!userId, hasGuestSessionId: !!guestSessionId, hasChatId: !!chatId });
+    
     if (userId || guestSessionId) {
       try {
         const userMessage = { text: prompt, sender: 'user', timestamp: new Date().toISOString() };
@@ -322,6 +334,7 @@ When web search results are provided in the prompt, they appear with 🔹 marker
 
         if (chatId) {
           // Update existing chat - append messages
+          console.log('📝 Updating existing chat:', chatId);
           const existingChat = await ChatModel.findById(chatId);
           if (existingChat) {
             const updatedMessages = [...(existingChat.messages || []), userMessage, assistantMessage];
@@ -329,6 +342,7 @@ When web search results are provided in the prompt, they appear with 🔹 marker
             console.log('✅ Chat updated in Supabase (chatId:', chatId, ')');
           } else {
             // Chat not found, create new one
+            console.log('⚠️ Chat not found, creating new one');
             const newChat = await ChatModel.create({
               user_id: userId || null,
               guest_session_id: guestSessionId || null,
@@ -340,6 +354,7 @@ When web search results are provided in the prompt, they appear with 🔹 marker
           }
         } else {
           // Create new chat
+          console.log('✨ Creating new chat');
           const newChat = await ChatModel.create({
             user_id: userId || null,
             guest_session_id: guestSessionId || null,
@@ -349,25 +364,13 @@ When web search results are provided in the prompt, they appear with 🔹 marker
           savedChatId = newChat?.id || null;
           console.log('✅ New chat created:', savedChatId, userId ? '(user)' : '(guest)');
         }
-
-        // ALSO save to chat_history table for backward compatibility
-        if (supabaseAdmin) {
-          await supabaseAdmin
-            .from('chat_history')
-            .insert([{
-              user_id: userId || null,
-              guest_session_id: guestSessionId || null,
-              prompt: prompt,
-              response: aiResponse,
-              title: prompt.substring(0, 50),
-            }]);
-          console.log('✅ Also saved to chat_history table');
-        }
         
       } catch (dbError) {
         console.error('❌ Supabase save error:', dbError);
         console.log('💡 To enable chat history: Configure Supabase connection');
       }
+    } else {
+      console.warn('⚠️ Skipping save - no userId or guestSessionId provided');
     }
 
     return NextResponse.json({ response: aiResponse, chatId: savedChatId });

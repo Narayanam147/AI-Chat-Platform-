@@ -1,4 +1,4 @@
-﻿'use client';
+'use client';
 
 import React, { useState, useEffect, useRef, Suspense } from 'react';
 import { useSession, signOut, signIn } from "next-auth/react";
@@ -194,15 +194,23 @@ function ChatContent() {
   // Initialize guest session for non-authenticated users
   useEffect(() => {
     async function initGuestSession() {
+      console.log('🔍 Guest session init:', { status, hasSession: !!session });
+      
       if (status === 'loading') return;
       
       if (!session) {
+        console.log('🔑 Creating guest session...');
         // User is not authenticated, create/get guest session
         const token = await getOrCreateGuestSession();
+        console.log('🔑 Guest session result:', { hasToken: !!token, tokenPreview: token?.substring(0, 10) });
         if (token) {
           setGuestToken(token);
-          console.log('Guest session initialized');
+          console.log('✅ Guest session initialized with token:', token.substring(0, 10) + '...');
+        } else {
+          console.error('❌ Failed to create guest session');
         }
+      } else {
+        console.log('👤 User is authenticated, skipping guest session');
       }
     }
 
@@ -258,7 +266,7 @@ function ChatContent() {
             pinned: c.pinned || false,
           }));
           setChatHistory(mapped);
-          console.log(`✅ Loaded ${mapped.length} chats for ${session?.user?.email ? 'user' : 'guest'}`);
+          console.log(`? Loaded ${mapped.length} chats for ${session?.user?.email ? 'user' : 'guest'}`);
         }
       }
     } catch (error) {
@@ -899,7 +907,7 @@ function ChatContent() {
         }))
       } : null;
 
-      console.log('📤 Sending to /api/chat:', { promptText: promptText.substring(0, 100), userId: session?.user?.email, hasGuestToken: !!guestToken });
+      console.log('?? Sending to /api/chat:', { promptText: promptText.substring(0, 100), userId: session?.user?.email, hasGuestToken: !!guestToken });
 
       const response = await fetch('/api/chat', {
         method: 'POST',
@@ -915,7 +923,7 @@ function ChatContent() {
         }),
       });
 
-      console.log('📥 Response status:', response.status, response.statusText);
+      console.log('?? Response status:', response.status, response.statusText);
 
       let data;
       const contentType = response.headers.get('content-type');
@@ -1055,21 +1063,21 @@ function ChatContent() {
           chatTitle={chatHistory.find((c) => c.id === (selectedChatId || currentChatId))?.title || 'New chat'}
           isChatActive={!!(selectedChatId || currentChatId)}
         >
-          <div className='flex flex-col h-full bg-white dark:bg-[#0E2F29] relative'>
+          <div className='flex flex-col h-full bg-white dark:bg-[#131314] relative'>
               <div className='flex-1 overflow-y-auto'>
                 {/* Conversation View - Messages */}
-                <div className='flex-1 bg-gradient-to-b from-white/50 dark:from-[#0E2F29]/30 to-white dark:to-[#0E2F29] transition-all duration-300 scroll-smooth'>
+                <div className='flex-1 bg-gradient-to-b from-white/50 dark:from-[#131314]/30 to-white dark:to-[#131314] transition-all duration-300 scroll-smooth'>
                   {/* Greeting State - ONLY when no messages */}
                   {messages.length === 0 && (
                     <div className='flex items-center justify-center h-full animate-fadeIn px-4 py-8'>
                       <div className='text-center max-w-2xl'>
-                        <h2 className='text-2xl sm:text-4xl font-semibold text-gray-900 dark:text-white mb-4'>
+                        <h2 className='text-2xl sm:text-4xl font-semibold text-gray-900 dark:text-[#E3E3E3] mb-4'>
                           Ace
                         </h2>
-                        <p className='text-sm sm:text-lg text-gray-600 dark:text-gray-400 mb-2'>
+                        <p className='text-sm sm:text-lg text-gray-600 dark:text-[#C4C7C5] mb-2'>
                           Hello, {session?.user?.name?.split(' ')[0] || 'there'}
                         </p>
-                        <p className='text-sm sm:text-lg text-gray-600 dark:text-gray-400'>
+                        <p className='text-sm sm:text-lg text-gray-600 dark:text-[#C4C7C5]'>
                           How can I help you today?
                         </p>
                       </div>
@@ -1082,7 +1090,7 @@ function ChatContent() {
                       {messages.map((message) => (
                         <div
                           key={message.id}
-                          className={`w-full py-4 sm:py-6 px-4 sm:px-6 lg:px-8 ${message.sender === 'user' ? 'bg-transparent' : 'bg-gray-50/50 dark:bg-[#0E2F29]/20'} border-b border-gray-100/50 dark:border-[#16423C]/50`}
+                          className={`w-full py-4 sm:py-6 px-4 sm:px-6 lg:px-8 ${message.sender === 'user' ? 'bg-transparent' : 'bg-gray-50/50 dark:bg-[#131314]/20'} border-b border-gray-100/50 dark:border-[#333537]/50`}
                         >
                           <div className='max-w-4xl mx-auto flex gap-2 sm:gap-4'>
                             {/* Avatar */}
@@ -1106,7 +1114,7 @@ function ChatContent() {
                             <div className='flex-1 min-w-0 group'>
                               <div className='relative'>
                                 {message.sender === 'ai' ? (
-                                  <div className='prose prose-sm sm:prose dark:prose-invert max-w-none prose-p:leading-relaxed prose-pre:bg-gray-900 prose-pre:text-gray-100 text-gray-900 dark:text-white'>
+                                  <div className='prose prose-sm sm:prose dark:prose-invert max-w-none prose-p:leading-relaxed prose-pre:bg-gray-900 prose-pre:text-gray-100 text-gray-900 dark:text-[#E3E3E3]'>
                                     <ReactMarkdown>{message.text}</ReactMarkdown>
                                   </div>
                                 ) : (
@@ -1115,13 +1123,13 @@ function ChatContent() {
                                 {/* Copy Button */}
                                 <button
                                   onClick={() => handleCopyMessage(message.id, message.text)}
-                                  className='mt-2 p-1.5 rounded-md opacity-0 group-hover:opacity-100 transition-opacity bg-gray-200/70 dark:bg-gray-700/50 hover:bg-gray-300 dark:hover:bg-gray-600'
+                                  className='mt-2 p-1.5 rounded-md opacity-0 group-hover:opacity-100 transition-opacity bg-gray-200/70 dark:bg-[#333537]/50 hover:bg-gray-300 dark:hover:bg-[#333537]'
                                   title='Copy message'
                                 >
                                   {copiedMessageId === message.id ? (
                                     <Check className='w-3.5 h-3.5 sm:w-4 sm:h-4 text-green-500' />
                                   ) : (
-                                    <Copy className='w-3.5 h-3.5 sm:w-4 sm:h-4 text-gray-600 dark:text-gray-400' />
+                                    <Copy className='w-3.5 h-3.5 sm:w-4 sm:h-4 text-gray-600 dark:text-[#C4C7C5]' />
                                   )}
                                 </button>
                                 <p className='text-xs text-gray-400 dark:text-gray-500 mt-2'>
@@ -1134,7 +1142,7 @@ function ChatContent() {
                       ))}
                       
                       {isLoading && (
-                        <div className='w-full py-6 px-4 sm:px-6 lg:px-8 bg-gray-50/50 dark:bg-[#0E2F29]/20 border-b border-gray-100/50 dark:border-[#16423C]/50'>
+                        <div className='w-full py-6 px-4 sm:px-6 lg:px-8 bg-gray-50/50 dark:bg-[#131314]/20 border-b border-gray-100/50 dark:border-[#333537]/50'>
                           <div className='max-w-4xl mx-auto flex gap-3 sm:gap-4'>
                             <div className='w-8 h-8 sm:w-10 sm:h-10 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center flex-shrink-0'>
                               <Sparkles className='w-4 h-4 sm:w-5 sm:h-5 text-white' />
@@ -1155,36 +1163,36 @@ function ChatContent() {
                 </div>
               </div>
     
-              {/* Chat Input Bar - Multi-functional (Gemini-style) */}
-              <div className='flex justify-center w-full'>
-                <div className='w-full max-w-4xl'>
-                  <div className='relative flex items-end gap-2 bg-gray-100/60 dark:bg-[#0E2F29]/40 rounded-full border border-gray-300/50 dark:border-[#16423C]/40 p-2 focus-within:bg-gray-100 dark:focus-within:bg-[#0E2F29]/60 focus-within:border-gray-400 dark:focus-within:border-[#16423C] transition-all'>
+              {/* Chat Input Bar - Floating capsule design with glassmorphism */}
+              <div className='flex justify-center w-full px-4 pb-4'>
+                <div className='w-full max-w-[750px]'>
+                  <div className='relative flex items-end gap-3 px-4 py-2 bg-white/80 dark:bg-[#1E1E1E]/80 backdrop-blur-xl rounded-[24px] border border-gray-200/50 dark:border-[#333537]/30 shadow-lg hover:shadow-xl focus-within:shadow-xl focus-within:border-gray-300 dark:focus-within:border-[#333537]/50 transition-all duration-300'>
                       {/* Attachment/Tools Menu */}
                       <div className='relative' ref={attachMenuRef}>
                         <button
                           onClick={() => setShowAttachMenu(!showAttachMenu)}
-                          className='p-2.5 hover:bg-gray-200/60 dark:hover:bg-gray-700/40 rounded-full transition-colors'
+                          className='p-2 hover:bg-gray-100 dark:hover:bg-[#333537]/40 rounded-full transition-all duration-200'
                           title='Add attachments'
                         >
-                          <Plus className='w-5 h-5 text-gray-600 dark:text-gray-400' />
+                          <Plus className='w-5 h-5 text-gray-600 dark:text-[#C4C7C5]' strokeWidth={1.5} />
                         </button>
     
                         {showAttachMenu && (
-                          <div className='absolute bottom-full left-0 mb-2 w-56 bg-white dark:bg-[#16423C] border border-gray-200 dark:border-[#1a4a42] rounded-xl shadow-xl py-2 z-[50]'>
+                          <div className='absolute bottom-full left-0 mb-2 w-56 bg-white dark:bg-[#1E1E1E] border border-gray-200 dark:border-[#333537] rounded-xl shadow-xl py-2 z-[50]'>
                             <button
                               onClick={() => {
                                 fileInputRef.current?.click();
                                 setShowAttachMenu(false);
                               }}
-                              className='w-full px-4 py-3 text-left text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors flex items-center gap-3'
+                              className='w-full px-4 py-3 text-left text-sm text-gray-700 dark:text-[#E3E3E3] hover:bg-gray-100 dark:hover:bg-[#333537] transition-colors flex items-center gap-3'
                             >
                               <Upload className='w-4 h-4' />
                               Upload files
                             </button>
-                            <button className='w-full px-4 py-3 text-left text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors flex items-center gap-3'>
+                            <button className='w-full px-4 py-3 text-left text-sm text-gray-700 dark:text-[#E3E3E3] hover:bg-gray-100 dark:hover:bg-[#333537] transition-colors flex items-center gap-3'>
                               Add from Drive
                             </button>
-                            <button className='w-full px-4 py-3 text-left text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors flex items-center gap-3'>
+                            <button className='w-full px-4 py-3 text-left text-sm text-gray-700 dark:text-[#E3E3E3] hover:bg-gray-100 dark:hover:bg-[#333537] transition-colors flex items-center gap-3'>
                               <FolderOpen className='w-4 h-4' />
                               Import code
                             </button>
@@ -1206,18 +1214,18 @@ function ChatContent() {
                       {attachedFiles.length > 0 && (
                         <div className='flex flex-wrap gap-2 px-2'>
                           {attachedFiles.map((file, index) => (
-                            <div key={index} className='flex items-center gap-2 bg-gray-200/60 dark:bg-gray-700/50 rounded-lg px-3 py-1.5'>
+                            <div key={index} className='flex items-center gap-2 bg-gray-200/60 dark:bg-[#333537]/50 rounded-lg px-3 py-1.5'>
                               {file.type.startsWith('image/') ? (
                                 <ImageIcon className='w-4 h-4 text-blue-500' />
                               ) : (
                                 <FileText className='w-4 h-4 text-blue-500' />
                               )}
-                              <span className='text-xs text-gray-700 dark:text-gray-300 max-w-[100px] truncate'>
+                              <span className='text-xs text-gray-700 dark:text-[#E3E3E3] max-w-[100px] truncate'>
                                 {file.name}
                               </span>
                               <button
                                 onClick={() => removeAttachedFile(index)}
-                                className='p-0.5 hover:bg-gray-300 dark:hover:bg-gray-600 rounded'
+                                className='p-0.5 hover:bg-gray-300 dark:hover:bg-[#333537] rounded'
                               >
                                 <X className='w-3 h-3 text-gray-500' />
                               </button>
@@ -1226,7 +1234,7 @@ function ChatContent() {
                         </div>
                       )}
     
-                      {/* Text Input Field */}
+                      {/* Text Input Field - Borderless for seamless blending */}
                       <textarea
                         value={input}
                         onChange={(e) => setInput(e.target.value)}
@@ -1237,7 +1245,7 @@ function ChatContent() {
                           }
                         }}
                         placeholder='Ask Ace'
-                        className='flex-1 px-3 py-2.5 bg-transparent border-none focus:outline-none resize-none text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 text-[15px] min-h-[40px] max-h-[200px]'
+                        className='flex-1 py-3 bg-transparent border-none focus:outline-none resize-none text-gray-900 dark:text-[#E3E3E3] placeholder-gray-400 dark:placeholder-[#C4C7C5]/70 text-[15px] min-h-[40px] max-h-[200px]'
                         rows={1}
                         disabled={isLoading}
                         style={{
@@ -1246,14 +1254,18 @@ function ChatContent() {
                         }}
                       />
     
-                      {/* Submit Button */}
+                      {/* Submit Button - High contrast circular design that lights up when typing */}
                       <button
                         onClick={handleSend}
                         disabled={isLoading || !input.trim()}
-                        className='p-2.5 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-400 dark:disabled:bg-gray-700/60 rounded-full transition-colors disabled:cursor-not-allowed'
+                        className={`p-2.5 rounded-full transition-all duration-300 disabled:cursor-not-allowed ${
+                          input.trim() 
+                            ? 'bg-gray-900 dark:bg-[#8AB4F8] hover:bg-gray-800 dark:hover:bg-[#a3c4fa] shadow-md hover:shadow-lg scale-100' 
+                            : 'bg-gray-300 dark:bg-[#333537] opacity-50 scale-95'
+                        }`}
                         title='Send message'
                       >
-                        <Send className='w-5 h-5 text-white' />
+                        <Send className={`w-5 h-5 transition-colors ${input.trim() ? 'text-white dark:text-[#131314]' : 'text-gray-500 dark:text-[#C4C7C5]'}`} strokeWidth={2} />
                       </button>
                     </div>
     
@@ -1264,19 +1276,19 @@ function ChatContent() {
     
                     {/* Shorthand suggestions popup */}
                     {input.startsWith('/') && (
-                      <div className='absolute bottom-full left-0 right-0 mb-2 max-h-64 overflow-y-auto bg-white dark:bg-[#16423C] border border-gray-200 dark:border-[#1a4a42] rounded-lg shadow-lg z-50'>
+                      <div className='absolute bottom-full left-0 right-0 mb-2 max-h-64 overflow-y-auto bg-white dark:bg-[#1E1E1E] border border-gray-200 dark:border-[#333537] rounded-lg shadow-lg z-50'>
                         <div className='p-3 space-y-1'>
                           {Object.entries(shorthands).map(([shorthand, description]) => (
                             <button
                               key={shorthand}
                               onClick={() => setInput(shorthand)}
-                              className='w-full text-left px-3 py-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded transition-colors group'
+                              className='w-full text-left px-3 py-2 hover:bg-gray-100 dark:hover:bg-[#333537] rounded transition-colors group'
                             >
                               <div className='flex items-start gap-2'>
                                 <code className='text-blue-600 dark:text-blue-400 font-semibold text-sm flex-shrink-0'>
                                   {shorthand}
                                 </code>
-                                <span className='text-xs text-gray-600 dark:text-gray-400 group-hover:text-gray-900 dark:group-hover:text-white transition-colors'>
+                                <span className='text-xs text-gray-600 dark:text-[#C4C7C5] group-hover:text-gray-900 dark:group-hover:text-white transition-colors'>
                                   {description}
                                 </span>
                               </div>
@@ -1294,18 +1306,18 @@ function ChatContent() {
               <div className='fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[300] p-4'>
                 <div 
                   ref={settingsModalRef}
-                  className='settings-modal-container bg-white dark:bg-[#0E2F29] rounded-2xl shadow-2xl w-full max-w-md overflow-hidden'
-                  style={{ backgroundColor: document.documentElement.classList.contains('dark') ? '#0E2F29' : '#ffffff' }}
+                  className='settings-modal-container bg-white dark:bg-[#131314] rounded-2xl shadow-2xl w-full max-w-md overflow-hidden'
+                  style={{ backgroundColor: document.documentElement.classList.contains('dark') ? '#131314' : '#ffffff' }}
                 >
                   {/* Modal Header */}
-                  <div className='p-6 border-b border-gray-200 dark:border-[#1a4a42] flex items-center justify-between'>
-                    <h2 className='text-xl font-semibold text-gray-900 dark:text-white'>Settings</h2>
+                  <div className='p-6 border-b border-gray-200 dark:border-[#333537] flex items-center justify-between'>
+                    <h2 className='text-xl font-semibold text-gray-900 dark:text-[#E3E3E3]'>Settings</h2>
                     <button
                       onClick={() => setShowSettingsModal(false)}
-                      className='p-2 hover:bg-gray-100 dark:hover:bg-[#16423C] rounded-full transition-colors'
+                      className='p-2 hover:bg-gray-100 dark:hover:bg-[#333537] rounded-full transition-colors'
                       aria-label='Close settings'
                     >
-                      <X className='w-5 h-5 text-gray-600 dark:text-gray-400' />
+                      <X className='w-5 h-5 text-gray-600 dark:text-[#C4C7C5]' />
                     </button>
                   </div>
     
@@ -1313,7 +1325,7 @@ function ChatContent() {
                   <div className='p-6 space-y-6 max-h-[70vh] overflow-y-auto'>
                     {/* Theme Selection */}
                     <div>
-                      <h3 className='text-sm font-semibold text-gray-900 dark:text-white mb-3'>Theme</h3>
+                      <h3 className='text-sm font-semibold text-gray-900 dark:text-[#E3E3E3] mb-3'>Theme</h3>
                       <div className='flex gap-3'>
                         <button
                           onClick={() => handleThemeChange('light')}
@@ -1323,8 +1335,8 @@ function ChatContent() {
                               : 'border-gray-300 dark:border-gray-600 hover:border-gray-400'
                           }`}
                         >
-                          <Sun className='w-6 h-6 mx-auto mb-2 text-gray-700 dark:text-gray-300' />
-                          <span className='text-sm font-medium text-gray-900 dark:text-white'>Light</span>
+                          <Sun className='w-6 h-6 mx-auto mb-2 text-gray-700 dark:text-[#E3E3E3]' />
+                          <span className='text-sm font-medium text-gray-900 dark:text-[#E3E3E3]'>Light</span>
                         </button>
                         <button
                           onClick={() => handleThemeChange('dark')}
@@ -1334,34 +1346,34 @@ function ChatContent() {
                               : 'border-gray-300 dark:border-gray-600 hover:border-gray-400'
                           }`}
                         >
-                          <Moon className='w-6 h-6 mx-auto mb-2 text-gray-700 dark:text-gray-300' />
-                          <span className='text-sm font-medium text-gray-900 dark:text-white'>Dark</span>
+                          <Moon className='w-6 h-6 mx-auto mb-2 text-gray-700 dark:text-[#E3E3E3]' />
+                          <span className='text-sm font-medium text-gray-900 dark:text-[#E3E3E3]'>Dark</span>
                         </button>
                       </div>
                     </div>
     
                     {/* Export Chat */}
                     <div>
-                      <h3 className='text-sm font-semibold text-gray-900 dark:text-white mb-3'>Export Chat</h3>
+                      <h3 className='text-sm font-semibold text-gray-900 dark:text-[#E3E3E3] mb-3'>Export Chat</h3>
                       <div className='space-y-2'>
                         <button
                           onClick={() => handleExport('word')}
-                          className='w-full p-4 bg-gray-100 dark:bg-[#16423C] hover:bg-gray-200 dark:hover:bg-[#1a4a42] rounded-lg transition-colors flex items-center gap-3'
+                          className='w-full p-4 bg-gray-100 dark:bg-[#1E1E1E] hover:bg-gray-200 dark:hover:bg-[#333537] rounded-lg transition-colors flex items-center gap-3'
                         >
                           <FileText className='w-5 h-5 text-blue-600' />
                           <div className='flex-1 text-left'>
-                            <p className='text-sm font-medium text-gray-900 dark:text-white'>Export as DOC</p>
-                            <p className='text-xs text-gray-600 dark:text-gray-400'>Download chat as Word document</p>
+                            <p className='text-sm font-medium text-gray-900 dark:text-[#E3E3E3]'>Export as DOC</p>
+                            <p className='text-xs text-gray-600 dark:text-[#C4C7C5]'>Download chat as Word document</p>
                           </div>
                         </button>
                         <button
                           onClick={() => handleExport('pdf')}
-                          className='w-full p-4 bg-gray-100 dark:bg-[#16423C] hover:bg-gray-200 dark:hover:bg-[#1a4a42] rounded-lg transition-colors flex items-center gap-3'
+                          className='w-full p-4 bg-gray-100 dark:bg-[#1E1E1E] hover:bg-gray-200 dark:hover:bg-[#333537] rounded-lg transition-colors flex items-center gap-3'
                         >
                           <FileText className='w-5 h-5 text-red-600' />
                           <div className='flex-1 text-left'>
-                            <p className='text-sm font-medium text-gray-900 dark:text-white'>Export as PDF</p>
-                            <p className='text-xs text-gray-600 dark:text-gray-400'>Download chat as PDF file</p>
+                            <p className='text-sm font-medium text-gray-900 dark:text-[#E3E3E3]'>Export as PDF</p>
+                            <p className='text-xs text-gray-600 dark:text-[#C4C7C5]'>Download chat as PDF file</p>
                           </div>
                         </button>
                       </div>
@@ -1369,7 +1381,7 @@ function ChatContent() {
     
                     {/* Clear History */}
                     <div>
-                      <h3 className='text-sm font-semibold text-gray-900 dark:text-white mb-3'>Clear History</h3>
+                      <h3 className='text-sm font-semibold text-gray-900 dark:text-[#E3E3E3] mb-3'>Clear History</h3>
                       <button
                         onClick={handleClearAllChats}
                         className='w-full p-4 bg-red-50 dark:bg-red-900/20 hover:bg-red-100 dark:hover:bg-red-900/30 border border-red-200 dark:border-red-800 rounded-lg transition-colors flex items-center gap-3'
@@ -1384,13 +1396,13 @@ function ChatContent() {
     
                     {/* Help & Support */}
                     <div>
-                      <h3 className='text-sm font-semibold text-gray-900 dark:text-white mb-3'>Help & Support</h3>
+                      <h3 className='text-sm font-semibold text-gray-900 dark:text-[#E3E3E3] mb-3'>Help & Support</h3>
                       <div className='space-y-2'>
                         <a
                           href='/help'
                           target='_blank'
                           rel='noopener noreferrer'
-                          className='w-full p-3 bg-gray-100 dark:bg-[#16423C] hover:bg-gray-200 dark:hover:bg-[#1a4a42] rounded-lg transition-colors flex items-center gap-3 text-sm text-gray-700 dark:text-gray-300'
+                          className='w-full p-3 bg-gray-100 dark:bg-[#1E1E1E] hover:bg-gray-200 dark:hover:bg-[#333537] rounded-lg transition-colors flex items-center gap-3 text-sm text-gray-700 dark:text-[#E3E3E3]'
                         >
                           <HelpCircle className='w-5 h-5' />
                           Help Center
@@ -1400,7 +1412,7 @@ function ChatContent() {
                             setShowSettingsModal(false);
                             setShowFeedbackModal(true);
                           }}
-                          className='w-full p-3 bg-gray-100 dark:bg-[#16423C] hover:bg-gray-200 dark:hover:bg-[#1a4a42] rounded-lg transition-colors flex items-center gap-3 text-sm text-gray-700 dark:text-gray-300'
+                          className='w-full p-3 bg-gray-100 dark:bg-[#1E1E1E] hover:bg-gray-200 dark:hover:bg-[#333537] rounded-lg transition-colors flex items-center gap-3 text-sm text-gray-700 dark:text-[#E3E3E3]'
                         >
                           <MessageSquare className='w-5 h-5' />
                           Send Feedback
@@ -1409,7 +1421,7 @@ function ChatContent() {
                           href='/terms'
                           target='_blank'
                           rel='noopener noreferrer'
-                          className='w-full p-3 bg-gray-100 dark:bg-[#16423C] hover:bg-gray-200 dark:hover:bg-[#1a4a42] rounded-lg transition-colors flex items-center gap-3 text-sm text-gray-700 dark:text-gray-300'
+                          className='w-full p-3 bg-gray-100 dark:bg-[#1E1E1E] hover:bg-gray-200 dark:hover:bg-[#333537] rounded-lg transition-colors flex items-center gap-3 text-sm text-gray-700 dark:text-[#E3E3E3]'
                         >
                           <FileText className='w-5 h-5' />
                           Terms of Service
@@ -1418,7 +1430,7 @@ function ChatContent() {
                           href='/privacy'
                           target='_blank'
                           rel='noopener noreferrer'
-                          className='w-full p-3 bg-gray-100 dark:bg-[#16423C] hover:bg-gray-200 dark:hover:bg-[#1a4a42] rounded-lg transition-colors flex items-center gap-3 text-sm text-gray-700 dark:text-gray-300'
+                          className='w-full p-3 bg-gray-100 dark:bg-[#1E1E1E] hover:bg-gray-200 dark:hover:bg-[#333537] rounded-lg transition-colors flex items-center gap-3 text-sm text-gray-700 dark:text-[#E3E3E3]'
                         >
                           <FileText className='w-5 h-5' />
                           Privacy Policy
@@ -1428,7 +1440,7 @@ function ChatContent() {
     
                     {/* Personalization / User Activity - At Bottom */}
                     <div>
-                      <h3 className='text-sm font-semibold text-gray-900 dark:text-white mb-3 flex items-center gap-2'>
+                      <h3 className='text-sm font-semibold text-gray-900 dark:text-[#E3E3E3] mb-3 flex items-center gap-2'>
                         <Brain className='w-4 h-4' />
                         Your Past Chats with AI
                       </h3>
@@ -1438,10 +1450,10 @@ function ChatContent() {
                         </p>
                       </div>
                       <div className='space-y-3'>
-                        <div className='flex items-center justify-between p-4 bg-gray-100 dark:bg-[#16423C] rounded-lg'>
+                        <div className='flex items-center justify-between p-4 bg-gray-100 dark:bg-[#1E1E1E] rounded-lg'>
                           <div className='flex-1'>
-                            <p className='text-sm font-medium text-gray-900 dark:text-white'>Adaptive Responses</p>
-                            <p className='text-xs text-gray-600 dark:text-gray-400'>AI learns from your activity to provide better answers</p>
+                            <p className='text-sm font-medium text-gray-900 dark:text-[#E3E3E3]'>Adaptive Responses</p>
+                            <p className='text-xs text-gray-600 dark:text-[#C4C7C5]'>AI learns from your activity to provide better answers</p>
                           </div>
                           <button
                             onClick={togglePersonalization}
@@ -1458,7 +1470,7 @@ function ChatContent() {
                         
                         {personalizationEnabled && isAdmin && (
                           <div className='p-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg border border-blue-200 dark:border-blue-800'>
-                            <p className='text-xs font-medium text-blue-800 dark:text-blue-300 mb-3'>📊 User Learning Profile (Admin Only)</p>
+                            <p className='text-xs font-medium text-blue-800 dark:text-blue-300 mb-3'>?? User Learning Profile (Admin Only)</p>
                             <div className='space-y-2 text-xs text-blue-700 dark:text-blue-400'>
                               <div className='flex justify-between'>
                                 <span>Total Interactions:</span>
@@ -1514,7 +1526,7 @@ function ChatContent() {
                               onClick={clearUserActivity}
                               className='mt-4 w-full px-3 py-2 text-xs text-red-600 dark:text-red-400 border border-red-300 dark:border-red-700 rounded-lg hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors'
                             >
-                              🗑️ Clear All Activity Data
+                              ??? Clear All Activity Data
                             </button>
                           </div>
                         )}
@@ -1530,33 +1542,33 @@ function ChatContent() {
               <div className='fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[300] p-4'>
                 <div 
                   ref={feedbackModalRef}
-                  className='bg-white dark:bg-[#16423C] rounded-2xl shadow-2xl w-full max-w-md overflow-hidden'
+                  className='bg-white dark:bg-[#1E1E1E] rounded-2xl shadow-2xl w-full max-w-md overflow-hidden'
                 >
                   {/* Modal Header */}
-                  <div className='p-6 border-b border-gray-200 dark:border-[#1a4a42] flex items-center justify-between'>
-                    <h2 className='text-xl font-semibold text-gray-900 dark:text-white'>Send Feedback</h2>
+                  <div className='p-6 border-b border-gray-200 dark:border-[#333537] flex items-center justify-between'>
+                    <h2 className='text-xl font-semibold text-gray-900 dark:text-[#E3E3E3]'>Send Feedback</h2>
                     <button
                       onClick={() => {
                         setShowFeedbackModal(false);
                         setFeedbackText('');
                       }}
-                      className='p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-full transition-colors'
+                      className='p-2 hover:bg-gray-100 dark:hover:bg-[#333537] rounded-full transition-colors'
                       aria-label='Close feedback'
                     >
-                      <X className='w-5 h-5 text-gray-600 dark:text-gray-400' />
+                      <X className='w-5 h-5 text-gray-600 dark:text-[#C4C7C5]' />
                     </button>
                   </div>
     
                   {/* Modal Content */}
                   <div className='p-6'>
-                      <p className='text-sm text-gray-600 dark:text-gray-400 mb-4'>
+                      <p className='text-sm text-gray-600 dark:text-[#C4C7C5] mb-4'>
                       Help us improve Ace by sharing your thoughts, suggestions, or reporting issues.
                     </p>
                     <textarea
                       value={feedbackText}
                       onChange={(e) => setFeedbackText(e.target.value)}
                       placeholder='Type your feedback here...'
-                      className='w-full h-32 p-3 border border-gray-300 dark:border-[#16423C] rounded-lg bg-white dark:bg-[#0E2F29] text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none'
+                      className='w-full h-32 p-3 border border-gray-300 dark:border-[#333537] rounded-lg bg-white dark:bg-[#131314] text-gray-900 dark:text-[#E3E3E3] placeholder-gray-500 dark:placeholder-gray-400 focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none'
                     />
                     <div className='flex gap-3 mt-4'>
                       <button
@@ -1564,7 +1576,7 @@ function ChatContent() {
                           setShowFeedbackModal(false);
                           setFeedbackText('');
                         }}
-                        className='flex-1 px-4 py-2.5 bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors font-medium'
+                        className='flex-1 px-4 py-2.5 bg-gray-200 dark:bg-[#333537] text-gray-700 dark:text-[#E3E3E3] rounded-lg hover:bg-gray-300 dark:hover:bg-[#333537] transition-colors font-medium'
                       >
                         Cancel
                       </button>
@@ -1591,3 +1603,6 @@ export default function ChatClientPage() {
     </Suspense>
   );
 }
+
+
+

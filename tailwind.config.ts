@@ -12,6 +12,14 @@ const config: Config = {
       colors: {
         background: "var(--background)",
         foreground: "var(--foreground)",
+        dark: {
+          bg: '#131314',
+          sidebar: '#1E1E1E',
+          text: '#E3E3E3',
+          'text-secondary': '#C4C7C5',
+          accent: '#8AB4F8',
+          hover: '#333537',
+        },
       },
       keyframes: {
         "fade-in": {

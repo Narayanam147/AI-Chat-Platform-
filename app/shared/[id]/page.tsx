@@ -98,7 +98,7 @@ export default function SharedChatPage() {
         chatTitle="Loading..."
         isChatActive={false}
       >
-        <div className="flex items-center justify-center h-screen bg-white dark:bg-[#0E2F29]">
+        <div className="flex items-center justify-center h-screen bg-white dark:bg-[#131314]">
           <div className="text-center">
             <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
             <p className="text-gray-600 dark:text-gray-400">Loading shared chat...</p>
@@ -124,7 +124,7 @@ export default function SharedChatPage() {
         chatTitle="Error"
         isChatActive={false}
       >
-        <div className="flex items-center justify-center h-screen bg-white dark:bg-[#0E2F29]">
+        <div className="flex items-center justify-center h-screen bg-white dark:bg-[#131314]">
           <div className="text-center max-w-md px-4">
             <div className="bg-red-100 dark:bg-red-900/20 rounded-full p-4 w-16 h-16 mx-auto mb-4 flex items-center justify-center">
               <Share2 className="w-8 h-8 text-red-600 dark:text-red-400" />
@@ -162,9 +162,9 @@ export default function SharedChatPage() {
       chatTitle="Shared Chat"
       isChatActive={true}
     >
-      <div className="flex flex-col h-full bg-white dark:bg-[#0E2F29]">
+      <div className="flex flex-col h-full bg-white dark:bg-[#131314]">
         {/* Header */}
-        <div className="border-b border-gray-200 dark:border-[#1a4a42] bg-white dark:bg-[#16423C] px-6 py-4">
+        <div className="border-b border-gray-200 dark:border-[#333537] bg-white dark:bg-[#1E1E1E] px-6 py-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
               <div className="bg-blue-100 dark:bg-blue-900/30 p-2 rounded-lg">
@@ -182,7 +182,7 @@ export default function SharedChatPage() {
             </div>
             <button
               onClick={handleCopyLink}
-              className="flex items-center gap-2 px-4 py-2 bg-gray-100 dark:bg-[#0E2F29] text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-200 dark:hover:bg-[#1a4a42] transition-colors"
+              className="flex items-center gap-2 px-4 py-2 bg-gray-100 dark:bg-[#131314] text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-200 dark:hover:bg-[#333537] transition-colors"
             >
               {copied ? (
                 <>
@@ -231,8 +231,8 @@ export default function SharedChatPage() {
                   <div className="flex-1">
                     <div className={`rounded-2xl px-4 py-3 ${
                       message.sender === 'user'
-                        ? 'bg-gray-100 dark:bg-[#16423C]'
-                        : 'bg-white dark:bg-[#16423C] border border-gray-200 dark:border-[#1a4a42]'
+                        ? 'bg-gray-100 dark:bg-[#1E1E1E]'
+                        : 'bg-white dark:bg-[#1E1E1E] border border-gray-200 dark:border-[#333537]'
                     }`}>
                       {message.sender === 'ai' ? (
                         <div className="prose prose-sm dark:prose-invert max-w-none">
@@ -268,7 +268,7 @@ export default function SharedChatPage() {
                       )}
                     </div>
                     <div className="flex-1">
-                      <div className="bg-gray-100 dark:bg-[#16423C] rounded-2xl px-4 py-3">
+                      <div className="bg-gray-100 dark:bg-[#1E1E1E] rounded-2xl px-4 py-3">
                         <p className="text-gray-900 dark:text-white whitespace-pre-wrap">
                           {chatData.prompt}
                         </p>
@@ -285,7 +285,7 @@ export default function SharedChatPage() {
                       </div>
                     </div>
                     <div className="flex-1">
-                      <div className="bg-white dark:bg-[#16423C] rounded-2xl px-4 py-3 border border-gray-200 dark:border-[#1a4a42]">
+                      <div className="bg-white dark:bg-[#1E1E1E] rounded-2xl px-4 py-3 border border-gray-200 dark:border-[#333537]">
                         <div className="prose prose-sm dark:prose-invert max-w-none">
                           <ReactMarkdown>{chatData.response}</ReactMarkdown>
                         </div>
@@ -300,7 +300,7 @@ export default function SharedChatPage() {
 
         {/* Footer */}
         {!session && (
-          <div className="border-t border-gray-200 dark:border-[#1a4a42] bg-gray-50 dark:bg-[#16423C] px-6 py-4">
+          <div className="border-t border-gray-200 dark:border-[#333537] bg-gray-50 dark:bg-[#1E1E1E] px-6 py-4">
             <div className="max-w-4xl mx-auto text-center">
               <p className="text-gray-600 dark:text-gray-400 mb-3">
                 Want to create your own chats? Sign up for free!

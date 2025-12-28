@@ -9,8 +9,12 @@
 
 @media (prefers-color-scheme: dark) {
   :root {
-    --background: #0E2F29;
-    --foreground: #ededed;
+    --background: #131314;
+    --foreground: #E3E3E3;
+    --sidebar: #1E1E1E;
+    --text-secondary: #C4C7C5;
+    --accent-blue: #8AB4F8;
+    --surface-hover: #333537;
   }
 }
 
@@ -83,16 +87,16 @@ body {
 
 /* Ensure sidebar has solid background to prevent content bleed-through */
 .sidebar-solid {
-  @apply bg-white dark:bg-gray-900;
+  @apply bg-white dark:bg-[#1E1E1E];
   isolation: isolate;
 }
 
-/* Force settings modal to bottle green in dark mode */
+/* Force settings modal to dark mode */
 html.dark .settings-modal-container,
 .dark .settings-modal-container,
 [class~="dark"] .settings-modal-container {
-  background-color: #0E2F29 !important;
-  background: #0E2F29 !important;
+  background-color: #131314 !important;
+  background: #131314 !important;
 }
 
 /* Override any potential conflicting modal backgrounds */
@@ -103,7 +107,7 @@ html.dark .settings-modal-container,
 
 /* Dark mode prose styling for better text visibility */
 .dark .prose {
-  color: #ffffff;
+  color: #E3E3E3;
 }
 
 .dark .prose p,
@@ -114,7 +118,7 @@ html.dark .settings-modal-container,
 .dark .prose h4,
 .dark .prose h5,
 .dark .prose h6 {
-  color: #ffffff;
+  color: #E3E3E3;
 }
 
 /* Custom scrollbar */
@@ -138,15 +142,15 @@ html.dark .settings-modal-container,
 /* Dark mode scrollbar */
 @media (prefers-color-scheme: dark) {
   ::-webkit-scrollbar-track {
-    background: #1a1a1a;
+    background: #1E1E1E;
   }
 
   ::-webkit-scrollbar-thumb {
-    background: #555;
+    background: #333537;
   }
 
   ::-webkit-scrollbar-thumb:hover {
-    background: #777;
+    background: #8AB4F8;
   }
 }
 
@@ -155,3 +159,41 @@ button {
   touch-action: manipulation;
 }
 
+/* Accent colors for links and buttons in dark mode */
+.dark a:hover,
+.dark button:hover:not(.destructive) {
+  color: #8AB4F8;
+}
+
+/* Primary buttons with accent color */
+.dark .btn-primary {
+  background-color: #8AB4F8;
+  color: #131314;
+}
+
+.dark .btn-primary:hover {
+  background-color: #a3c4fa;
+}
+
+/* Focus rings with accent color */
+.dark *:focus-visible {
+  outline-color: #8AB4F8;
+}
+
+/* Selection color */
+.dark ::selection {
+  background-color: #8AB4F8;
+  color: #131314;
+}
+
+/* Link colors */
+.dark a {
+  color: #8AB4F8;
+}
+
+/* Code blocks in dark mode */
+.dark pre,
+.dark code {
+  background-color: #1E1E1E;
+  border-color: #333537;
+}

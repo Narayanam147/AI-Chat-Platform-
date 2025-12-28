@@ -7,13 +7,18 @@ import crypto from 'crypto';
  */
 export async function POST(request: NextRequest) {
   try {
+    console.log('🆕 Creating new guest session...');
+    
     if (!supabaseAdmin) {
+      console.error('❌ Supabase admin not configured');
       return NextResponse.json({ error: 'Server misconfiguration' }, { status: 500 });
     }
 
     // Generate unique session token
     const sessionToken = crypto.randomBytes(32).toString('hex');
     const expiresAt = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000); // 30 days
+
+    console.log('🔑 Generated token:', sessionToken.substring(0, 10) + '...');
 
     // Create guest session in database
     const { data, error } = await supabaseAdmin
@@ -27,9 +32,11 @@ export async function POST(request: NextRequest) {
       .single();
 
     if (error) {
-      console.error('Failed to create guest session:', error);
+      console.error('❌ Failed to create guest session:', error);
       return NextResponse.json({ error: 'Failed to create guest session' }, { status: 500 });
     }
+
+    console.log('✅ Guest session created:', data.id);
 
     return NextResponse.json({ 
       token: data.session_token, 

@@ -76,33 +76,49 @@ export async function POST(request: NextRequest) {
     const body = await request.json();
     const { user_id, guest_session_id, messages, title } = body;
 
+    console.log('📝 POST /api/history - Creating chat:', { 
+      user_id, 
+      guest_session_id: guest_session_id ? 'provided' : 'none', 
+      messageCount: messages?.length 
+    });
+
     // Determine which ID to use
     const effectiveUserId = user_id || userId;
     
     // Validate we have either a user or guest session
     if (!effectiveUserId && !guest_session_id) {
+      console.error('❌ No user ID or guest session ID provided');
       return NextResponse.json(
         { error: 'User ID or guest session ID required' },
         { status: 400 }
       );
     }
 
-    // For guest sessions, validate the guest token exists
-    let guestSessionIdToUse = guest_session_id;
-    if (guest_session_id && supabaseAdmin) {
-      const { data: guestSession } = await supabaseAdmin
-        .from('guest_sessions')
-        .select('id')
-        .eq('session_token', guest_session_id)
-        .single();
+    // For guest sessions, check if it's a token or ID and convert if needed
+    let guestSessionIdToUse = null;
+    if (guest_session_id && !effectiveUserId && supabaseAdmin) {
+      // Check if it's a UUID (database ID) or a token
+      const isUUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(guest_session_id);
       
-      if (guestSession) {
-        guestSessionIdToUse = guestSession.id;
+      if (isUUID) {
+        // Already a database ID
+        guestSessionIdToUse = guest_session_id;
       } else {
-        return NextResponse.json(
-          { error: 'Invalid guest session' },
-          { status: 400 }
-        );
+        // It's a token, look up the ID
+        const { data: guestSession, error: guestError } = await supabaseAdmin
+          .from('guest_sessions')
+          .select('id')
+          .eq('session_token', guest_session_id)
+          .single();
+        
+        if (guestError || !guestSession) {
+          console.error('❌ Guest session not found:', guestError);
+          return NextResponse.json(
+            { error: 'Invalid guest session' },
+            { status: 400 }
+          );
+        }
+        guestSessionIdToUse = guestSession.id;
       }
     }
 
@@ -115,13 +131,14 @@ export async function POST(request: NextRequest) {
     });
 
     if (!chat) {
+      console.error('❌ ChatModel.create returned null');
       return NextResponse.json(
         { error: 'Failed to create chat' },
         { status: 500 }
       );
     }
 
-    console.log('✅ Chat created successfully:', chat.id);
+    console.log('✅ Chat created successfully:', chat.id, 'with', messages?.length || 0, 'messages');
 
     return NextResponse.json({
       success: true,
