@@ -9,8 +9,27 @@ if (!supabaseUrl || !supabaseAnonKey) {
 
 export const supabase = createClient(supabaseUrl, supabaseAnonKey);
 
-// Optional admin client (service role) for server-side tasks
+// Admin client (service role) for server-side tasks - bypasses RLS
 const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY || '';
-export const supabaseAdmin = supabaseServiceKey ? createClient(supabaseUrl, supabaseServiceKey) : null;
+
+// Log whether service role is available (for debugging)
+if (typeof window === 'undefined') {
+  // Server-side only logging
+  console.log('🔑 Supabase config:', {
+    hasUrl: !!supabaseUrl,
+    hasAnonKey: !!supabaseAnonKey,
+    hasServiceKey: !!supabaseServiceKey,
+    serviceKeyLength: supabaseServiceKey.length
+  });
+}
+
+export const supabaseAdmin = supabaseServiceKey 
+  ? createClient(supabaseUrl, supabaseServiceKey, {
+      auth: {
+        autoRefreshToken: false,
+        persistSession: false
+      }
+    }) 
+  : null;
 
 export default supabase;
