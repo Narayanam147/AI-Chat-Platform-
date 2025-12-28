@@ -676,25 +676,36 @@ function ChatContent() {
             hasData: !!data,
             hasMessages: !!data?.messages,
             messageCount: data?.messages?.length || 0,
-            title: data?.title
+            title: data?.title,
+            rawMessages: data?.messages
           });
           
-          if (data?.messages && data.messages.length > 0) {
+          if (data?.messages && Array.isArray(data.messages) && data.messages.length > 0) {
             messagesToShare = data.messages.map((m: any, i: number) => ({
               id: `${id}-${i}`,
-              text: m.text,
-              sender: m.sender as 'user' | 'ai',
-              timestamp: new Date(m.timestamp || new Date()),
+              text: m.text || '',
+              sender: (m.sender || 'user') as 'user' | 'ai',
+              timestamp: m.timestamp ? new Date(m.timestamp) : new Date(),
             }));
             chatTitle = data.title || 'Shared Chat';
-            console.log('✅ Loaded messages from database:', messagesToShare.length);
+            console.log('✅ Loaded messages from database:', {
+              count: messagesToShare.length,
+              firstMessage: messagesToShare[0]
+            });
           } else {
-            console.warn('⚠️ No messages in fetched data');
+            console.error('❌ No valid messages in fetched data:', {
+              messagesExists: !!data?.messages,
+              isArray: Array.isArray(data?.messages),
+              length: data?.messages?.length,
+              rawMessages: data?.messages
+            });
+            alert('This chat has no messages to share. Please select a chat with messages.');
+            return;
           }
         } else {
           const errorText = await response.text();
           console.error('❌ Failed to fetch chat:', response.status, errorText);
-          alert(`Failed to load chat: ${response.status} ${errorText}`);
+          alert(`Failed to load chat: ${response.status}`);
           return;
         }
       } catch (error) {
@@ -705,29 +716,66 @@ function ChatContent() {
     } else {
       // Use title from chatHistory if available
       chatTitle = chatHistory.find(ch => ch.id === id)?.title || 'Shared Chat';
-      console.log('📝 Using current messages state:', messagesToShare.length);
+      console.log('📝 Using current messages state:', {
+        count: messagesToShare.length,
+        firstMessage: messagesToShare[0]
+      });
     }
     
-    // Final check
-    if (!messagesToShare || messagesToShare.length === 0) {
-      console.error('❌ No messages to share after all attempts');
+    // Final comprehensive check
+    if (!messagesToShare || !Array.isArray(messagesToShare) || messagesToShare.length === 0) {
+      console.error('❌ No messages to share after all attempts:', {
+        hasMessages: !!messagesToShare,
+        isArray: Array.isArray(messagesToShare),
+        length: messagesToShare?.length,
+        messagesToShare
+      });
       alert('Cannot share an empty chat. Please send at least one message first.');
       return;
     }
+    
+    // Validate message format
+    const validMessages = messagesToShare.filter(m => m && m.text && m.sender);
+    if (validMessages.length === 0) {
+      console.error('❌ All messages are invalid:', messagesToShare);
+      alert('Cannot share chat: messages are invalid or empty.');
+      return;
+    }
+    
+    if (validMessages.length < messagesToShare.length) {
+      console.warn('⚠️ Some messages were invalid and filtered out:', {
+        original: messagesToShare.length,
+        valid: validMessages.length
+      });
+      messagesToShare = validMessages;
+    }
 
     try {
-      console.log('📤 Sending share request with messages:', messagesToShare.length);
+      console.log('📤 Sending share request with messages:', {
+        count: messagesToShare.length,
+        messages: messagesToShare,
+        firstMessage: messagesToShare[0]
+      });
+      
+      const messagesPayload = messagesToShare.map(m => ({
+        text: m.text,
+        sender: m.sender,
+        timestamp: typeof m.timestamp === 'string' ? m.timestamp : m.timestamp.toISOString(),
+      }));
+      
+      console.log('📦 Payload:', {
+        messages: messagesPayload,
+        title: chatTitle,
+        expiresDays: 30,
+        isPublic: true
+      });
       
       // Send messages directly to create a snapshot (no database lookup needed)
       const response = await fetch('/api/share', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ 
-          messages: messagesToShare.map(m => ({
-            text: m.text,
-            sender: m.sender,
-            timestamp: typeof m.timestamp === 'string' ? m.timestamp : m.timestamp.toISOString(),
-          })),
+          messages: messagesPayload,
           title: chatTitle,
           expiresDays: 30,
           isPublic: true 

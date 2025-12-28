@@ -13,14 +13,23 @@ export async function POST(request: NextRequest) {
     const isPublic = body?.isPublic !== false;
     
     console.log('🔗 Share request received:', { 
+      body: JSON.stringify(body),
       hasMessages: !!messages, 
       messageCount: messages?.length,
+      isArray: Array.isArray(messages),
+      messagesType: typeof messages,
       title,
       expiresDays 
     });
 
     // Validate messages
     if (!messages || !Array.isArray(messages) || messages.length === 0) {
+      console.error('❌ Message validation failed:', {
+        hasMessages: !!messages,
+        isArray: Array.isArray(messages),
+        length: messages?.length,
+        messagesValue: messages
+      });
       return NextResponse.json({ 
         error: 'No messages to share. Please send at least one message first.' 
       }, { status: 400 });

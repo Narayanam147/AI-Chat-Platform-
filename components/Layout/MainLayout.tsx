@@ -243,8 +243,12 @@ export function MainLayout({
                   className="flex items-center gap-2 px-3 py-1 rounded-md hover:bg-gray-100 dark:hover:bg-[#333537] pointer-events-auto"
                   aria-expanded={showActionsMenu}
                 >
-                  <span className="text-lg font-semibold text-gray-900 dark:text-[#E3E3E3] truncate max-w-[48vw]">
-                    {activeTitle || title || 'Untitled Chat'}
+                  <span className="text-sm sm:text-base font-medium text-gray-900 dark:text-[#E3E3E3] truncate max-w-[120px] sm:max-w-[200px] md:max-w-[300px]">
+                    {(() => {
+                      const fullTitle = activeTitle || title || 'Untitled Chat';
+                      const maxLength = 30;
+                      return fullTitle.length > maxLength ? fullTitle.substring(0, maxLength) + '...' : fullTitle;
+                    })()}
                   </span>
                   <ChevronDown className="w-4 h-4 text-gray-600 dark:text-[#E3E3E3]" strokeWidth={2} />
                 </button>
