@@ -657,10 +657,63 @@ function ChatContent() {
       return;
     }
 
-    // If this is a temporary chat that hasn't been saved yet, alert the user
-    if (id.startsWith('temp-')) {
-      console.log('⚠️ Cannot share temporary chat:', id);
-      alert('This chat is still being processed. Please wait a moment and try again.');
+    // If this is a temporary chat or chat not in DB, save it first
+    if (id.startsWith('temp-') || messages.length > 0) {
+      console.log('💾 Saving chat before sharing...');
+      
+      if (messages.length === 0) {
+        alert('Cannot share an empty chat. Please send at least one message first.');
+        return;
+      }
+
+      try {
+        // Save the chat to database first
+        const chatToSave = {
+          user_id: session?.user?.email || null,
+          guest_session_id: guestToken || null,
+          messages: messages.map(m => ({
+            text: m.text,
+            sender: m.sender,
+            timestamp: typeof m.timestamp === 'string' ? m.timestamp : m.timestamp.toISOString(),
+          })),
+          title: chatHistory.find(ch => ch.id === id)?.title || messages[0]?.text.substring(0, 50) || 'Untitled Chat',
+        };
+
+        const saveResponse = await fetch('/api/history', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(chatToSave),
+        });
+
+        if (saveResponse.ok) {
+          const savedData = await saveResponse.json();
+          const newId = savedData.data?.id;
+          
+          if (newId) {
+            console.log('✅ Chat saved with ID:', newId);
+            id = newId;
+            setCurrentChatId(newId);
+            setSelectedChatId(newId);
+            
+            // Update chat history to replace temp ID with real ID
+            setChatHistory(prev => prev.map(ch => 
+              ch.id === chatId || ch.id === selectedChatId || ch.id === currentChatId 
+                ? { ...ch, id: newId } 
+                : ch
+            ));
+          }
+        } else {
+          console.log('⚠️ Failed to save chat, trying to share anyway with ID:', id);
+        }
+      } catch (saveError) {
+        console.error('⚠️ Error saving chat:', saveError);
+        // Continue trying to share with existing ID
+      }
+    }
+
+    // Skip if still a temp ID after save attempt
+    if (!id || id.startsWith('temp-')) {
+      alert('Could not save chat. Please try again in a moment.');
       return;
     }
 
