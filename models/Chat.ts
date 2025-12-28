@@ -13,6 +13,9 @@ export interface Chat {
   guest_session_id?: string | null;
   messages: Message[];
   title?: string;
+  pinned?: boolean;
+  is_deleted?: boolean;
+  deleted_at?: string | null;
   created_at?: string;
   updated_at?: string;
 }

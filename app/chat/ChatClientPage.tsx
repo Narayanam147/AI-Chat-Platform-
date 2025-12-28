@@ -265,8 +265,14 @@ function ChatContent() {
             messages: c.messages || [],
             pinned: c.pinned || false,
           }));
-          setChatHistory(mapped);
-          console.log(`? Loaded ${mapped.length} chats for ${session?.user?.email ? 'user' : 'guest'}`);
+          
+          // Sort: pinned chats first, then by timestamp
+          const pinnedChats = mapped.filter((c: ChatHistory) => c.pinned);
+          const unpinnedChats = mapped.filter((c: ChatHistory) => !c.pinned);
+          const sorted = [...pinnedChats, ...unpinnedChats];
+          
+          setChatHistory(sorted);
+          console.log(`📌 Loaded ${mapped.length} chats (${pinnedChats.length} pinned) for ${session?.user?.email ? 'user' : 'guest'}`);
         }
       }
     } catch (error) {
@@ -471,7 +477,12 @@ function ChatContent() {
           })),
           pinned: false,
         };
-        setChatHistory(prev => [newChat, ...prev]);
+        // Add new chat after pinned chats, not at the very top
+        setChatHistory(prev => {
+          const pinnedChats = prev.filter(ch => ch.pinned);
+          const unpinnedChats = prev.filter(ch => !ch.pinned);
+          return [...pinnedChats, newChat, ...unpinnedChats];
+        });
       }
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -757,14 +768,38 @@ function ChatContent() {
         firstMessage: messagesToShare[0]
       });
       
-      const messagesPayload = messagesToShare.map(m => ({
-        text: m.text,
-        sender: m.sender,
-        timestamp: typeof m.timestamp === 'string' ? m.timestamp : m.timestamp.toISOString(),
-      }));
+      const messagesPayload = messagesToShare.map((m, index) => {
+        try {
+          let timestampStr: string;
+          if (typeof m.timestamp === 'string') {
+            timestampStr = m.timestamp;
+          } else if (m.timestamp instanceof Date) {
+            timestampStr = m.timestamp.toISOString();
+          } else {
+            // Fallback to current time if timestamp is missing or invalid
+            timestampStr = new Date().toISOString();
+            console.warn(`⚠️ Invalid timestamp for message ${index}, using current time`);
+          }
+          
+          return {
+            text: m.text || '',
+            sender: m.sender || 'user',
+            timestamp: timestampStr,
+          };
+        } catch (err) {
+          console.error(`❌ Error processing message ${index}:`, err, m);
+          // Return a valid message structure even if processing fails
+          return {
+            text: m.text || 'Error processing message',
+            sender: m.sender || 'user',
+            timestamp: new Date().toISOString(),
+          };
+        }
+      });
       
       console.log('📦 Payload:', {
         messages: messagesPayload,
+        messageCount: messagesPayload.length,
         title: chatTitle,
         expiresDays: 30,
         isPublic: true
