@@ -140,6 +140,38 @@ export async function POST(request: NextRequest) {
 
     console.log('✅ Chat created successfully:', chat.id, 'with', messages?.length || 0, 'messages');
 
+    // Also sync to chat_history table (prompt/response pairs)
+    if (supabaseAdmin && messages && messages.length > 0) {
+      const historyEntries = [];
+      
+      for (let i = 0; i < messages.length - 1; i++) {
+        if (messages[i].sender === 'user' && messages[i + 1]?.sender === 'ai') {
+          historyEntries.push({
+            chat_id: chat.id,  // Link to parent chat
+            user_id: effectiveUserId,
+            guest_session_id: guestSessionIdToUse,
+            prompt: messages[i].text,
+            response: messages[i + 1].text,
+            title: title || 'New Chat',
+            created_at: messages[i].timestamp || new Date().toISOString(),
+            updated_at: messages[i].timestamp || new Date().toISOString(),
+          });
+        }
+      }
+      
+      if (historyEntries.length > 0) {
+        const { error: historyError } = await supabaseAdmin
+          .from('chat_history')
+          .insert(historyEntries);
+        
+        if (historyError) {
+          console.error('⚠️ Failed to sync to chat_history:', historyError);
+        } else {
+          console.log('✅ Synced', historyEntries.length, 'entries to chat_history');
+        }
+      }
+    }
+
     return NextResponse.json({
       success: true,
       data: {
