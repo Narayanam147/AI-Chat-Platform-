@@ -654,45 +654,57 @@ function ChatContent() {
     const id = chatId || selectedChatId || currentChatId;
     console.log('📋 Target chat ID:', id);
     
-    // Get messages - either from current state or from chatHistory
+    if (!id) {
+      alert('No chat selected to share.');
+      return;
+    }
+
     let messagesToShare = messages;
+    let chatTitle = 'Shared Chat';
     
-    // If sharing a specific chat from history, get its messages
-    if (chatId) {
-      console.log('🔍 Looking for chat in history...');
-      const historyChat = chatHistory.find(ch => ch.id === chatId);
-      console.log('📦 Found history chat:', {
-        found: !!historyChat,
-        hasMessages: !!historyChat?.messages,
-        messageCount: historyChat?.messages?.length || 0
-      });
+    // If we don't have messages in current state, fetch from database
+    if (!messagesToShare || messagesToShare.length === 0 || (chatId && chatId !== currentChatId)) {
+      console.log('🔍 Fetching chat from database...');
       
-      if (historyChat?.messages && historyChat.messages.length > 0) {
-        messagesToShare = historyChat.messages.map((m: any, i: number) => ({
-          id: `${chatId}-${i}`,
-          text: m.text,
-          sender: m.sender as 'user' | 'ai',
-          timestamp: new Date(m.timestamp || new Date()),
-        }));
-        console.log('✅ Using messages from history:', messagesToShare.length);
+      try {
+        const response = await fetch(`/api/history/${id}`);
+        if (response.ok) {
+          const data = await response.json();
+          console.log('📦 Fetched chat data:', {
+            hasMessages: !!data?.messages,
+            messageCount: data?.messages?.length || 0
+          });
+          
+          if (data?.messages && data.messages.length > 0) {
+            messagesToShare = data.messages.map((m: any, i: number) => ({
+              id: `${id}-${i}`,
+              text: m.text,
+              sender: m.sender as 'user' | 'ai',
+              timestamp: new Date(m.timestamp || new Date()),
+            }));
+            chatTitle = data.title || 'Shared Chat';
+            console.log('✅ Loaded messages from database:', messagesToShare.length);
+          }
+        } else {
+          console.error('❌ Failed to fetch chat:', response.status);
+        }
+      } catch (error) {
+        console.error('❌ Error fetching chat:', error);
       }
     } else {
+      // Use title from chatHistory if available
+      chatTitle = chatHistory.find(ch => ch.id === id)?.title || 'Shared Chat';
       console.log('📝 Using current messages state:', messagesToShare.length);
     }
     
-    // Check if there are messages to share
+    // Final check
     if (!messagesToShare || messagesToShare.length === 0) {
-      console.error('❌ No messages to share');
+      console.error('❌ No messages to share after all attempts');
       alert('Cannot share an empty chat. Please send at least one message first.');
       return;
     }
 
     try {
-      // Get the chat title
-      const title = chatHistory.find(ch => ch.id === id)?.title 
-        || messagesToShare[0]?.text.substring(0, 50) 
-        || 'Shared Chat';
-
       console.log('📤 Sending share request with messages:', messagesToShare.length);
       
       // Send messages directly to create a snapshot (no database lookup needed)
@@ -705,7 +717,7 @@ function ChatContent() {
             sender: m.sender,
             timestamp: typeof m.timestamp === 'string' ? m.timestamp : m.timestamp.toISOString(),
           })),
-          title,
+          title: chatTitle,
           expiresDays: 30,
           isPublic: true 
         }),
