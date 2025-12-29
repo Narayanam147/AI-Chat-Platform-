@@ -543,11 +543,18 @@ export default function ChatPage() {
       return;
     }
 
+    let messagesToShare = messages;
+    let chatTitle = 'Shared Chat';
+
+    // If sharing the current active chat and we have messages, use them directly
+    const isSharingCurrentChat = id === currentChatId;
+    const hasCurrentMessages = messages && messages.length > 0;
+
     try {
       // If this is a temporary chat, we need to save it to the database first
       if (id.startsWith('temp-')) {
         if (messages.length === 0) {
-          alert('Cannot share an empty chat');
+          alert('Cannot share an empty chat. Please send at least one message first.');
           return;
         }
 
@@ -590,14 +597,55 @@ export default function ChatPage() {
         setChatHistory(prev => prev.map(ch => 
           ch.id === chatId ? { ...ch, id: newId } : ch
         ));
+        
+        messagesToShare = messages;
+        chatTitle = chatToSave.title;
+      } else if (!isSharingCurrentChat || !hasCurrentMessages) {
+        // Fetch from database if sharing different chat or no current messages
+        const fetchResponse = await fetch(`/api/history/${id}`);
+        if (fetchResponse.ok) {
+          const data = await fetchResponse.json();
+          if (data?.messages && Array.isArray(data.messages) && data.messages.length > 0) {
+            messagesToShare = data.messages.map((m: any) => ({
+              text: m.text || '',
+              sender: m.sender || 'user',
+              timestamp: m.timestamp || new Date().toISOString(),
+            }));
+            chatTitle = data.title || 'Shared Chat';
+          } else {
+            alert('This chat has no messages to share. Please select a chat with messages.');
+            return;
+          }
+        } else {
+          alert('Failed to load chat messages.');
+          return;
+        }
+      } else {
+        // Use current messages for active chat
+        messagesToShare = messages;
+        chatTitle = chatHistory.find(ch => ch.id === id)?.title || 'Shared Chat';
       }
 
-      // Create a shareable link using the API
+      // Validate messages before sharing
+      if (!messagesToShare || messagesToShare.length === 0) {
+        alert('Cannot share an empty chat. Please send at least one message first.');
+        return;
+      }
+
+      // Prepare messages payload
+      const messagesPayload = messagesToShare.map(m => ({
+        text: m.text || '',
+        sender: m.sender || 'user',
+        timestamp: typeof m.timestamp === 'string' ? m.timestamp : (m.timestamp instanceof Date ? m.timestamp.toISOString() : new Date().toISOString()),
+      }));
+
+      // Create a shareable link using the API with messages directly
       const response = await fetch('/api/share', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ 
-          id, 
+          messages: messagesPayload,
+          title: chatTitle, 
           expiresDays: 30,
           isPublic: true 
         }),
@@ -746,6 +794,66 @@ export default function ChatPage() {
       return () => document.removeEventListener('mousedown', handleClickOutside);
     }
   }, [showAttachMenu, showSettingsModal, showFeedbackModal, openDropdownId, headingMenuOpen]);
+
+  // Auto-save current chat when user logs in
+  useEffect(() => {
+    const saveCurrentChatOnLogin = async () => {
+      // Only run when user just logged in and has an active chat with messages
+      if (!session?.user?.email) return;
+      if (!currentChatId) return;
+      if (messages.length === 0) return;
+      
+      // Check if it's a temporary chat that needs to be saved
+      const isTemporaryChat = currentChatId.startsWith('temp-');
+      if (!isTemporaryChat) return;
+
+      console.log('🔄 Auto-saving chat after login...', { chatId: currentChatId, messageCount: messages.length });
+
+      try {
+        const chatToSave = {
+          user_id: session.user.email,
+          guest_session_id: null,
+          messages: messages.map(m => ({
+            text: m.text,
+            sender: m.sender,
+            timestamp: typeof m.timestamp === 'string' ? m.timestamp : m.timestamp.toISOString(),
+          })),
+          title: chatHistory.find(ch => ch.id === currentChatId)?.title || messages[0]?.text.substring(0, 50) || 'Untitled Chat',
+        };
+
+        const saveResponse = await fetch('/api/history', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(chatToSave),
+        });
+
+        if (!saveResponse.ok) {
+          console.error('❌ Failed to auto-save chat after login');
+          return;
+        }
+
+        const savedData = await saveResponse.json();
+        const newId = savedData.data?.id;
+        
+        if (newId) {
+          console.log('✅ Chat auto-saved after login', { oldId: currentChatId, newId });
+          
+          // Update the current chat ID
+          setCurrentChatId(newId);
+          setSelectedChatId(newId);
+          
+          // Update chat history to replace temp ID with real ID
+          setChatHistory(prev => prev.map(ch => 
+            ch.id === currentChatId ? { ...ch, id: newId } : ch
+          ));
+        }
+      } catch (error) {
+        console.error('❌ Error auto-saving chat after login:', error);
+      }
+    };
+
+    saveCurrentChatOnLogin();
+  }, [session?.user?.email]); // Only runs when session email changes (user logs in)
 
   // Load history from backend for signed-in user
   useEffect(() => {

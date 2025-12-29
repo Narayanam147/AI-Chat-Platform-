@@ -255,20 +255,20 @@ export function MainLayout({
               )}
               {showActionsMenu && headerChatId && (
                 <div className="absolute left-1/2 transform -translate-x-1/2 mt-2 w-48 bg-white dark:bg-[#1E1E1E] border border-gray-200 dark:border-[#333537] rounded-lg shadow-lg z-[150] overflow-hidden">
-                  <button className="w-full px-3 py-2 text-left text-sm hover:bg-gray-100 dark:hover:bg-[#333537] flex items-center gap-2" onClick={() => { onPinChat?.(String(headerChatId)); setShowActionsMenu(false); }}>
+                  <button className="w-full px-3 py-2 text-left text-sm text-gray-700 dark:text-[#E3E3E3] hover:bg-gray-100 dark:hover:bg-[#333537] flex items-center gap-2" onClick={() => { onPinChat?.(String(headerChatId)); setShowActionsMenu(false); }}>
                     <Pin className="w-4 h-4" strokeWidth={1.5} />
                     <span>{isSelectedPinned ? 'Unpin' : 'Pin'}</span>
                   </button>
-                  <button className="w-full px-3 py-2 text-left text-sm hover:bg-gray-100 dark:hover:bg-[#333537] flex items-center gap-2" onClick={() => { onRenameChat?.(String(headerChatId)); setShowActionsMenu(false); }}>
+                  <button className="w-full px-3 py-2 text-left text-sm text-gray-700 dark:text-[#E3E3E3] hover:bg-gray-100 dark:hover:bg-[#333537] flex items-center gap-2" onClick={() => { onRenameChat?.(String(headerChatId)); setShowActionsMenu(false); }}>
                     <Edit3 className="w-4 h-4" strokeWidth={1.5} />
                     <span>Rename</span>
                   </button>
-                  <button className="w-full px-3 py-2 text-left text-sm hover:bg-gray-100 dark:hover:bg-[#333537] flex items-center gap-2" onClick={() => { onShareChat?.(String(headerChatId)); setShowActionsMenu(false); }}>
+                  <button className="w-full px-3 py-2 text-left text-sm text-gray-700 dark:text-[#E3E3E3] hover:bg-gray-100 dark:hover:bg-[#333537] flex items-center gap-2" onClick={() => { onShareChat?.(String(headerChatId)); setShowActionsMenu(false); }}>
                     <Share2 className="w-4 h-4" strokeWidth={1.5} />
                     <span>Share</span>
                   </button>
                   <div className="border-t border-gray-100 dark:border-[#333537]" />
-                  <button className="w-full px-3 py-2 text-left text-sm text-red-600 hover:bg-gray-100 dark:hover:bg-[#333537] flex items-center gap-2" onClick={() => { onDeleteChat?.(String(headerChatId)); setShowActionsMenu(false); }}>
+                  <button className="w-full px-3 py-2 text-left text-sm text-red-600 dark:text-[#FF6B6B] hover:bg-gray-100 dark:hover:bg-[#333537] flex items-center gap-2" onClick={() => { onDeleteChat?.(String(headerChatId)); setShowActionsMenu(false); }}>
                     <Trash2 className="w-4 h-4" strokeWidth={1.5} />
                     <span>Delete</span>
                   </button>

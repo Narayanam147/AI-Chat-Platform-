@@ -5,8 +5,8 @@ import { useParams, useSearchParams } from 'next/navigation';
 import Image from 'next/image';
 import { MainLayout } from '@/components/Layout/MainLayout';
 import ReactMarkdown from 'react-markdown';
-import { Share2, Copy, Check, Calendar, Sparkles } from 'lucide-react';
-import { useSession } from 'next-auth/react';
+import { Share2, Copy, Check, Calendar, Sparkles, Save } from 'lucide-react';
+import { useSession, signIn } from 'next-auth/react';
 
 interface SharedChatData {
   id: string;
@@ -29,6 +29,8 @@ export default function SharedChatPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [saved, setSaved] = useState(false);
 
   const id = params?.id as string;
   const token = searchParams?.get('t');
@@ -69,6 +71,55 @@ export default function SharedChatPage() {
     navigator.clipboard.writeText(url);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
+  };
+
+  const handleSaveChat = async () => {
+    if (!session?.user?.email || !chatData) return;
+    
+    setSaving(true);
+    try {
+      // Prepare messages from shared chat data
+      const messages = chatData.messages || [
+        { text: chatData.prompt || '', sender: 'user' as const, timestamp: chatData.created_at },
+        { text: chatData.response || '', sender: 'ai' as const, timestamp: chatData.created_at }
+      ].filter(m => m.text); // Remove empty messages
+
+      const chatToSave = {
+        user_id: session.user.email,
+        guest_session_id: null,
+        messages: messages.map(m => ({
+          text: m.text,
+          sender: m.sender,
+          timestamp: m.timestamp,
+        })),
+        title: chatData.title || messages[0]?.text.substring(0, 50) || 'Shared Chat',
+      };
+
+      const response = await fetch('/api/history', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(chatToSave),
+      });
+
+      if (response.ok) {
+        setSaved(true);
+        setTimeout(() => {
+          // Redirect to the chat page with the new chat
+          window.location.href = '/chat';
+        }, 1000);
+      } else {
+        alert('Failed to save chat. Please try again.');
+        setSaving(false);
+      }
+    } catch (error) {
+      console.error('Error saving chat:', error);
+      alert('Failed to save chat. Please try again.');
+      setSaving(false);
+    }
+  };
+
+  const handleSignIn = () => {
+    signIn(undefined, { callbackUrl: window.location.href });
   };
 
   const formatDate = (dateString: string) => {
@@ -172,7 +223,7 @@ export default function SharedChatPage() {
               </div>
               <div>
                 <h1 className="text-lg font-semibold text-gray-900 dark:text-white">
-                  Shared Chat
+                  {chatData.title || 'Shared Chat'}
                 </h1>
                 <div className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400">
                   <Calendar className="w-4 h-4" />
@@ -180,22 +231,61 @@ export default function SharedChatPage() {
                 </div>
               </div>
             </div>
-            <button
-              onClick={handleCopyLink}
-              className="flex items-center gap-2 px-4 py-2 bg-gray-100 dark:bg-[#131314] text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-200 dark:hover:bg-[#333537] transition-colors"
-            >
-              {copied ? (
-                <>
-                  <Check className="w-4 h-4" />
-                  <span>Copied!</span>
-                </>
+            <div className="flex items-center gap-3">
+              {session ? (
+                <button
+                  onClick={handleSaveChat}
+                  disabled={saving || saved}
+                  className={`flex items-center gap-2 px-4 py-2 rounded-lg font-medium transition-all ${
+                    saved
+                      ? 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400 cursor-default'
+                      : saving
+                      ? 'bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 cursor-wait'
+                      : 'bg-blue-600 text-white hover:bg-blue-700'
+                  }`}
+                >
+                  {saved ? (
+                    <>
+                      <Check className="w-4 h-4" />
+                      <span>Saved!</span>
+                    </>
+                  ) : saving ? (
+                    <>
+                      <div className="w-4 h-4 border-2 border-blue-600 border-t-transparent rounded-full animate-spin"></div>
+                      <span>Saving...</span>
+                    </>
+                  ) : (
+                    <>
+                      <Save className="w-4 h-4" />
+                      <span>Save this chat</span>
+                    </>
+                  )}
+                </button>
               ) : (
-                <>
-                  <Copy className="w-4 h-4" />
-                  <span>Copy Link</span>
-                </>
+                <button
+                  onClick={handleSignIn}
+                  className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium"
+                >
+                  Sign in
+                </button>
               )}
-            </button>
+              <button
+                onClick={handleCopyLink}
+                className="flex items-center gap-2 px-4 py-2 bg-gray-100 dark:bg-[#131314] text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-200 dark:hover:bg-[#333537] transition-colors"
+              >
+                {copied ? (
+                  <>
+                    <Check className="w-4 h-4" />
+                    <span>Copied!</span>
+                  </>
+                ) : (
+                  <>
+                    <Copy className="w-4 h-4" />
+                    <span>Copy Link</span>
+                  </>
+                )}
+              </button>
+            </div>
           </div>
         </div>
 
@@ -297,25 +387,6 @@ export default function SharedChatPage() {
             )}
           </div>
         </div>
-
-        {/* Footer */}
-        {!session && (
-          <div className="border-t border-gray-200 dark:border-[#333537] bg-gray-50 dark:bg-[#1E1E1E] px-6 py-4">
-            <div className="max-w-4xl mx-auto text-center">
-              <p className="text-gray-600 dark:text-gray-400 mb-3">
-                Want to create your own chats? Sign up for free!
-              </p>
-              <div className="flex gap-3 justify-center">
-                <button
-                  onClick={() => window.location.href = '/chat'}
-                  className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium"
-                >
-                  Get Started
-                </button>
-              </div>
-            </div>
-          </div>
-        )}
       </div>
     </MainLayout>
   );

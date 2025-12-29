@@ -79,7 +79,7 @@ export function ChatHistoryDropdown({
               e.stopPropagation();
               onDelete(chatId);
             }}
-            className="flex items-center gap-3 px-3 py-2.5 text-sm text-red-600 dark:text-red-400 rounded-lg hover:bg-red-50 dark:hover:bg-red-900/30 focus:bg-red-50 dark:focus:bg-red-900/30 outline-none cursor-pointer transition-colors"
+            className="flex items-center gap-3 px-3 py-2.5 text-sm text-red-600 dark:text-[#FF6B6B] rounded-lg hover:bg-red-50 dark:hover:bg-red-900/30 focus:bg-red-50 dark:focus:bg-red-900/30 outline-none cursor-pointer transition-colors"
           >
             <Trash2 className="w-4 h-4" />
             <span>Delete</span>
