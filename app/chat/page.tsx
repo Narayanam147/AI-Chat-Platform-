@@ -6,6 +6,7 @@ import Image from "next/image";
 import { Send, Upload, Sparkles, FileText, Image as ImageIcon, X, Trash2, Plus, Settings, HelpCircle, FolderOpen, Code, Copy, Check, Brain, ToggleLeft, ToggleRight, Moon, Sun, MessageSquare, LogOut } from "lucide-react";
 import ReactMarkdown from "react-markdown";
 import { MainLayout } from "@/components/Layout/MainLayout";
+import { getOrCreateGuestSession, getGuestToken, migrateGuestToUser } from "@/lib/guestSession";
 
 interface Message {
   id: string;
@@ -48,6 +49,7 @@ export default function ChatPage() {
   const [renameValue, setRenameValue] = useState('');
   const renameInputRef = useRef<HTMLInputElement>(null);
   const [searchQuery, setSearchQuery] = useState("");
+  const [guestToken, setGuestToken] = useState<string | null>(null);
   const [userActivity, setUserActivity] = useState<{
     topics: string[];
     preferredStyle: string;
@@ -192,6 +194,40 @@ export default function ChatPage() {
     window.addEventListener('resize', update);
     return () => window.removeEventListener('resize', update);
   }, []);
+
+  // Initialize guest session for non-authenticated users
+  useEffect(() => {
+    async function initGuestSession() {
+      if (!session) {
+        console.log('🔑 Initializing guest session...');
+        
+        // Try to load existing token from localStorage
+        const existingToken = getGuestToken();
+        if (existingToken) {
+          console.log('✅ Found existing guest token:', existingToken.substring(0, 10) + '...');
+          setGuestToken(existingToken);
+        }
+        
+        // Create or verify session
+        const token = await getOrCreateGuestSession();
+        if (token) {
+          setGuestToken(token);
+          console.log('✅ Guest session ready:', token.substring(0, 10) + '...');
+        } else {
+          console.error('❌ Failed to create guest session');
+        }
+      } else {
+        // Clear guest token if user is logged in
+        if (guestToken) {
+          setGuestToken(null);
+        }
+      }
+    }
+    
+    if (mounted) {
+      initGuestSession();
+    }
+  }, [session, mounted]);
 
   // Extract topics from user message
   const extractTopics = (text: string): string[] => {
@@ -949,7 +985,15 @@ export default function ChatPage() {
         }))
       } : null;
 
-      console.log('📤 Sending to /api/chat:', { promptText: promptText.substring(0, 100), userId: session?.user?.email });
+      // Get guest token for non-authenticated users
+      const currentGuestToken = guestToken || (typeof window !== 'undefined' ? localStorage.getItem('guest_session_token') : null);
+
+      console.log('📤 Sending to /api/chat:', { 
+        promptText: promptText.substring(0, 100), 
+        userId: session?.user?.email,
+        hasGuestToken: !!currentGuestToken,
+        guestTokenPreview: currentGuestToken?.substring(0, 10)
+      });
 
       const response = await fetch("/api/chat", {
         method: "POST",
@@ -959,6 +1003,7 @@ export default function ChatPage() {
         body: JSON.stringify({ 
           prompt: promptText,
           userId: session?.user?.email,
+          guestToken: currentGuestToken,
           personalization: personalizationContext,
           chatId: currentChatId // Send current chat ID to append messages
         }),

@@ -14,6 +14,14 @@ export const authOptions: NextAuthOptions = {
     FacebookProvider({
       clientId: process.env.FACEBOOK_CLIENT_ID || "",
       clientSecret: process.env.FACEBOOK_CLIENT_SECRET || "",
+      profile(profile) {
+        return {
+          id: profile.id,
+          name: profile.name,
+          email: profile.email,
+          image: profile.picture?.data?.url || `https://graph.facebook.com/${profile.id}/picture?type=large&width=200&height=200`,
+        }
+      },
     }),
     CredentialsProvider({
       name: "Credentials",
@@ -67,6 +75,11 @@ export const authOptions: NextAuthOptions = {
             });
             console.log(`✅ New ${account.provider} user created:`, user.email);
           } else {
+            // Update existing user's image if it changed
+            if (user.image && existingUser.image !== user.image) {
+              await UserModel.updateImage(user.email!, user.image);
+              console.log(`✅ Updated ${account.provider} user image:`, user.email);
+            }
             console.log(`✅ Existing ${account.provider} user logged in:`, user.email);
           }
         } catch (error) {
@@ -77,8 +90,19 @@ export const authOptions: NextAuthOptions = {
       return true;
     },
     async session({ session, token }) {
-      if (session.user) {
+      if (session.user && session.user.email) {
         session.user.id = token.sub || "";
+        
+        // Fetch user data from database to get latest image and name
+        try {
+          const user = await UserModel.findByEmail(session.user.email);
+          if (user) {
+            session.user.name = user.name || session.user.name;
+            session.user.image = user.image || session.user.image;
+          }
+        } catch (error) {
+          console.error('Error fetching user data for session:', error);
+        }
       }
       return session;
     },

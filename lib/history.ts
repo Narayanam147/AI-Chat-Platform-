@@ -3,6 +3,7 @@ import { supabase } from '@/lib/supabase';
 export type HistoryEntry = {
 	id: string;
 	user_id: string | null;
+	guest_session_id: string | null;
 	prompt: string;
 	response: string;
 	is_deleted: boolean;
@@ -11,6 +12,7 @@ export type HistoryEntry = {
 
 export type FetchHistoryOptions = {
 	userId?: string | null;
+	guestSessionId?: string | null;
 	limit?: number;
 	offset?: number;
 };
@@ -22,10 +24,12 @@ export type HistoryError = {
 
 export async function saveHistoryEntry({
 	userId,
+	guestSessionId,
 	prompt,
 	response,
 }: {
 	userId?: string | null;
+	guestSessionId?: string | null;
 	prompt: string;
 	response: string;
 }): Promise<{ data: HistoryEntry | null; error: HistoryError | null }> {
@@ -42,6 +46,7 @@ export async function saveHistoryEntry({
 
 		const row = {
 			user_id: userId ?? null,
+			guest_session_id: guestSessionId ?? null,
 			prompt: prompt.trim(),
 			response: response.trim(),
 			is_deleted: false,
@@ -75,6 +80,7 @@ export async function saveHistoryEntry({
 
 export async function fetchHistoryForUser({
 	userId,
+	guestSessionId,
 	limit = 50,
 	offset = 0,
 }: FetchHistoryOptions = {}): Promise<{
@@ -90,8 +96,16 @@ export async function fetchHistoryForUser({
 			.order('created_at', { ascending: false })
 			.range(offset, offset + limit - 1);
 
-		if (userId == null) query = query.is('user_id', null);
-		else query = query.eq('user_id', userId);
+		if (userId) {
+			// Authenticated user - query by user_id
+			query = query.eq('user_id', userId);
+		} else if (guestSessionId) {
+			// Guest with session - query by guest_session_id
+			query = query.eq('guest_session_id', guestSessionId);
+		} else {
+			// No user or guest session
+			query = query.is('user_id', null).is('guest_session_id', null);
+		}
 
 		const { data, error, count } = await query;
 
@@ -112,15 +126,20 @@ export async function fetchHistoryForUser({
 	}
 }
 
-export async function softDeleteHistory(id: string, userId?: string | null): Promise<{ data: HistoryEntry | null; error: HistoryError | null }> {
+export async function softDeleteHistory(id: string, userId?: string | null, guestSessionId?: string | null): Promise<{ data: HistoryEntry | null; error: HistoryError | null }> {
 	try {
 		if (!id?.trim()) {
 			return { data: null, error: { code: 'INVALID_INPUT', message: 'History ID is required' } };
 		}
 
 		let builder: any = supabase.from('chat_history').update({ is_deleted: true }).eq('id', id);
-		if (userId == null) builder = builder.is('user_id', null);
-		else builder = builder.eq('user_id', userId);
+		if (userId) {
+			builder = builder.eq('user_id', userId);
+		} else if (guestSessionId) {
+			builder = builder.eq('guest_session_id', guestSessionId);
+		} else {
+			builder = builder.is('user_id', null).is('guest_session_id', null);
+		}
 
 		const { data, error } = await builder.select().single();
 

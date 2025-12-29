@@ -1122,7 +1122,9 @@ function ChatContent() {
         promptText: promptText.substring(0, 100), 
         userId: session?.user?.email,
         hasGuestToken: !!currentGuestToken,
-        guestTokenPreview: currentGuestToken?.substring(0, 10)
+        guestTokenPreview: currentGuestToken?.substring(0, 10),
+        guestTokenState: guestToken?.substring(0, 10),
+        localStorageToken: (typeof window !== 'undefined' ? localStorage.getItem('guest_session_token')?.substring(0, 10) : 'server-side')
       });
 
       const response = await fetch('/api/chat', {

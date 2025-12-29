@@ -69,6 +69,21 @@ export const UserModel = {
     return data;
   },
 
+  async updateImage(email: string, image: string): Promise<User | null> {
+    const { data, error } = await supabase
+      .from('users')
+      .update({ image })
+      .eq('email', email)
+      .select()
+      .single();
+    
+    if (error) {
+      console.error('Error updating user image:', error);
+      return null;
+    }
+    return data;
+  },
+
   async delete(id: string): Promise<boolean> {
     const { error } = await supabase
       .from('users')

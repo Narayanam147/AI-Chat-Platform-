@@ -291,16 +291,17 @@ export function MainLayout({
             <div className="relative" ref={profileMenuRef}>
               {!session ? (
                 <div className="flex items-center gap-2">
-                  {!isMobile && (
-                    <span className="text-xs text-gray-600 dark:text-[#C4C7C5] mr-1 hidden sm:inline">
-                      Sign in to save
-                    </span>
-                  )}
                   <button 
-                    onClick={(e) => { e.stopPropagation(); signIn(); }} 
+                    onClick={(e) => { e.stopPropagation(); setAuthMode('login'); setShowAuthModal(true); setAuthError(''); }}
+                    className="px-3 sm:px-4 py-2 text-xs sm:text-sm font-medium text-gray-700 dark:text-[#E3E3E3] hover:bg-gray-100 dark:hover:bg-[#333537] rounded-lg transition-colors"
+                  >
+                    Log In
+                  </button>
+                  <button 
+                    onClick={(e) => { e.stopPropagation(); setAuthMode('signup'); setShowAuthModal(true); setAuthError(''); }}
                     className="px-3 sm:px-4 py-2 text-xs sm:text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-lg transition-colors"
                   >
-                    Sign in
+                    Sign Up
                   </button>
                 </div>
               ) : (
