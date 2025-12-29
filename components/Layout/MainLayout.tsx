@@ -237,7 +237,7 @@ export function MainLayout({
           {/* Center: absolutely centered title with actions (keeps perfect center) */}
           <div className="absolute left-1/2 top-1/2 transform -translate-x-1/2 -translate-y-1/2">
             <div className="relative" ref={actionsMenuRef}>
-              {(activeTitle || selectedChatId) && (
+              {(activeTitle || selectedChatId || isChatActive) && (
                 <button
                   onClick={(e) => { e.stopPropagation(); setShowActionsMenu(prev => !prev); }}
                   className="flex items-center gap-2 px-3 py-1 rounded-md hover:bg-gray-100 dark:hover:bg-[#333537] pointer-events-auto"
@@ -245,7 +245,7 @@ export function MainLayout({
                 >
                   <span className="text-sm sm:text-base font-medium text-gray-900 dark:text-[#E3E3E3] truncate max-w-[120px] sm:max-w-[200px] md:max-w-[300px]">
                     {(() => {
-                      const fullTitle = activeTitle || title || 'Untitled Chat';
+                      const fullTitle = activeTitle || chatTitle || title || 'Untitled Chat';
                       const maxLength = 30;
                       return fullTitle.length > maxLength ? fullTitle.substring(0, maxLength) + '...' : fullTitle;
                     })()}
@@ -406,13 +406,13 @@ export function MainLayout({
 
             {/* Chat History */}
             <div className="flex-1 overflow-y-auto overflow-x-hidden px-2 scroll-smooth">
-              {!session && filteredHistory.length === 0 ? (
+              {!session ? (
                 <div className="p-4 mx-2 my-4 text-center border border-dashed border-gray-300 dark:border-[#333537] rounded-xl bg-gray-50 dark:bg-[#1E1E1E]/50">
                   <MessageSquare className="w-10 h-10 mx-auto mb-3 text-gray-400 dark:text-[#C4C7C5]/60" strokeWidth={1.5} />
                   <h3 className="text-sm font-semibold text-gray-900 dark:text-[#E3E3E3] mb-2">Sign in to start saving your chats</h3>
                   <p className="text-xs text-gray-600 dark:text-[#C4C7C5] mb-4">Once you&apos;re signed in, your chat history will be saved and accessible across devices.</p>
                   <button 
-                    onClick={(e) => { e.stopPropagation(); setAuthMode('login'); setShowAuthModal(true); setAuthError(''); }}
+                    onClick={(e) => { e.stopPropagation(); signIn(); }}
                     className="w-full px-4 py-2 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 dark:bg-[#8AB4F8] dark:hover:bg-[#a3c4fa] dark:text-[#131314] rounded-lg transition-colors"
                   >
                     Sign In

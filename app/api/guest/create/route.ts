@@ -7,10 +7,11 @@ import crypto from 'crypto';
  */
 export async function POST(request: NextRequest) {
   try {
-    console.log('🆕 Creating new guest session...');
+    console.log('🆕 POST /api/guest/create - Creating new guest session...');
+    console.log('🔍 Supabase Admin client available:', !!supabaseAdmin);
     
     if (!supabaseAdmin) {
-      console.error('❌ Supabase admin not configured');
+      console.error('❌ Supabase admin not configured - check SUPABASE_SERVICE_ROLE_KEY');
       return NextResponse.json({ error: 'Server misconfiguration' }, { status: 500 });
     }
 
@@ -19,6 +20,7 @@ export async function POST(request: NextRequest) {
     const expiresAt = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000); // 30 days
 
     console.log('🔑 Generated token:', sessionToken.substring(0, 10) + '...');
+    console.log('🔍 Attempting database insert...');
 
     // Create guest session in database
     const { data, error } = await supabaseAdmin
@@ -31,12 +33,26 @@ export async function POST(request: NextRequest) {
       .select()
       .single();
 
+    console.log('🔍 Insert result:', { hasData: !!data, hasError: !!error });
+    
     if (error) {
-      console.error('❌ Failed to create guest session:', error);
-      return NextResponse.json({ error: 'Failed to create guest session' }, { status: 500 });
+      console.error('❌ Supabase insert error:', JSON.stringify(error, null, 2));
+      return NextResponse.json({ 
+        error: 'Failed to create guest session',
+        details: error.message 
+      }, { status: 500 });
     }
 
-    console.log('✅ Guest session created:', data.id);
+    if (!data) {
+      console.error('❌ No data returned from insert');
+      return NextResponse.json({ error: 'No data returned' }, { status: 500 });
+    }
+
+    console.log('✅ Guest session created successfully:', {
+      id: data.id,
+      token: data.session_token.substring(0, 10) + '...',
+      expires_at: data.expires_at
+    });
 
     return NextResponse.json({ 
       token: data.session_token, 

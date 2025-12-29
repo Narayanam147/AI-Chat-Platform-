@@ -31,8 +31,20 @@ export function getGuestToken(): string | null {
  * Set guest session token in localStorage (client-side only)
  */
 export function setGuestToken(token: string): void {
-  if (typeof window === 'undefined') return;
+  if (typeof window === 'undefined') {
+    console.warn('⚠️ setGuestToken called on server side');
+    return;
+  }
+  console.log('💾 Saving guest token to localStorage:', token.substring(0, 10) + '...');
   localStorage.setItem('guest_session_token', token);
+  
+  // Verify it was saved
+  const saved = localStorage.getItem('guest_session_token');
+  if (saved === token) {
+    console.log('✅ Token saved successfully to localStorage');
+  } else {
+    console.error('❌ Token save FAILED! Saved:', saved?.substring(0, 10));
+  }
 }
 
 /**

@@ -57,11 +57,12 @@ function ChatContent() {
   const [attachedFiles, setAttachedFiles] = useState<File[]>([]);
   const [personalizationEnabled, setPersonalizationEnabled] = useState(true);
   const [currentChatId, setCurrentChatId] = useState<string | null>(null);
+  const [currentChatTitle, setCurrentChatTitle] = useState<string | null>(null); // Track title for immediate update
   const [renameMode, setRenameMode] = useState(false);
   const [renameValue, setRenameValue] = useState('');
   const renameInputRef = useRef<HTMLInputElement>(null);
   const [searchQuery, setSearchQuery] = useState('');
-  const [guestToken, setGuestToken] = useState<string | null>(null);
+  const [guestToken, setGuestTokenState] = useState<string | null>(null);
   const [userActivity, setUserActivity] = useState<UserActivity>({
     topics: [],
     preferredStyle: 'balanced',
@@ -199,18 +200,30 @@ function ChatContent() {
       if (status === 'loading') return;
       
       if (!session) {
-        console.log('🔑 Creating guest session...');
-        // User is not authenticated, create/get guest session
+        console.log('🔑 Creating/loading guest session...');
+        
+        // First, try to load existing token from localStorage
+        const existingToken = getGuestToken();
+        if (existingToken) {
+          console.log('✅ Found existing guest token in localStorage:', existingToken.substring(0, 10) + '...');
+          setGuestTokenState(existingToken);
+        }
+        
+        // Then, verify or create session
         const token = await getOrCreateGuestSession();
         console.log('🔑 Guest session result:', { hasToken: !!token, tokenPreview: token?.substring(0, 10) });
         if (token) {
-          setGuestToken(token);
+          setGuestTokenState(token);
           console.log('✅ Guest session initialized with token:', token.substring(0, 10) + '...');
         } else {
           console.error('❌ Failed to create guest session');
         }
       } else {
         console.log('👤 User is authenticated, skipping guest session');
+        // Clear guest token if user is logged in
+        if (guestToken) {
+          setGuestTokenState(null);
+        }
       }
     }
 
@@ -578,6 +591,7 @@ function ChatContent() {
     setInput('');
     setSelectedChatId(null);
     setCurrentChatId(null); // Clear current chat ID to start fresh conversation
+    setCurrentChatTitle(null); // Clear title for new chat
   };
 
   const handleDeleteChat = async (chatId: string) => {
@@ -1064,6 +1078,15 @@ function ChatContent() {
     setAttachedFiles([]); // Clear attached files after sending
     setIsLoading(true);
 
+    // Set chat title immediately when user sends first message (before API response)
+    if (!currentChatId && !currentChatTitle) {
+      const immediateTitle = processedText.length > 30 
+        ? processedText.substring(0, 30) + '...' 
+        : processedText;
+      setCurrentChatTitle(immediateTitle);
+      console.log('📝 Set immediate chat title:', immediateTitle);
+    }
+
     // Update user activity for personalization
     if (personalizationEnabled) {
       updateUserActivity(processedText);
@@ -1092,7 +1115,15 @@ function ChatContent() {
         }))
       } : null;
 
-      console.log('?? Sending to /api/chat:', { promptText: promptText.substring(0, 100), userId: session?.user?.email, hasGuestToken: !!guestToken });
+      // Always check localStorage for guest token right before sending
+      const currentGuestToken = guestToken || (typeof window !== 'undefined' ? localStorage.getItem('guest_session_token') : null);
+
+      console.log('📤 Sending to /api/chat:', { 
+        promptText: promptText.substring(0, 100), 
+        userId: session?.user?.email,
+        hasGuestToken: !!currentGuestToken,
+        guestTokenPreview: currentGuestToken?.substring(0, 10)
+      });
 
       const response = await fetch('/api/chat', {
         method: 'POST',
@@ -1102,7 +1133,7 @@ function ChatContent() {
         body: JSON.stringify({ 
           prompt: promptText,
           userId: session?.user?.email,
-          guestToken: guestToken,
+          guestToken: currentGuestToken,
           personalization: personalizationContext,
           chatId: currentChatId // Send current chat ID to append messages
         }),
@@ -1152,7 +1183,16 @@ function ChatContent() {
         throw new Error(data.error || 'No response from AI');
       }
 
-      // Update currentChatId with the database ID
+      const aiMessage: Message = {
+        id: (Date.now() + 1).toString(),
+        text: data.response,
+        sender: 'ai',
+        timestamp: new Date(),
+      };
+
+      setMessages(prev => [...prev, aiMessage]);
+
+      // Update currentChatId with the database ID and add to history
       if (data.chatId) {
         const oldChatId = currentChatId;
         setCurrentChatId(data.chatId);
@@ -1163,17 +1203,25 @@ function ChatContent() {
           setChatHistory(prev => prev.map(ch => 
             ch.id === oldChatId ? { ...ch, id: data.chatId } : ch
           ));
+        } else if (!oldChatId) {
+          // New chat created - add to history immediately with proper title
+          const newChatTitle = userMessage.text.length > 50 
+            ? userMessage.text.substring(0, 50) + '...' 
+            : userMessage.text;
+          
+          const newChat: ChatHistory = {
+            id: data.chatId,
+            title: newChatTitle,
+            timestamp: new Date(),
+            preview: aiMessage.text.substring(0, 100),
+            messages: [],
+            pinned: false
+          };
+          
+          setChatHistory(prev => [newChat, ...prev]);
+          console.log('✅ Added new chat to history:', { id: data.chatId, title: newChatTitle });
         }
       }
-
-      const aiMessage: Message = {
-        id: (Date.now() + 1).toString(),
-        text: data.response,
-        sender: 'ai',
-        timestamp: new Date(),
-      };
-
-      setMessages(prev => [...prev, aiMessage]);
     } catch (error) {
       console.error('Chat error:', error);
       const errorMessage: Message = {
@@ -1246,6 +1294,7 @@ function ChatContent() {
             }
             setSelectedChatId(chat.id);
             setCurrentChatId(chat.id);
+            setCurrentChatTitle(chat.title); // Update title when selecting chat
           }}
           onDeleteChat={handleDeleteChat}
           onPinChat={togglePin}
@@ -1254,8 +1303,9 @@ function ChatContent() {
           selectedChatId={selectedChatId || currentChatId}
           onOpenSettings={() => setShowSettingsModal(true)}
           isMobile={isMobile}
-          chatTitle={chatHistory.find((c) => c.id === (selectedChatId || currentChatId))?.title || 'New chat'}
-          isChatActive={!!(selectedChatId || currentChatId)}
+          activeTitle={currentChatTitle || chatHistory.find((c) => c.id === (selectedChatId || currentChatId))?.title || null}
+          chatTitle={currentChatTitle || chatHistory.find((c) => c.id === (selectedChatId || currentChatId))?.title || 'New chat'}
+          isChatActive={!!(selectedChatId || currentChatId) || messages.length > 0 || !!currentChatTitle}
         >
           <div className='flex flex-col h-full bg-white dark:bg-[#131314] relative'>
               {/* Guest User Sign-in Banner - Show when not authenticated and has messages */}

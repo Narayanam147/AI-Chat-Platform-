@@ -32,6 +32,22 @@ export async function POST(request: NextRequest) {
       if (guestSession) {
         guestSessionId = guestSession.id;
         console.log('✅ Found guest session ID:', guestSessionId);
+        
+        // Update chat_title in guest_sessions table
+        const chatTitle = prompt.substring(0, 100); // Store first 100 chars of prompt as title
+        const { error: updateError } = await supabaseAdmin
+          .from('guest_sessions')
+          .update({ 
+            chat_title: chatTitle,
+            last_activity: new Date().toISOString()
+          })
+          .eq('id', guestSessionId);
+        
+        if (updateError) {
+          console.error('⚠️ Failed to update guest chat_title:', updateError);
+        } else {
+          console.log('✅ Updated guest session chat_title:', chatTitle.substring(0, 30) + '...');
+        }
       } else {
         console.warn('⚠️ No guest session found for token');
       }
@@ -340,6 +356,25 @@ When web search results are provided in the prompt, they appear with 🔹 marker
             const updatedMessages = [...(existingChat.messages || []), userMessage, assistantMessage];
             await ChatModel.update(chatId, { messages: updatedMessages });
             console.log('✅ Chat updated in Supabase (chatId:', chatId, ')');
+            
+            // Also save to chat_history table
+            if (supabaseAdmin) {
+              const { error: historyError } = await supabaseAdmin
+                .from('chat_history')
+                .insert({
+                  chat_id: chatId,
+                  user_id: userId || null,
+                  guest_session_id: guestSessionId || null,
+                  prompt: prompt,
+                  response: aiResponse,
+                  title: existingChat.title || prompt.substring(0, 50),
+                });
+              if (historyError) {
+                console.error('⚠️ Failed to sync to chat_history:', historyError);
+              } else {
+                console.log('✅ Synced to chat_history (existing chat)');
+              }
+            }
           } else {
             // Chat not found, create new one
             console.log('⚠️ Chat not found, creating new one');
@@ -363,6 +398,25 @@ When web search results are provided in the prompt, they appear with 🔹 marker
           });
           savedChatId = newChat?.id || null;
           console.log('✅ New chat created:', savedChatId, userId ? '(user)' : '(guest)');
+          
+          // Also save to chat_history table for new chats
+          if (supabaseAdmin && savedChatId) {
+            const { error: historyError } = await supabaseAdmin
+              .from('chat_history')
+              .insert({
+                chat_id: savedChatId,
+                user_id: userId || null,
+                guest_session_id: guestSessionId || null,
+                prompt: prompt,
+                response: aiResponse,
+                title: prompt.substring(0, 50),
+              });
+            if (historyError) {
+              console.error('⚠️ Failed to sync to chat_history:', historyError);
+            } else {
+              console.log('✅ Synced to chat_history (new chat)');
+            }
+          }
         }
         
       } catch (dbError) {
