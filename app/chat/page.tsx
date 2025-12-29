@@ -1121,9 +1121,24 @@ export default function ChatPage() {
     if (!mounted) return null;
 
     // Compute active chat title for MainLayout header
-    const activeTitle = (selectedChatId || currentChatId)
-      ? chatHistory.find(c => c.id === (selectedChatId || currentChatId))?.title
-      : undefined;
+    const activeTitle = (() => {
+      // If we have a selected or current chat ID, find it in history
+      if (selectedChatId || currentChatId) {
+        const foundChat = chatHistory.find(c => c.id === (selectedChatId || currentChatId));
+        if (foundChat) return foundChat.title;
+      }
+      
+      // If we have messages but no chat ID yet (new chat being created), use first message as title
+      if (messages.length > 0) {
+        const firstUserMessage = messages.find(m => m.sender === 'user');
+        if (firstUserMessage) {
+          const title = firstUserMessage.text.substring(0, 50);
+          return title.length < firstUserMessage.text.length ? title + '...' : title;
+        }
+      }
+      
+      return undefined;
+    })();
 
     return (
       <MainLayout
