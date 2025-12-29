@@ -38,7 +38,8 @@ CREATE TABLE public.guest_sessions (
   session_token TEXT UNIQUE NOT NULL,
   user_agent TEXT,
   created_at TIMESTAMPTZ DEFAULT NOW(),
-  expires_at TIMESTAMPTZ DEFAULT (NOW() + INTERVAL '30 days')
+  expires_at TIMESTAMPTZ DEFAULT (NOW() + INTERVAL '30 days'),
+  last_activity TIMESTAMPTZ DEFAULT NOW()
 );
 
 -- ============================================

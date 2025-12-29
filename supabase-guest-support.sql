@@ -9,6 +9,7 @@
 CREATE TABLE IF NOT EXISTS public.guest_sessions (
   id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
   session_token TEXT UNIQUE NOT NULL,
+  user_agent TEXT,
   created_at TIMESTAMPTZ DEFAULT NOW(),
   expires_at TIMESTAMPTZ DEFAULT (NOW() + INTERVAL '30 days'),
   last_activity TIMESTAMPTZ DEFAULT NOW()

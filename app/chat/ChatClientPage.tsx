@@ -1258,6 +1258,33 @@ function ChatContent() {
           isChatActive={!!(selectedChatId || currentChatId)}
         >
           <div className='flex flex-col h-full bg-white dark:bg-[#131314] relative'>
+              {/* Guest User Sign-in Banner - Show when not authenticated and has messages */}
+              {!session && messages.length > 0 && (
+                <div className='w-full bg-blue-50 dark:bg-blue-900/20 border-b border-blue-200 dark:border-blue-800 px-4 py-3'>
+                  <div className='max-w-4xl mx-auto flex items-center justify-between gap-4'>
+                    <div className='flex items-center gap-3'>
+                      <div className='flex-shrink-0'>
+                        <MessageSquare className='w-5 h-5 text-blue-600 dark:text-blue-400' />
+                      </div>
+                      <div className='flex-1 min-w-0'>
+                        <p className='text-sm font-medium text-blue-900 dark:text-blue-100'>
+                          Sign in to save your chats
+                        </p>
+                        <p className='text-xs text-blue-700 dark:text-blue-300 mt-0.5'>
+                          Your current chat will be saved when you sign in
+                        </p>
+                      </div>
+                    </div>
+                    <button
+                      onClick={() => signIn()}
+                      className='flex-shrink-0 px-4 py-2 bg-blue-600 hover:bg-blue-700 dark:bg-blue-500 dark:hover:bg-blue-600 text-white text-sm font-medium rounded-lg transition-colors duration-200'
+                    >
+                      Sign in
+                    </button>
+                  </div>
+                </div>
+              )}
+              
               <div className='flex-1 overflow-y-auto'>
                 {/* Conversation View - Messages */}
                 <div className='flex-1 bg-gradient-to-b from-white/50 dark:from-[#131314]/30 to-white dark:to-[#131314] transition-all duration-300 scroll-smooth'>
