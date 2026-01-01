@@ -56,9 +56,141 @@ export async function POST(request: NextRequest) {
 
     let searchContext = '';
     const lowerPrompt = prompt.toLowerCase();
-    const isNewsQuery = lowerPrompt.includes('news') || lowerPrompt.includes('headlines') || lowerPrompt.includes('today') || lowerPrompt.includes('latest') || lowerPrompt.includes('current events');
+    
+    // Enhanced time detection
+    const timePatterns = [
+      /what\s+(time|date)\s+is\s+it/i,
+      /current\s+(time|date)/i,
+      /show\s+me\s+the\s+(time|clock)/i,
+      /what\s+is\s+today/i,
+      /time\s+now/i,
+      /today('s)?\s+date/i,
+      /what's\s+the\s+time/i,
+      /tell\s+me\s+the\s+time/i,
+      /time\s+right\s+now/i,
+      /time\s+in\s+india/i,
+      /india\s+time/i,
+      /ist\s+time/i,
+      /current\s+time\s+india/i
+    ];
+    
+    const isTimeQuery = timePatterns.some(pattern => pattern.test(prompt));
+    
+    // If it's a time query, return the time directly without AI processing
+    if (isTimeQuery) {
+      try {
+        const timeRes = await fetch(`${process.env.NEXTAUTH_URL || 'http://localhost:3002'}/api/timezone`);
+        if (timeRes.ok) {
+          const timeData = await timeRes.json();
+          
+          // Build formatted time response
+          let timeResponse = `🕐 **CURRENT TIME IN INDIA (IST)**\n\n`;
+          timeResponse += `⏰ **${timeData.primary.time}**\n\n`;
+          timeResponse += `📍 **Location:** ${timeData.primary.location}\n`;
+          timeResponse += `🌍 **Timezone:** ${timeData.primary.timezone} (UTC${timeData.primary.utcOffset})\n\n`;
+          
+          // Add user's local time if different
+          if (timeData.user) {
+            timeResponse += `📍 **Your Local Time:** ${timeData.user.time}\n`;
+            timeResponse += `🌍 **Your Timezone:** ${timeData.user.timezone}\n\n`;
+          }
+          
+          timeResponse += `*Note: India does not observe daylight saving time (DST)*`;
+          
+          // Return time directly without AI processing
+          return NextResponse.json({
+            success: true,
+            message: timeResponse,
+            timestamp: new Date().toISOString(),
+            directResponse: true
+          });
+        }
+      } catch (error) {
+        console.error('Time API error:', error);
+        // Fallback - return basic IST time directly
+        const fallbackTime = new Date().toLocaleString('en-IN', {
+          timeZone: 'Asia/Kolkata',
+          dateStyle: 'full',
+          timeStyle: 'long',
+          hour12: true
+        });
+        
+        return NextResponse.json({
+          success: true,
+          message: `🕐 **CURRENT TIME IN INDIA (IST)**\n\n⏰ **${fallbackTime}**\n\n📍 **Timezone:** Asia/Kolkata (UTC+05:30)\n\n*Note: India does not observe daylight saving time (DST)*`,
+          timestamp: new Date().toISOString(),
+          directResponse: true
+        });
+      }
+    }
+    
+    // Enhanced news detection
+    const newsPatterns = [
+      /latest\s+news/i,
+      /current\s+affairs/i,
+      /news\s+(today|headlines|update)/i,
+      /what('s|\s+is)\s+happening/i,
+      /breaking\s+news/i,
+      /today('s)?\s+news/i,
+      /headlines/i,
+      /top\s+\d+\s+news/i,
+      /news\s+of\s+today/i
+    ];
+    
+    const isNewsQuery = newsPatterns.some(pattern => pattern.test(prompt)) || 
+                       lowerPrompt.includes('news') || lowerPrompt.includes('headlines') || 
+                       lowerPrompt.includes('current events');
+    
+    console.log('🔍 News query check:', { isNewsQuery, prompt: prompt.substring(0, 50) });
+    
+    // If it's a news query, return news directly without AI processing
+    if (isNewsQuery) {
+      console.log('📰 Detected news query, fetching directly...');
+      try {
+        let newsQuery = '';
+        // Extract specific topic if mentioned
+        const words = prompt.split(' ');
+        const aboutIndex = words.findIndex((word: string) => word.toLowerCase() === 'about' || word.toLowerCase() === 'on');
+        if (aboutIndex !== -1 && aboutIndex < words.length - 1) {
+          newsQuery = words.slice(aboutIndex + 1).join(' ');
+        }
+        
+        const newsUrl = new URL(`${process.env.NEXTAUTH_URL || 'http://localhost:3002'}/api/news`);
+        if (newsQuery) newsUrl.searchParams.set('q', newsQuery);
+        
+        const newsResponse = await fetch(newsUrl);
+        
+        if (newsResponse.ok) {
+          const newsData = await newsResponse.json();
+          if (newsData.success && newsData.articles?.length > 0) {
+            let newsMessage = `📰 **LATEST NEWS HEADLINES**\n\n`;
+            newsMessage += `📅 **${new Date().toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}**\n\n`;
+            
+            newsData.articles.slice(0, 10).forEach((article: any, index: number) => {
+              newsMessage += `**${index + 1}.** [${article.source}] ${article.title}\n`;
+              if (article.description) {
+                newsMessage += `   ${article.description.substring(0, 120)}...\n`;
+              }
+              newsMessage += `   🔗 ${article.url}\n\n`;
+            });
+            
+            newsMessage += `\n*Total Results: ${newsData.totalResults}*`;
+            
+            return NextResponse.json({
+              success: true,
+              message: newsMessage,
+              timestamp: new Date().toISOString(),
+              directResponse: true
+            });
+          }
+        }
+      } catch (error) {
+        console.error('News API error:', error);
+        // Continue to normal processing if news fails
+      }
+    }
 
-    // Weather query detection
+    // Weather query detection (keeping existing logic)
     const weatherKeywords = ['weather', 'temperature', 'forecast', 'humidity', 'rain', 'snow', 'wind'];
     const isWeatherQuery = weatherKeywords.some(word => lowerPrompt.includes(word));
     // Simple city extraction: look for 'in [city]' or 'at [city]'
@@ -80,37 +212,13 @@ export async function POST(request: NextRequest) {
         const weatherRes = await fetch(`${process.env.NEXT_PUBLIC_BASE_URL || ''}/api/weather?city=${encodeURIComponent(weatherCity)}`);
         if (weatherRes.ok) {
           const weatherData = await weatherRes.json();
-          searchContext = `\n\n[CURRENT WEATHER for ${weatherData.city}: ${weatherData.temp}°C, ${weatherData.desc}]`;
+          searchContext += `\n\n[CURRENT WEATHER for ${weatherData.city}: ${weatherData.temp}°C, ${weatherData.desc}]`;
         } else {
           const err = await weatherRes.text();
           console.error('❌ Weather API error:', err);
         }
       } catch (weatherError) {
         console.error('❌ Weather fetch error:', weatherError);
-      }
-    } else {
-      // For news queries, try NewsAPI first (free tier: 100 requests/day)
-      if (isNewsQuery && process.env.NEWS_API_KEY) {
-        try {
-          const newsUrl = `https://newsapi.org/v2/top-headlines?country=us&pageSize=10&apiKey=${process.env.NEWS_API_KEY}`;
-          console.log('📰 Fetching top headlines...');
-          const newsResponse = await fetch(newsUrl);
-          
-          if (newsResponse.ok) {
-            const newsData = await newsResponse.json();
-            if (newsData.articles && newsData.articles.length > 0) {
-              searchContext = "\n\n[TODAY'S TOP NEWS HEADLINES - December 16, 2025:]\n" + 
-                newsData.articles.slice(0, 10).map((article: any, index: number) => 
-                  `${index + 1}. **${article.title}**\n${article.description || ''}\nSource: ${article.source?.name} - ${article.url}`
-                ).join('\n\n');
-              console.log('✅ News headlines added:', newsData.articles.length);
-            }
-          } else {
-            console.error('❌ News API error:', await newsResponse.text());
-          }
-        } catch (newsError) {
-          console.error('❌ News fetch error:', newsError);
-        }
       }
     }
     
