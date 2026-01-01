@@ -57,7 +57,7 @@ export async function POST(request: NextRequest) {
     let searchContext = '';
     const lowerPrompt = prompt.toLowerCase();
     
-    // Enhanced time detection
+    // Enhanced time detection - catches any location
     const timePatterns = [
       /what\s+(time|date)\s+is\s+it/i,
       /current\s+(time|date)/i,
@@ -65,13 +65,14 @@ export async function POST(request: NextRequest) {
       /what\s+is\s+today/i,
       /time\s+now/i,
       /today('s)?\s+date/i,
-      /what's\s+the\s+time/i,
+      /what('s|\s+is)\s+the\s+time/i,
       /tell\s+me\s+the\s+time/i,
       /time\s+right\s+now/i,
-      /time\s+in\s+india/i,
-      /india\s+time/i,
-      /ist\s+time/i,
-      /current\s+time\s+india/i
+      /time\s+(in|at)\s+[a-z]+/i,  // Catches "time in [location]" or "time at [location]"
+      /[a-z]+\s+time/i,  // Catches "[location] time"
+      /what\s+time\s+is\s+it\s+in/i,
+      /current\s+time\s+(in|at)/i,
+      /ist\s+time/i
     ];
     
     const isTimeQuery = timePatterns.some(pattern => pattern.test(prompt));
