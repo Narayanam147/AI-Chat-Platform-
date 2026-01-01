@@ -77,20 +77,72 @@ export async function POST(request: NextRequest) {
     
     const isTimeQuery = timePatterns.some(pattern => pattern.test(prompt));
     
-    // If it's a time query, return the time directly without AI processing
+    // If it's a time query, use Google Search for location-specific time and weather
     if (isTimeQuery) {
       try {
+        // Extract location from prompt
+        let location = 'India';
+        const locationMatch = prompt.match(/(?:time|weather)\s+(?:in|at)\s+([a-zA-Z\s]+)/i);
+        if (locationMatch && locationMatch[1]) {
+          location = locationMatch[1].trim();
+        } else {
+          const cityMatch = prompt.match(/([a-zA-Z]+)\s+time/i);
+          if (cityMatch && cityMatch[1]) {
+            location = cityMatch[1].trim();
+          }
+        }
+        
+        console.log('🌍 Detected location:', location);
+        
+        // Use Google Search for time and weather
+        if (process.env.GOOGLE_API_KEY && process.env.GOOGLE_SEARCH_ENGINE_ID) {
+          const timeSearchUrl = `https://www.googleapis.com/customsearch/v1?key=${process.env.GOOGLE_API_KEY}&cx=${process.env.GOOGLE_SEARCH_ENGINE_ID}&q=current+time+in+${encodeURIComponent(location)}&num=3`;
+          const weatherSearchUrl = `https://www.googleapis.com/customsearch/v1?key=${process.env.GOOGLE_API_KEY}&cx=${process.env.GOOGLE_SEARCH_ENGINE_ID}&q=current+weather+in+${encodeURIComponent(location)}&num=3`;
+          
+          const [timeSearch, weatherSearch] = await Promise.all([
+            fetch(timeSearchUrl).then(r => r.json()).catch(() => null),
+            fetch(weatherSearchUrl).then(r => r.json()).catch(() => null)
+          ]);
+          
+          let timeResponse = `🕐 **CURRENT TIME & WEATHER IN ${location.toUpperCase()}**\n\n`;
+          
+          // Extract time information
+          if (timeSearch?.items?.[0]) {
+            const timeSnippet = timeSearch.items[0].snippet;
+            timeResponse += `⏰ **Time:** ${timeSnippet}\n`;
+            timeResponse += `🔗 Source: ${timeSearch.items[0].displayLink}\n\n`;
+          }
+          
+          // Extract weather information
+          if (weatherSearch?.items?.[0]) {
+            const weatherSnippet = weatherSearch.items[0].snippet;
+            timeResponse += `🌤️ **Weather:** ${weatherSnippet}\n`;
+            timeResponse += `🔗 Source: ${weatherSearch.items[0].displayLink}\n\n`;
+          }
+          
+          if (timeSearch?.items || weatherSearch?.items) {
+            timeResponse += `\n📍 **Location:** ${location}\n`;
+            timeResponse += `🕐 **Updated:** ${new Date().toLocaleString()}\n`;
+            
+            return NextResponse.json({
+              success: true,
+              response: timeResponse,
+              timestamp: new Date().toISOString(),
+              directResponse: true
+            });
+          }
+        }
+        
+        // Fallback to timezone API for India
         const timeRes = await fetch(`${process.env.NEXTAUTH_URL || 'http://localhost:3002'}/api/timezone`);
         if (timeRes.ok) {
           const timeData = await timeRes.json();
           
-          // Build formatted time response
           let timeResponse = `🕐 **CURRENT TIME IN INDIA (IST)**\n\n`;
           timeResponse += `⏰ **${timeData.primary.time}**\n\n`;
           timeResponse += `📍 **Location:** ${timeData.primary.location}\n`;
           timeResponse += `🌍 **Timezone:** ${timeData.primary.timezone} (UTC${timeData.primary.utcOffset})\n\n`;
           
-          // Add user's local time if different
           if (timeData.user) {
             timeResponse += `📍 **Your Local Time:** ${timeData.user.time}\n`;
             timeResponse += `🌍 **Your Timezone:** ${timeData.user.timezone}\n\n`;
@@ -98,7 +150,6 @@ export async function POST(request: NextRequest) {
           
           timeResponse += `*Note: India does not observe daylight saving time (DST)*`;
           
-          // Return time directly without AI processing
           return NextResponse.json({
             success: true,
             response: timeResponse,
@@ -107,8 +158,7 @@ export async function POST(request: NextRequest) {
           });
         }
       } catch (error) {
-        console.error('Time API error:', error);
-        // Fallback - return basic IST time directly
+        console.error('Time/Weather API error:', error);
         const fallbackTime = new Date().toLocaleString('en-IN', {
           timeZone: 'Asia/Kolkata',
           dateStyle: 'full',
@@ -118,7 +168,7 @@ export async function POST(request: NextRequest) {
         
         return NextResponse.json({
           success: true,
-          response: `🕐 **CURRENT TIME IN INDIA (IST)**\n\n⏰ **${fallbackTime}**\n\n📍 **Timezone:** Asia/Kolkata (UTC+05:30)\n\n*Note: India does not observe daylight saving time (DST)*`,
+          response: `🕐 **CURRENT TIME**\n\n⏰ **${fallbackTime}**\n\n📍 **Timezone:** Asia/Kolkata (UTC+05:30)`,
           timestamp: new Date().toISOString(),
           directResponse: true
         });
