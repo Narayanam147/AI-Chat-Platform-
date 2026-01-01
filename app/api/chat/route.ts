@@ -100,7 +100,7 @@ export async function POST(request: NextRequest) {
           // Return time directly without AI processing
           return NextResponse.json({
             success: true,
-            message: timeResponse,
+            response: timeResponse,
             timestamp: new Date().toISOString(),
             directResponse: true
           });
@@ -117,14 +117,14 @@ export async function POST(request: NextRequest) {
         
         return NextResponse.json({
           success: true,
-          message: `🕐 **CURRENT TIME IN INDIA (IST)**\n\n⏰ **${fallbackTime}**\n\n📍 **Timezone:** Asia/Kolkata (UTC+05:30)\n\n*Note: India does not observe daylight saving time (DST)*`,
+          response: `🕐 **CURRENT TIME IN INDIA (IST)**\n\n⏰ **${fallbackTime}**\n\n📍 **Timezone:** Asia/Kolkata (UTC+05:30)\n\n*Note: India does not observe daylight saving time (DST)*`,
           timestamp: new Date().toISOString(),
           directResponse: true
         });
       }
     }
     
-    // Enhanced news detection
+    // Enhanced news detection - catches more variations
     const newsPatterns = [
       /latest\s+news/i,
       /current\s+affairs/i,
@@ -134,12 +134,16 @@ export async function POST(request: NextRequest) {
       /today('s)?\s+news/i,
       /headlines/i,
       /top\s+\d+\s+news/i,
-      /news\s+of\s+today/i
+      /news\s+of\s+today/i,
+      /give\s+me\s+(some|the)?\s*news/i,
+      /show\s+me\s+(some|the)?\s*news/i,
+      /tell\s+me\s+(some|the)?\s*news/i,
+      /what('s|\s+is)\s+new/i
     ];
     
     const isNewsQuery = newsPatterns.some(pattern => pattern.test(prompt)) || 
                        lowerPrompt.includes('news') || lowerPrompt.includes('headlines') || 
-                       lowerPrompt.includes('current events');
+                       lowerPrompt.includes('current events') || lowerPrompt.includes('current affairs');
     
     console.log('🔍 News query check:', { isNewsQuery, prompt: prompt.substring(0, 50) });
     
@@ -148,44 +152,72 @@ export async function POST(request: NextRequest) {
       console.log('📰 Detected news query, fetching directly...');
       try {
         let newsQuery = '';
-        // Extract specific topic if mentioned
-        const words = prompt.split(' ');
-        const aboutIndex = words.findIndex((word: string) => word.toLowerCase() === 'about' || word.toLowerCase() === 'on');
-        if (aboutIndex !== -1 && aboutIndex < words.length - 1) {
-          newsQuery = words.slice(aboutIndex + 1).join(' ');
+        // Extract specific topic if mentioned (sports, tech, business, etc.)
+        const topicKeywords = ['sports', 'sport', 'tech', 'technology', 'business', 'politics', 'entertainment', 'science', 'health', 'world', 'india', 'cricket', 'football'];
+        for (const keyword of topicKeywords) {
+          if (lowerPrompt.includes(keyword)) {
+            newsQuery = keyword;
+            console.log('📰 Topic detected:', keyword);
+            break;
+          }
+        }
+        
+        // Also check for 'about [topic]' pattern
+        const aboutMatch = lowerPrompt.match(/(?:about|on|regarding)\s+([a-zA-Z\s]+)/i);
+        if (!newsQuery && aboutMatch && aboutMatch[1]) {
+          newsQuery = aboutMatch[1].trim();
+          console.log('📰 Topic from about pattern:', newsQuery);
         }
         
         const newsUrl = new URL(`${process.env.NEXTAUTH_URL || 'http://localhost:3002'}/api/news`);
         if (newsQuery) newsUrl.searchParams.set('q', newsQuery);
+        console.log('📰 Fetching from:', newsUrl.toString());
         
-        const newsResponse = await fetch(newsUrl);
+        const newsResponse = await fetch(newsUrl.toString());
+        console.log('📰 News API status:', newsResponse.status);
         
         if (newsResponse.ok) {
           const newsData = await newsResponse.json();
+          console.log('📰 Articles found:', newsData.articles?.length || 0);
+          
           if (newsData.success && newsData.articles?.length > 0) {
             let newsMessage = `📰 **LATEST NEWS HEADLINES**\n\n`;
             newsMessage += `📅 **${new Date().toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}**\n\n`;
             
+            if (newsQuery) {
+              newsMessage += `🎯 **Category:** ${newsQuery.charAt(0).toUpperCase() + newsQuery.slice(1)}\n\n`;
+            }
+            
             newsData.articles.slice(0, 10).forEach((article: any, index: number) => {
-              newsMessage += `**${index + 1}.** [${article.source}] ${article.title}\n`;
+              newsMessage += `**${index + 1}. ${article.title}**\n`;
+              newsMessage += `   📰 *${article.source}*\n`;
               if (article.description) {
-                newsMessage += `   ${article.description.substring(0, 120)}...\n`;
+                newsMessage += `   ${article.description.substring(0, 150)}\n`;
               }
-              newsMessage += `   🔗 ${article.url}\n\n`;
+              if (article.publishedAt) {
+                const pubDate = new Date(article.publishedAt);
+                newsMessage += `   🕐 ${pubDate.toLocaleString()}\n`;
+              }
+              newsMessage += `   🔗 [Read more](${article.url})\n\n`;
             });
             
-            newsMessage += `\n*Total Results: ${newsData.totalResults}*`;
+            newsMessage += `\n---\n*Showing ${Math.min(10, newsData.articles.length)} of ${newsData.totalResults} results*`;
             
+            console.log('✅ Returning news directly');
             return NextResponse.json({
               success: true,
-              message: newsMessage,
+              response: newsMessage,
               timestamp: new Date().toISOString(),
               directResponse: true
             });
+          } else {
+            console.log('⚠️ No articles in response');
           }
+        } else {
+          console.log('❌ News API error status:', newsResponse.status);
         }
       } catch (error) {
-        console.error('News API error:', error);
+        console.error('❌ News API error:', error);
         // Continue to normal processing if news fails
       }
     }
