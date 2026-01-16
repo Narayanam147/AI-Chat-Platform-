@@ -1,0 +1,19 @@
+name: Keep Supabase Alive
+
+on:
+  schedule:
+    # Runs at 00:00 UTC every 4 days
+    - cron: '0 0 */4 * *'
+  workflow_dispatch: # Allows you to run this manually from the Actions tab for testing
+
+jobs:
+  ping-database:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Ping Supabase URL
+        run: |
+          # This sends a simple GET request to your Supabase project URL
+          # Replace 'health' with a valid endpoint or just query the root if applicable.
+          # We use the REST API to query a table slightly to ensure it registers as DB activity.
+          
+          curl -I "${{ secrets.SUPABASE_URL }}/rest/v1/?apikey=${{ secrets.SUPABASE_ANON_KEY }}"
