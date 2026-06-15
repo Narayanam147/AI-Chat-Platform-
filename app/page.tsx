@@ -18,6 +18,18 @@ export default function Home() {
     {
       question: "Are there developer APIs built into the workspace?",
       answer: "Yes, the platform includes built-in endpoints for developers, including /api/timezone for temporal conversions and /api/weather for local climatic data fetching, designed to showcase conversational agent tooling."
+    },
+    {
+      question: "How does Ace ensure data privacy and security?",
+      answer: "Ace implements robust server-side security measures including bcrypt password hashing, in-memory rate limiting against brute force attacks, and comprehensive sanitization to prevent XSS and catastrophic backtracking (ReDoS) vulnerabilities."
+    },
+    {
+      question: "What language models power the Ace conversational engine?",
+      answer: "Ace leverages Groq's ultra-low latency inference engine, specifically utilizing Llama 3 70B Versatile, to provide lightning-fast, high-quality responses that rival state-of-the-art models like GPT-4 and Claude 3.5 Sonnet."
+    },
+    {
+      question: "Does Ace support real-time web search integration?",
+      answer: "Absolutely. Ace natively integrates with the Google Programmable Search Engine API to fetch real-time weather, timezone data, and live news headlines, feeding verified context directly into the LLM's prompt window to eliminate hallucinations."
     }
   ];
 
