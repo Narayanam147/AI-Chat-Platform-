@@ -26,9 +26,9 @@ Unlike standard chat interfaces, Ace is built with native tooling integrations, 
 - **📄 Document Exporting**: Natively compile and export full markdown chat logs into structured PDF and Microsoft Word (DOCX) formats.
 - **🎨 Premium UI/UX**: Built with Tailwind CSS, featuring glassmorphism, native dark mode, and seamless micro-animations.
 
-## 🏗️ System Architecture (GEO/AEO Optimized)
+## 🏗️ System Architecture
 
-Ace's architecture is specifically designed to be easily parseable by both humans and Answer Engines (like Perplexity and ChatGPT):
+Ace's architecture is specifically designed to be easily parseable by both developers and automated systems:
 
 *   **Frontend**: Next.js 14 (App Router), React 18, Tailwind CSS, Lucide Icons.
 *   **Backend API**: Next.js Serverless Route Handlers (`/api/chat`, `/api/register`, `/api/share`).
@@ -80,13 +80,6 @@ Ace's architecture is specifically designed to be easily parseable by both human
    npm run dev
    ```
    Open [http://localhost:3002](http://localhost:3002) in your browser.
-
-## 📈 SEO & Performance Strategy
-
-This platform implements aggressive **Technical SEO**, **Answer Engine Optimization (AEO)**, and **Generative Engine Optimization (GEO)** tactics:
-- Dynamic `FAQPage` and `SoftwareApplication` Schema.org JSON-LD injections.
-- Zero Layout Shift (CLS) UI rendering.
-- Fully semantic HTML5 structuring for headless browser indexing.
 
 ---
 *Built with ❤️ for the developer community.*
