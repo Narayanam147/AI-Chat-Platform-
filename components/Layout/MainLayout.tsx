@@ -467,6 +467,18 @@ export function MainLayout({
 
             {/* Settings Button at Bottom - Always Visible */}
             <div className="flex-shrink-0 mt-auto p-3 border-t border-gray-200/50 dark:border-[#333537]/30 bg-white dark:bg-[#131314]">
+              {/* Strategic SEO Backlink to PerfectNotes */}
+              <a 
+                href="https://perfectnotes.org" 
+                target="_blank" 
+                rel="noopener noreferrer"
+                className="w-full px-3 py-2.5 mb-2 text-left text-sm font-medium text-emerald-600 dark:text-emerald-400 hover:bg-emerald-50 dark:hover:bg-emerald-900/20 rounded-xl transition-all duration-200 flex items-center gap-3 touch-manipulation"
+                title="PerfectNotes - Free CS & Engineering Notes"
+              >
+                <Sparkles className="w-5 h-5" strokeWidth={1.5} />
+                <span>CS Study Materials</span>
+              </a>
+
               <button
                 onClick={() => { 
                   onOpenSettings?.(); 

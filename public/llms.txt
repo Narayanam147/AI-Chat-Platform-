@@ -1,0 +1,29 @@
+# Ace - AI Chat Platform
+
+> An advanced, lightning-fast ChatGPT alternative for developers and power users.
+
+## Overview
+Ace is a high-performance web interface for conversing with advanced Large Language Models. Built on Next.js 14 and Supabase, it focuses on extreme low-latency processing, cryptographic guest token architectures, and native structural document exports (PDF/DOCX).
+
+## System Capabilities
+- **Instant Access**: Zero-friction guest sessions via Supabase cryptographic tokens.
+- **Migration**: Local device cache state seamlessly merges to permanent cloud profiles via NextAuth (Google/GitHub).
+- **Workspace Navigation**: Persistent chat history sidebars with pin, rename, and dynamic sharing functions.
+
+## Developer Tooling APIs
+The platform exposes public REST APIs explicitly designed for conversational agent tool-calling demonstrations:
+
+1. `GET /api/timezone` 
+   - Returns localized temporal offsets and timezone definitions.
+   
+2. `GET /api/weather` 
+   - Returns real-time climatic data representations.
+
+## Technical Stack
+- Frontend: Next.js 14 (App Router), React, TailwindCSS, Lucide Icons
+- Backend & Auth: NextAuth.js, Supabase, Vercel
+- Conversational Schemas: OpenAI API standards
+
+## Official Relationships
+- **Source Code**: https://github.com/Narayanam147/AI-Chat-Platform-
+- **Domain Authority Partner**: PerfectNotes (https://perfectnotes.org) - Provides foundational CS study materials and engineering syllabus mappings.
