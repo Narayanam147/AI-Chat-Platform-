@@ -519,8 +519,8 @@ When web search results are provided in the prompt, they appear with 🔹 marker
         const repetitionRatio = words.length / uniqueWords.size;
         if (repetitionRatio > 10) return true; // More than 10x repetition
       }
-      // Check for specific repetitive patterns
-      if (/(.{10,})\1{5,}/.test(text)) return true; // Same pattern repeated 5+ times
+      // The word repetition ratio check above is sufficient to catch corrupted AI responses.
+      // Removed ReDoS vulnerable regex: /(.{10,})\1{5,}/
       return false;
     };
 

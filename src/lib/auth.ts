@@ -34,6 +34,11 @@ export const authOptions: NextAuthOptions = {
           throw new Error("Please enter an email and password");
         }
 
+        // Prevent Long Password DoS: check length before hitting bcrypt
+        if (credentials.password.length > 64) {
+          throw new Error("Password too long");
+        }
+
         const user = await UserModel.findByEmail(credentials.email);
 
         if (!user || !user.password) {

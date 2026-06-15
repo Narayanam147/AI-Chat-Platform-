@@ -23,7 +23,7 @@ export default function ChatLayout({ children }: { children: React.ReactNode }) 
               'priceCurrency': 'USD'
             },
             'description': 'Advanced conversational interface for AI models, providing persistent session states, document parsing, and code compilation options.'
-          })
+          }).replace(/</g, '\\u003c')
         }}
       />
       {children}

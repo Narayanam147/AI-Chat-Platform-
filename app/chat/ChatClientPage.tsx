@@ -138,7 +138,9 @@ function ChatContent() {
   // Copy message to clipboard
   const handleCopyMessage = async (messageId: string, text: string) => {
     try {
-      await navigator.clipboard.writeText(text);
+      // Prevent Clipboard Hijacking by stripping hidden terminal control characters
+      const sanitizedText = text.replace(/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/g, '');
+      await navigator.clipboard.writeText(sanitizedText);
       setCopiedMessageId(messageId);
       setTimeout(() => setCopiedMessageId(null), 2000);
     } catch (err) {

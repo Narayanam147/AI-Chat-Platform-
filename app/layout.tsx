@@ -121,7 +121,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
                   ]
                 }
               ]
-            })
+            }).replace(/</g, '\\u003c')
           }}
         />
       </head>
