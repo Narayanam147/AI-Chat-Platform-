@@ -3,7 +3,7 @@
 import Image from 'next/image';
 import React, { ReactNode, useState, useEffect, useRef } from 'react';
 import { useSession, signOut, signIn } from 'next-auth/react';
-import { Menu, Sparkles, LogOut, Settings, Plus, MessageSquare, Search, X, Trash2, Pin, Edit3, Share2, ChevronDown } from 'lucide-react';
+import { Menu, Sparkles, LogOut, Settings, Plus, MessageSquare, Search, X, Trash2, Pin, Edit3, Share2, ChevronDown, BookOpen } from 'lucide-react';
 import { ChatHistoryDropdown } from '@/components/ChatHistoryDropdown';
 
 interface MainLayoutProps {
@@ -472,10 +472,10 @@ export function MainLayout({
                 href="https://perfectnotes.org" 
                 target="_blank" 
                 rel="noopener noreferrer"
-                className="w-full px-3 py-2.5 mb-2 text-left text-sm font-medium text-emerald-600 dark:text-emerald-400 hover:bg-emerald-50 dark:hover:bg-emerald-900/20 rounded-xl transition-all duration-200 flex items-center gap-3 touch-manipulation"
+                className="w-full px-3 py-2.5 mb-2 text-left text-sm font-medium text-gray-700 dark:text-[#E3E3E3] hover:bg-gray-100 dark:hover:bg-[#1E1E1E] rounded-xl transition-all duration-200 flex items-center gap-3 touch-manipulation active:bg-gray-200 dark:active:bg-[#333537]"
                 title="PerfectNotes - Free CS & Engineering Notes"
               >
-                <Sparkles className="w-5 h-5" strokeWidth={1.5} />
+                <BookOpen className="w-5 h-5" strokeWidth={1.5} />
                 <span>CS Study Materials</span>
               </a>
 
