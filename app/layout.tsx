@@ -9,20 +9,20 @@ const inter = Inter({ subsets: ['latin'] });
 export const metadata: Metadata = {
   metadataBase: new URL('https://ai-chat.engineer'),
   title: {
-    default: 'AI Chat Platform - Next-Gen Conversational Assistant',
-    template: '%s | AI Chat Platform'
+    default: 'Ace | The AI Chat Engineer Platform',
+    template: '%s | Ace AI Chat Engineer'
   },
-  description: 'An advanced, lightning-fast ChatGPT alternative featuring multi-modal support, dark mode, persistent search history, and powered by state-of-the-art LLMs.',
+  description: 'Ace is the ultimate AI Chat Engineer platform. A blazing-fast ChatGPT alternative powered by Llama 3 and Groq, featuring multi-modal support, persistent search history, and RAG capabilities.',
   keywords: [
-    'AI Chat',
-    'AI Assistant',
+    'Ace',
+    'AI Chat Engineer',
+    'Ace AI',
+    'AI Chat Platform',
     'ChatGPT alternative',
     'Conversational AI',
-    'LLM Chatbot',
-    'AI Chat Platform',
-    'Generative AI',
-    'AI chat history',
-    'developer chatbot'
+    'developer chatbot',
+    'Groq AI Chat',
+    'Llama 3 Chat'
   ],
   authors: [{ name: 'Narayanam147' }],
   creator: 'Narayanam147',
@@ -30,22 +30,22 @@ export const metadata: Metadata = {
     type: 'website',
     locale: 'en_US',
     url: 'https://ai-chat.engineer',
-    siteName: 'AI Chat Platform',
-    title: 'AI Chat Platform - Next-Gen Conversational Assistant',
-    description: 'An advanced, lightning-fast ChatGPT alternative featuring multi-modal support, dark mode, persistent search history, and powered by state-of-the-art LLMs.',
+    siteName: 'Ace AI Chat Engineer',
+    title: 'Ace | The AI Chat Engineer Platform',
+    description: 'Ace is the ultimate AI Chat Engineer platform. A blazing-fast ChatGPT alternative powered by Llama 3 and Groq.',
     images: [
       {
         url: '/og-image.png',
         width: 1200,
         height: 630,
-        alt: 'AI Chat Platform Preview'
+        alt: 'Ace AI Chat Engineer Preview'
       }
     ]
   },
   twitter: {
     card: 'summary_large_image',
-    title: 'AI Chat Platform - Next-Gen Conversational Assistant',
-    description: 'An advanced, lightning-fast ChatGPT alternative featuring multi-modal support, dark mode, persistent search history, and powered by state-of-the-art LLMs.',
+    title: 'Ace | The AI Chat Engineer Platform',
+    description: 'Ace is the ultimate AI Chat Engineer platform. A blazing-fast ChatGPT alternative.',
     images: ['/og-image.png'],
     creator: '@ai_chat_engineer'
   },

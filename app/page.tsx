@@ -91,11 +91,11 @@ export default function Home() {
             </div>
 
             <h1 className="text-4xl sm:text-5xl lg:text-6xl font-bold tracking-tight text-slate-950 dark:text-white leading-[1.1] mb-6 font-sans">
-              High-fidelity terminal for conversational AI.
+              Ace: The High-Fidelity AI Chat Engineer Terminal.
             </h1>
 
             <p className="text-base sm:text-lg text-slate-650 dark:text-[#C4C7C5] mb-8 max-w-xl leading-relaxed">
-              An engineering-first workspace built for speed. Query advanced models, manage cryptographic guest tokens, compile developer API weather tasks, and export structured document layouts natively.
+              Ace is an engineering-first AI Chat Engineer workspace built for speed. Query advanced models, manage cryptographic guest tokens, compile developer API weather tasks, and export structured document layouts natively.
             </p>
 
             <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 w-full sm:w-auto">
