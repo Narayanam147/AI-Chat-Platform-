@@ -97,6 +97,24 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
                       'name': 'PerfectNotes',
                       'url': 'https://perfectnotes.org',
                       'description': 'Free expert-curated technical notes and CS study material.'
+                    },
+                    {
+                      '@type': 'WebPage',
+                      'name': 'PerfectNotes Engineering Notes',
+                      'url': 'https://perfectnotes.org/notes',
+                      'description': 'Comprehensive library of B.Tech engineering notes and study material.'
+                    },
+                    {
+                      '@type': 'WebPage',
+                      'name': 'PerfectNotes MCQs',
+                      'url': 'https://perfectnotes.org/mcq',
+                      'description': 'Extensive collection of Multiple Choice Questions for computer science engineering exams.'
+                    },
+                    {
+                      '@type': 'WebPage',
+                      'name': 'PerfectNotes Interview Preparation',
+                      'url': 'https://perfectnotes.org/interview-questions',
+                      'description': 'Technical interview preparation resources, coding questions, and HR interview guides.'
                     }
                   ],
                   'potentialAction': [
