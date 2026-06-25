@@ -1,5 +1,5 @@
 import Link from 'next/link';
-import { Sparkles, FileText, ArrowRight, Terminal, Globe, Cpu, Zap, Code2, Heart, Shield } from 'lucide-react';
+import { Sparkles, FileText, ArrowRight, Terminal, Globe, Cpu, Zap, Code2, Heart, Shield, Moon } from 'lucide-react';
 
 export default function Home() {
   const faqs = [
@@ -91,11 +91,11 @@ export default function Home() {
             </div>
 
             <h1 className="text-4xl sm:text-5xl lg:text-6xl font-bold tracking-tight text-slate-950 dark:text-white leading-[1.1] mb-6 font-sans">
-              Ace: The High-Fidelity AI Chat Engineer Terminal.
+              The Next-Gen Conversational AI Built for Engineers
             </h1>
 
             <p className="text-base sm:text-lg text-slate-650 dark:text-[#C4C7C5] mb-8 max-w-xl leading-relaxed">
-              Ace is an engineering-first AI Chat Engineer workspace built for speed. Query advanced models, manage cryptographic guest tokens, compile developer API weather tasks, and export structured document layouts natively.
+              Lightning-fast latency, persistent search history, and multi-modal support. The ChatGPT alternative designed for code.
             </p>
 
             <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 w-full sm:w-auto">
@@ -149,21 +149,23 @@ export default function Home() {
                 <div className="flex gap-3 items-start">
                   <div className="w-6 h-6 rounded-md bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-[#8AB4F8] flex items-center justify-center font-bold text-xs">U</div>
                   <div className="flex-1 bg-slate-50 dark:bg-[#131314]/50 p-3 rounded-lg border border-slate-100 dark:border-[#1E1E1E] text-slate-700 dark:text-[#C4C7C5]">
-                    How do I format structural code blocks and check current local timezone API?
+                    Can you write a clean React hook to fetch from the local timezone API?
                   </div>
                 </div>
                 <div className="flex gap-3 items-start">
                   <div className="w-6 h-6 rounded-md bg-slate-900 dark:bg-white text-white dark:text-slate-900 flex items-center justify-center font-bold text-xs"><Cpu className="w-3.5 h-3.5" /></div>
                   <div className="flex-1 space-y-3">
-                    <p className="text-slate-800 dark:text-zinc-200">Here is the API response schema for the weather integrations:</p>
-                    <pre className="p-2.5 rounded-md bg-slate-950 text-emerald-400 font-mono text-xs overflow-x-auto border border-[#1E1E1E]">
-{`{
-  "status": "success",
-  "data": {
-    "timezone": "America/New_York",
-    "gmtOffset": -5
-  }
-}`}
+                    <p className="text-slate-850 dark:text-zinc-200">Sure! Here is the custom React hook implementation:</p>
+                    <pre className="p-3 rounded-md bg-slate-950 font-mono text-[11px] leading-relaxed overflow-x-auto border border-slate-800/80 text-[#C4C7C5]">
+                      <span className="text-[#F92672]">const</span> <span className="text-[#A6E22E]">useTimezone</span> <span className="text-[#F92672]">=</span> <span className="text-[#F8F8F2]">()</span> <span className="text-[#F92672] font-semibold">=&gt;</span> <span className="text-[#F8F8F2]">&#123;</span><br />
+                      <span className="text-[#F8F8F2]">  </span><span className="text-[#F92672]">const</span> <span className="text-[#F8F8F2] font-semibold">[data, setData]</span> <span className="text-[#F92672]">=</span> <span className="text-[#A6E22E]">useState</span><span className="text-[#F8F8F2]">(</span><span className="text-[#AE81FF]">null</span><span className="text-[#F8F8F2]">)</span><span className="text-[#F8F8F2]">;</span><br />
+                      <span className="text-[#F8F8F2]">  </span><span className="text-[#A6E22E]">useEffect</span><span className="text-[#F8F8F2]">(</span><span className="text-[#F8F8F2]">()</span> <span className="text-[#F92672] font-semibold">=&gt;</span> <span className="text-[#F8F8F2]">&#123;</span><br />
+                      <span className="text-[#F8F8F2]">    </span><span className="text-[#A6E22E]">fetch</span><span className="text-[#F8F8F2]">(</span><span className="text-[#E6DB74]">&quot;/api/timezone&quot;</span><span className="text-[#F8F8F2]">)</span><br />
+                      <span className="text-[#F8F8F2]">      .</span><span className="text-[#A6E22E]">then</span><span className="text-[#F8F8F2]">(</span><span className="text-[#FD971F]">res</span> <span className="text-[#F92672] font-semibold">=&gt;</span> <span className="text-[#FD971F]">res</span><span className="text-[#F8F8F2]">.</span><span className="text-[#A6E22E]">json</span><span className="text-[#F8F8F2]">()</span><span className="text-[#F8F8F2]">)</span><br />
+                      <span className="text-[#F8F8F2]">      .</span><span className="text-[#A6E22E]">then</span><span className="text-[#F8F8F2]">(setData)</span><span className="text-[#F8F8F2]">;</span><br />
+                      <span className="text-[#F8F8F2]">  &#125;, []);</span><br />
+                      <span className="text-[#F8F8F2]">  </span><span className="text-[#F92672]">return</span> <span className="text-[#F8F8F2]">data;</span><br />
+                      <span className="text-[#F8F8F2]">&#125;;</span>
                     </pre>
                   </div>
                 </div>
@@ -189,20 +191,33 @@ export default function Home() {
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            {/* Feature 1 - Guest token */}
+            {/* Feature 1 - Guest token / Persistent History */}
             <div className="md:col-span-2 p-8 rounded-xl border border-slate-200 dark:border-[#333537] bg-white dark:bg-[#1E1E1E] hover:border-slate-350 dark:hover:border-[#333537] transition-all flex flex-col justify-between min-h-[220px]">
               <div className="h-10 w-10 rounded-lg bg-slate-100 dark:bg-[#131314] flex items-center justify-center text-slate-950 dark:text-white mb-4 border border-slate-200/60 dark:border-[#333537]/80">
                 <Shield className="h-5 w-5" />
               </div>
               <div>
-                <h3 className="text-lg font-semibold text-slate-950 dark:text-white mb-2">Supabase Guest Token Migration</h3>
+                <h3 className="text-lg font-semibold text-slate-950 dark:text-white mb-2">Persistent History & Guest Migration</h3>
                 <p className="text-sm text-slate-500 dark:text-[#C4C7C5] leading-relaxed max-w-lg font-sans">
-                  Initiate chat workspaces with zero sign-up friction. Cryptographic session tokens are generated on Supabase and cached locally, migrating historical assets to permanent profiles securely.
+                  Initiate chat workspaces with zero sign-up friction. Cryptographic session tokens are cached locally, preserving persistent search history that automatically migrates to your cloud profile.
                 </p>
               </div>
             </div>
 
-            {/* Feature 2 - Exports */}
+            {/* Feature 2 - Native Dark Mode */}
+            <div className="p-8 rounded-xl border border-slate-200 dark:border-[#333537] bg-white dark:bg-[#1E1E1E] hover:border-slate-350 dark:hover:border-[#333537] transition-all flex flex-col justify-between min-h-[220px]">
+              <div className="h-10 w-10 rounded-lg bg-slate-100 dark:bg-[#131314] flex items-center justify-center text-slate-950 dark:text-white mb-4 border border-slate-200/60 dark:border-[#333537]/80">
+                <Moon className="h-5 w-5 text-indigo-500" />
+              </div>
+              <div>
+                <h3 className="text-lg font-semibold text-slate-950 dark:text-white mb-2">Native Dark Mode</h3>
+                <p className="text-sm text-slate-500 dark:text-[#C4C7C5] leading-relaxed">
+                  Engineered for late-night coding sessions. High-contrast, easy-on-the-eyes dark theme built to minimize eye strain during long programming blocks.
+                </p>
+              </div>
+            </div>
+
+            {/* Feature 3 - Structured Exports */}
             <div className="p-8 rounded-xl border border-slate-200 dark:border-[#333537] bg-white dark:bg-[#1E1E1E] hover:border-slate-350 dark:hover:border-[#333537] transition-all flex flex-col justify-between min-h-[220px]">
               <div className="h-10 w-10 rounded-lg bg-slate-100 dark:bg-[#131314] flex items-center justify-center text-slate-950 dark:text-white mb-4 border border-slate-200/60 dark:border-[#333537]/80">
                 <FileText className="h-5 w-5" />
@@ -215,28 +230,15 @@ export default function Home() {
               </div>
             </div>
 
-            {/* Feature 3 - Share Links */}
-            <div className="p-8 rounded-xl border border-slate-200 dark:border-[#333537] bg-white dark:bg-[#1E1E1E] hover:border-slate-350 dark:hover:border-[#333537] transition-all flex flex-col justify-between min-h-[220px]">
-              <div className="h-10 w-10 rounded-lg bg-slate-100 dark:bg-[#131314] flex items-center justify-center text-slate-950 dark:text-white mb-4 border border-slate-200/60 dark:border-[#333537]/80">
-                <Globe className="h-5 w-5" />
-              </div>
-              <div>
-                <h3 className="text-lg font-semibold text-slate-950 dark:text-white mb-2">Dynamic Share Links</h3>
-                <p className="text-sm text-slate-500 dark:text-[#C4C7C5] leading-relaxed">
-                  Generate instant, public-facing preview pages of selected chats, formatted using fully compliant SEO metadata tags.
-                </p>
-              </div>
-            </div>
-
-            {/* Feature 4 - System APIs */}
+            {/* Feature 4 - Model Transparency */}
             <div className="md:col-span-2 p-8 rounded-xl border border-slate-200 dark:border-[#333537] bg-white dark:bg-[#1E1E1E] hover:border-slate-350 dark:hover:border-[#333537] transition-all flex flex-col justify-between min-h-[220px]">
               <div className="h-10 w-10 rounded-lg bg-slate-100 dark:bg-[#131314] flex items-center justify-center text-slate-950 dark:text-white mb-4 border border-slate-200/60 dark:border-[#333537]/80">
                 <Cpu className="h-5 w-5" />
               </div>
               <div>
-                <h3 className="text-lg font-semibold text-slate-950 dark:text-white mb-2">Built-in API Tools Integration</h3>
+                <h3 className="text-lg font-semibold text-slate-950 dark:text-white mb-2">Model Transparency & Speed</h3>
                 <p className="text-sm text-slate-500 dark:text-[#C4C7C5] leading-relaxed max-w-lg">
-                  Showcases robust tool-calling schemas via local routes. Integrated API functions enable conversational systems to request physical weather conditions and timezones cleanly.
+                  Powered by Groq&apos;s ultra-low latency inference engine running Llama 3 70B. We disclose exactly what LLMs power your queries, providing full developer-first backend transparency.
                 </p>
               </div>
             </div>
